@@ -1,23 +1,51 @@
 import { Order } from "@/types/order.types";
 
+function formatCurrencyMXN(value: number): string {
+  return new Intl.NumberFormat("es-MX", {
+    style: "currency",
+    currency: "MXN",
+  }).format(value);
+}
+
+function formatTimeMX(date: Date): string {
+  return new Intl.DateTimeFormat("es-MX", {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "America/Mexico_City",
+  }).format(date);
+}
+
 export function formatComanda(order: Order): string {
-  const items = order.items
-    .map(
-      (item) =>
-        `• ${item.quantity}x ${item.productName}
-💵 ${item.unitPrice}`
-    )
-    .join("\n");
+  const itemsText = order.items
+    .map((item) => {
+      const subtotal = item.quantity * item.unitPrice;
 
-  return `
-🌮 NUEVO PEDIDO
+      const notes = item.notes?.trim()
+        ? `\n   📝 ${item.notes.trim()}`
+        : "";
 
-👤 ${order.customerName}
-📞 ${order.customerPhone}
+      return `• ${item.quantity} × ${item.productName}${notes}
+   💵 ${formatCurrencyMXN(item.unitPrice)} c/u
+   💰 Subtotal: ${formatCurrencyMXN(subtotal)}`;
+    })
+    .join("\n\n");
+
+  return `🌮 NUEVO PEDIDO — FOODSPV
+
+👤 Cliente: ${order.customerName}
+📞 Tel: ${order.customerPhone}
 
 🧾 Pedido:
-${items}
 
-💰 Total: $${order.total}
-`;
+${itemsText}
+
+━━━━━━━━━━━━━━━
+
+💰 TOTAL: ${formatCurrencyMXN(order.total)}
+🕒 Hora: ${formatTimeMX(order.createdAt)}
+
+✅ Respuesta sugerida:
+Hola ${order.customerName} 👋
+Recibimos tu pedido.
+En breve te confirmamos el tiempo de preparación.`;
 }
