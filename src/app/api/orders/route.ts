@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 
 import { firestoreWriterAgent } from "@/modules/orders/agents/firestoreWriterAgent";
 import { orderValidatorAgent } from "@/modules/orders/agents/orderValidatorAgent";
+import { whatsappComandaAgent } from "@/modules/orders/agents/whatsappComandaAgent";
+import { whatsappSenderAgent } from "@/modules/orders/agents/whatsappSenderAgent";
 
 export async function POST(request: Request) {
   try {
@@ -32,12 +34,22 @@ export async function POST(request: Request) {
       );
     }
 
+    const whatsappMessage = whatsappComandaAgent(validation.data);
+    const whatsappDelivery = await whatsappSenderAgent({
+      tenantId: validation.data.tenantId,
+      whatsappMessage,
+    });
+
     return NextResponse.json(
       {
         success: true,
-        message: "Pedido validado y guardado correctamente.",
+        message: whatsappDelivery.success
+          ? "Pedido guardado y enviado por WhatsApp correctamente."
+          : "Pedido guardado correctamente, pero falló el envío por WhatsApp.",
         orderId: persistedOrder.orderId,
         order: validation.data,
+        whatsappMessage,
+        whatsappDelivery,
       },
       { status: 201 }
     );
