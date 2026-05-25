@@ -45,9 +45,9 @@ export async function POST(request: Request) {
     const rawPayload = (await request.json()) as unknown;
     const payload = parseMetaWebhookPayload(rawPayload);
     const phoneNumberId = extractPhoneNumberId(payload);
-    const summary = summarizeMetaWebhookEvent(payload);
+    const tenantRoute = await routeWebhookByPhoneNumberId(phoneNumberId, payload);
+    const summary = summarizeMetaWebhookEvent(payload, tenantRoute);
 
-    routeWebhookByPhoneNumberId(phoneNumberId, payload);
     logWebhookEvent(summary);
   } catch (error) {
     console.error("Meta webhook payload could not be processed safely.", {

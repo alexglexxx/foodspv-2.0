@@ -27,6 +27,8 @@ export interface WebhookEventSummary {
   entryCount: number;
   changeCount: number;
   phoneNumberId: string | null;
+  tenantId: string | null;
+  tenantFound: boolean;
   fields: string[];
   hasMessages: boolean;
   hasStatuses: boolean;

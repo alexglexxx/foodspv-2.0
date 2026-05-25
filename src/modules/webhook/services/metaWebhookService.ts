@@ -1,12 +1,8 @@
+import { tenantRouterAgent, type TenantRouterResult } from "../agents/tenantRouterAgent";
 import type {
   MetaWebhookPayload,
   WebhookEventSummary,
 } from "../types/metaWebhook";
-
-interface PhoneNumberRouteResult {
-  handled: boolean;
-  phoneNumberId: string | null;
-}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
@@ -52,7 +48,8 @@ export function extractPhoneNumberId(
 }
 
 export function summarizeMetaWebhookEvent(
-  payload: MetaWebhookPayload | null
+  payload: MetaWebhookPayload | null,
+  tenantRoute: TenantRouterResult
 ): WebhookEventSummary {
   const entryList = payload?.entry ?? [];
   const changeList = entryList.flatMap((entry) =>
@@ -64,6 +61,8 @@ export function summarizeMetaWebhookEvent(
     entryCount: entryList.length,
     changeCount: changeList.length,
     phoneNumberId: extractPhoneNumberId(payload),
+    tenantId: tenantRoute.found ? tenantRoute.tenantId : null,
+    tenantFound: tenantRoute.found,
     fields: changeList
       .map((change) => change.field)
       .filter((field): field is string => typeof field === "string"),
@@ -76,26 +75,14 @@ export function summarizeMetaWebhookEvent(
   };
 }
 
-export function routeWebhookByPhoneNumberId(
+export async function routeWebhookByPhoneNumberId(
   phoneNumberId: string | null,
   payload: MetaWebhookPayload | null
-): PhoneNumberRouteResult {
-  if (!phoneNumberId) {
-    return {
-      handled: false,
-      phoneNumberId: null,
-    };
-  }
-
-  switch (phoneNumberId) {
-    default:
-      // Placeholder for tenant-specific routing by Meta phone_number_id.
-      void payload;
-      return {
-        handled: false,
-        phoneNumberId,
-      };
-  }
+): Promise<TenantRouterResult> {
+  return tenantRouterAgent({
+    phoneNumberId,
+    payload,
+  });
 }
 
 export function logWebhookEvent(summary: WebhookEventSummary): void {
