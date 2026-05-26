@@ -52,6 +52,10 @@ No chaos.
 9. Avoid patches
 10. Complete files over code fragments
 
+Al finalizar:
+
+11. Actualizar CODEX.md
+12. Actualizar docs/project-status.md
 ---
 
 ## CURRENT ARCHITECTURE
@@ -211,6 +215,40 @@ TASK-001
 Description:
 
 Create Order Validator Agent
+
+Status:
+
+COMPLETE
+
+---
+
+TASK-008
+
+Description:
+
+Crear Menú Dinámico + Carrito conectado
+
+Dependencies:
+
+- Firebase client
+- tenants/{tenantId}/products
+- Product types
+- Cart types
+
+Files:
+
+- src/app/page.tsx
+- src/modules/orders/components/OrderMenuClient.tsx
+- src/modules/orders/components/ProductCard.tsx
+- src/modules/orders/components/CartDrawer.tsx
+- src/modules/orders/components/CartSummary.tsx
+
+Expected result:
+
+- catálogo dinámico por tenant
+- carrito conectado
+- total recalculado
+- botón generar pedido
 
 Status:
 
