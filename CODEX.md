@@ -192,6 +192,24 @@ PENDING
 
 ---
 
+### Agent 06
+
+Name:
+
+Order State Agent
+
+Responsibilities:
+
+- definir estados oficiales del pedido
+- validar transiciones permitidas
+- actualizar estado en Firestore para tenants `dashboard_managed`
+
+Status:
+
+COMPLETE
+
+---
+
 ## TASK SYSTEM
 
 Each task must follow:
@@ -316,6 +334,106 @@ Expected result:
 - escucha en tiempo real con `onSnapshot()`
 - estados loading, error, empty state y lista
 - dashboard funcional con `/admin?tenantId=demo-tenant`
+
+Status:
+
+COMPLETE
+
+---
+
+TASK-011
+
+Description:
+
+Crear configuración de flujo de pedidos por tenant
+
+Dependencies:
+
+- tenant config types
+- lectura de tenant en flujo de órdenes
+- compatibilidad con `/api/orders`
+
+Files:
+
+- src/types/tenant.types.ts
+- src/modules/orders/agents/tenantOrderFlowConfigAgent.ts
+- src/app/api/orders/route.ts
+- src/modules/orders/services/orderService.ts
+
+Expected result:
+
+- tipos para `orderFlowMode` y `estimatedPreparationMinutes`
+- soporte para `simple_whatsapp` y `dashboard_managed`
+- lectura tipada de configuración del tenant dentro del flujo de órdenes
+- sin implementar todavía notificaciones ni botones de estado
+
+Status:
+
+COMPLETE
+
+---
+
+TASK-012
+
+Description:
+
+Implementar confirmación automática por WhatsApp al cliente en modo simple_whatsapp
+
+Dependencies:
+
+- TASK-011
+- whatsappSenderAgent
+- tenant config
+- order types existentes
+
+Files:
+
+- src/modules/orders/agents/customerConfirmationAgent.ts
+- src/modules/orders/agents/whatsappSenderAgent.ts
+- src/modules/orders/agents/tenantOrderFlowConfigAgent.ts
+- src/app/api/orders/route.ts
+
+Expected result:
+
+- confirmación automática al cliente solo si `orderFlowMode === "simple_whatsapp"`
+- no enviar confirmación todavía en `dashboard_managed`
+- reutilizar infraestructura existente de WhatsApp sin duplicarla
+
+Status:
+
+COMPLETE
+
+---
+
+TASK-013
+
+Description:
+
+Implementar cambio de estados de pedido para tenants en modo dashboard_managed
+
+Dependencies:
+
+- TASK-010
+- TASK-011
+- Firestore client SDK
+- onSnapshot
+- reglas oficiales de transición de estados
+
+Files:
+
+- src/modules/orders/agents/orderStateAgent.ts
+- src/modules/orders/components/OrdersDashboardClient.tsx
+- src/modules/orders/types/order.ts
+
+Expected result:
+
+- estados oficiales: `pendiente`, `preparando`, `listo`, `entregado`, `cancelado`
+- transiciones válidas limitadas a la máquina de estados definida
+- cancelación permitida solo desde `pendiente` y `preparando`
+- actualización del documento `tenants/{tenantId}/orders/{orderId}` desde el dashboard
+- badge visual de estado y botones condicionados por estado actual
+- cambios reflejados en tiempo real con `onSnapshot()`
+- sin notificaciones de WhatsApp todavía
 
 Status:
 

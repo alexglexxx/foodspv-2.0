@@ -1,3 +1,12 @@
+export type OrderFlowMode =
+  | "simple_whatsapp"
+  | "dashboard_managed";
+
+export interface TenantOrderFlowConfig {
+  orderFlowMode: OrderFlowMode;
+  estimatedPreparationMinutes: number;
+}
+
 export interface Tenant {
   id: string;
   name: string;
@@ -9,6 +18,8 @@ export interface Tenant {
   logoUrl?: string;
 
   active: boolean;
+  orderFlowMode: OrderFlowMode;
+  estimatedPreparationMinutes: number;
 
   createdAt: Date;
   updatedAt: Date;

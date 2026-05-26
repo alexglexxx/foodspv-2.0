@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import {
   collection,
+  doc,
   onSnapshot,
   orderBy,
   query,
@@ -11,8 +12,15 @@ import {
 } from "firebase/firestore";
 
 import { db } from "@/lib/firebase/client";
+import type { OrderFlowMode } from "@/types/tenant.types";
 
-import type { Order } from "../types/order";
+import {
+  getAvailableOrderStateTransitions,
+  getOrderStateLabel,
+  isOrderState,
+  updateOrderStateAgent,
+} from "../agents/orderStateAgent";
+import type { Order, OrderState } from "../types/order";
 
 interface OrdersDashboardClientProps {
   tenantId: string;
@@ -36,6 +44,15 @@ interface FirestoreOrderRecord {
   createdAt?: Timestamp | { toDate?: () => Date } | null;
 }
 
+interface TenantRecord {
+  orderFlowMode?: unknown;
+}
+
+type DashboardOrder = Order & {
+  orderId: string;
+  createdAtLabel: string | null;
+};
+
 function isNonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
 }
@@ -44,9 +61,13 @@ function isValidNumber(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value);
 }
 
+function isOrderFlowMode(value: unknown): value is OrderFlowMode {
+  return value === "simple_whatsapp" || value === "dashboard_managed";
+}
+
 function mapOrderDocument(
   document: QueryDocumentSnapshot
-): Order & { orderId: string; createdAtLabel: string | null } | null {
+): DashboardOrder | null {
   const record = document.data() as FirestoreOrderRecord;
 
   if (
@@ -55,7 +76,7 @@ function mapOrderDocument(
     !isNonEmptyString(record.cliente.telefono) ||
     !Array.isArray(record.productos) ||
     !isValidNumber(record.total) ||
-    !isNonEmptyString(record.estado) ||
+    !isOrderState(record.estado) ||
     !isNonEmptyString(record.tenantId)
   ) {
     return null;
@@ -104,7 +125,7 @@ function mapOrderDocument(
     },
     productos,
     total: record.total,
-    estado: record.estado.trim() as Order["estado"],
+    estado: record.estado,
     createdAt: createdAtDate ? createdAtDate.getTime() : 0,
     createdAtLabel: createdAtDate
       ? new Intl.DateTimeFormat("es-MX", {
@@ -123,29 +144,42 @@ function formatCurrency(value: number): string {
   }).format(value);
 }
 
-function getStatusLabel(status: Order["estado"]): string {
+function getStatusBadgeClassName(status: OrderState): string {
   switch (status) {
     case "pendiente":
-      return "Pendiente";
+      return "border border-amber-200 bg-amber-50 text-amber-800";
     case "preparando":
-      return "Preparando";
+      return "border border-sky-200 bg-sky-50 text-sky-800";
     case "listo":
-      return "Listo";
+      return "border border-emerald-200 bg-emerald-50 text-emerald-800";
+    case "cancelado":
+      return "border border-rose-200 bg-rose-50 text-rose-800";
     case "entregado":
-      return "Entregado";
+      return "border border-stone-200 bg-stone-100 text-stone-700";
     default:
-      return status;
+      return "border border-stone-200 bg-stone-50 text-stone-700";
   }
 }
 
 export function OrdersDashboardClient({
   tenantId,
 }: OrdersDashboardClientProps) {
-  const [orders, setOrders] = useState<
-    Array<Order & { orderId: string; createdAtLabel: string | null }>
-  >([]);
+  const [orders, setOrders] = useState<DashboardOrder[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [ordersErrorMessage, setOrdersErrorMessage] = useState<string | null>(
+    null
+  );
+  const [tenantFlowErrorMessage, setTenantFlowErrorMessage] = useState<
+    string | null
+  >(null);
+  const [tenantOrderFlowMode, setTenantOrderFlowMode] =
+    useState<OrderFlowMode>("simple_whatsapp");
+  const [updatingOrderIds, setUpdatingOrderIds] = useState<
+    Record<string, boolean>
+  >({});
+  const [orderActionErrors, setOrderActionErrors] = useState<
+    Record<string, string | null>
+  >({});
 
   useEffect(() => {
     const ordersQuery = query(
@@ -158,20 +192,14 @@ export function OrdersDashboardClient({
       (snapshot) => {
         const nextOrders = snapshot.docs
           .map((document) => mapOrderDocument(document))
-          .filter(
-            (
-              order
-            ): order is Order & {
-              orderId: string;
-              createdAtLabel: string | null;
-            } => order !== null
-          );
+          .filter((order): order is DashboardOrder => order !== null);
 
         setOrders(nextOrders);
+        setOrdersErrorMessage(null);
         setIsLoading(false);
       },
       (error) => {
-        setErrorMessage(error.message);
+        setOrdersErrorMessage(error.message);
         setIsLoading(false);
       }
     );
@@ -180,6 +208,65 @@ export function OrdersDashboardClient({
       unsubscribe();
     };
   }, [tenantId]);
+
+  useEffect(() => {
+    const tenantRef = doc(db, "tenants", tenantId);
+
+    const unsubscribe = onSnapshot(
+      tenantRef,
+      (snapshot) => {
+        const tenantRecord = (snapshot.data() ?? {}) as TenantRecord;
+
+        setTenantOrderFlowMode(
+          isOrderFlowMode(tenantRecord.orderFlowMode)
+            ? tenantRecord.orderFlowMode
+            : "simple_whatsapp"
+        );
+        setTenantFlowErrorMessage(null);
+      },
+      (error) => {
+        setTenantFlowErrorMessage(error.message);
+      }
+    );
+
+    return () => {
+      unsubscribe();
+    };
+  }, [tenantId]);
+
+  async function handleStateChange(
+    orderId: string,
+    nextState: OrderState
+  ): Promise<void> {
+    setUpdatingOrderIds((current) => ({
+      ...current,
+      [orderId]: true,
+    }));
+    setOrderActionErrors((current) => ({
+      ...current,
+      [orderId]: null,
+    }));
+
+    const result = await updateOrderStateAgent({
+      tenantId,
+      orderId,
+      nextState,
+    });
+
+    setUpdatingOrderIds((current) => ({
+      ...current,
+      [orderId]: false,
+    }));
+
+    if (!result.success) {
+      setOrderActionErrors((current) => ({
+        ...current,
+        [orderId]: result.message,
+      }));
+    }
+  }
+
+  const isDashboardManaged = tenantOrderFlowMode === "dashboard_managed";
 
   return (
     <div className="min-h-screen bg-[#f7f1e8] text-stone-900">
@@ -193,10 +280,14 @@ export function OrdersDashboardClient({
           </h1>
           <p className="mt-4 max-w-2xl text-sm leading-7 text-stone-300 sm:text-base">
             Escucha en tiempo real los pedidos del tenant y revisa cliente,
-            productos, total y estado.
+            productos, total y estado. Si el tenant usa
+            `dashboard_managed`, también puedes avanzar el pedido desde aquí.
           </p>
           <div className="mt-6 inline-flex rounded-full bg-white/10 px-4 py-2 text-sm text-stone-200">
             tenantId: {tenantId}
+          </div>
+          <div className="mt-4 inline-flex rounded-full bg-amber-300/15 px-4 py-2 text-sm text-amber-100">
+            Modo de flujo: {tenantOrderFlowMode}
           </div>
         </section>
 
@@ -216,15 +307,29 @@ export function OrdersDashboardClient({
             </div>
           ) : null}
 
-          {errorMessage ? (
+          {ordersErrorMessage ? (
             <div className="rounded-[2rem] border border-rose-200 bg-rose-50 p-6 text-sm text-rose-700 shadow-sm">
-              No se pudo leer `tenants/{tenantId}/orders`: {errorMessage}
+              No se pudo leer `tenants/{tenantId}/orders`: {ordersErrorMessage}
             </div>
           ) : null}
 
-          {!isLoading && !errorMessage && orders.length === 0 ? (
+          {tenantFlowErrorMessage ? (
+            <div className="mt-5 rounded-[2rem] border border-rose-200 bg-rose-50 p-6 text-sm text-rose-700 shadow-sm">
+              No se pudo leer `tenants/{tenantId}` para resolver
+              `orderFlowMode`: {tenantFlowErrorMessage}
+            </div>
+          ) : null}
+
+          {!isLoading && !ordersErrorMessage && orders.length === 0 ? (
             <div className="rounded-[2rem] border border-dashed border-stone-300 bg-white p-6 text-sm text-stone-500 shadow-sm">
               No hay pedidos todavía para este tenant.
+            </div>
+          ) : null}
+
+          {!isLoading && !ordersErrorMessage && !isDashboardManaged ? (
+            <div className="mb-5 rounded-[2rem] border border-amber-200 bg-amber-50 p-6 text-sm text-amber-800 shadow-sm">
+              Este tenant está en modo `simple_whatsapp`. El dashboard muestra
+              el estado actual, pero no habilita cambios manuales todavía.
             </div>
           ) : null}
 
@@ -260,9 +365,13 @@ export function OrdersDashboardClient({
                     <p className="text-xs uppercase tracking-[0.24em] text-amber-300">
                       Estado
                     </p>
-                    <p className="mt-2 text-lg font-semibold">
-                      {getStatusLabel(order.estado)}
-                    </p>
+                    <div
+                      className={`mt-3 inline-flex rounded-full px-3 py-1 text-sm font-semibold ${getStatusBadgeClassName(
+                        order.estado
+                      )}`}
+                    >
+                      {getOrderStateLabel(order.estado)}
+                    </div>
                     <p className="mt-3 text-2xl font-semibold">
                       {formatCurrency(order.total)}
                     </p>
@@ -291,6 +400,67 @@ export function OrdersDashboardClient({
                       </li>
                     ))}
                   </ul>
+                </div>
+
+                <div className="mt-5 border-t border-stone-100 pt-5">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="text-sm font-semibold text-stone-800">
+                        Acciones de estado
+                      </p>
+                      <p className="mt-1 text-sm text-stone-500">
+                        {isDashboardManaged
+                          ? "Solo se muestran las transiciones válidas para el estado actual."
+                          : "Las transiciones manuales se habilitan solo para tenants dashboard_managed."}
+                      </p>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2">
+                      {isDashboardManaged ? (
+                        getAvailableOrderStateTransitions(order.estado).length > 0 ? (
+                          getAvailableOrderStateTransitions(order.estado).map(
+                            (nextState) => (
+                              <button
+                                key={`${order.orderId}-${nextState}`}
+                                type="button"
+                                onClick={() =>
+                                  void handleStateChange(order.orderId, nextState)
+                                }
+                                disabled={updatingOrderIds[order.orderId] === true}
+                                className="rounded-full border border-stone-300 bg-white px-4 py-2 text-sm font-semibold text-stone-800 transition hover:border-stone-950 hover:bg-stone-950 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+                              >
+                                {nextState === "cancelado"
+                                  ? "Cancelar pedido"
+                                  : `Marcar como ${getOrderStateLabel(
+                                      nextState
+                                    ).toLowerCase()}`}
+                              </button>
+                            )
+                          )
+                        ) : (
+                          <span className="text-sm text-stone-500">
+                            Estado final sin acciones disponibles.
+                          </span>
+                        )
+                      ) : (
+                        <span className="text-sm text-stone-500">
+                          Acciones deshabilitadas para este modo.
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {updatingOrderIds[order.orderId] === true ? (
+                    <p className="mt-3 text-sm text-stone-500">
+                      Actualizando estado en Firestore...
+                    </p>
+                  ) : null}
+
+                  {orderActionErrors[order.orderId] ? (
+                    <p className="mt-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                      {orderActionErrors[order.orderId]}
+                    </p>
+                  ) : null}
                 </div>
               </article>
             ))}

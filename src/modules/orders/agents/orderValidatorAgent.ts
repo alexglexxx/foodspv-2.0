@@ -1,4 +1,4 @@
-import { Order } from "../types/order";
+import { ORDER_STATES, Order } from "../types/order";
 
 export type ValidationResult =
   | {
@@ -77,6 +77,8 @@ export function orderValidatorAgent(input: unknown): ValidationResult {
 
   if (!order.estado) {
     order.estado = "pendiente";
+  } else if (!ORDER_STATES.includes(order.estado)) {
+    errors.push("Estado de pedido inválido.");
   }
 
   if (!order.createdAt) {

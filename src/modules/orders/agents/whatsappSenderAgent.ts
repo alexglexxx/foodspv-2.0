@@ -15,6 +15,7 @@ const META_MESSAGES_ENDPOINT = `${META_GRAPH_API_BASE_URL}/${META_GRAPH_API_VERS
 interface WhatsAppSenderInput {
   tenantId: string;
   whatsappMessage: string;
+  recipientPhone?: string;
 }
 
 interface MetaMessagesResponse {
@@ -43,14 +44,17 @@ function isNonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
 }
 
-function getMissingTenantFields(data: DocumentData): string[] {
+function getMissingTenantFields(
+  data: DocumentData,
+  requiresDefaultRecipient: boolean
+): string[] {
   const missingFields: string[] = [];
 
   if (typeof data.active !== "boolean") {
     missingFields.push("active");
   }
 
-  if (!isNonEmptyString(data.whatsappPhone)) {
+  if (requiresDefaultRecipient && !isNonEmptyString(data.whatsappPhone)) {
     missingFields.push("whatsappPhone");
   }
 
@@ -96,6 +100,9 @@ export async function whatsappSenderAgent(
   const whatsappMessage = isNonEmptyString(input.whatsappMessage)
     ? input.whatsappMessage.trim()
     : "";
+  const recipientPhone = isNonEmptyString(input.recipientPhone)
+    ? input.recipientPhone.trim()
+    : null;
 
   if (!tenantId) {
     return createResult("config_error", "tenantId es obligatorio.");
@@ -119,7 +126,10 @@ export async function whatsappSenderAgent(
     }
 
     const tenantData = tenantSnapshot.data() ?? {};
-    const missingFields = getMissingTenantFields(tenantData);
+    const missingFields = getMissingTenantFields(
+      tenantData,
+      recipientPhone === null
+    );
 
     if (missingFields.length > 0) {
       return createResult(
@@ -150,7 +160,7 @@ export async function whatsappSenderAgent(
         body: JSON.stringify({
           messaging_product: "whatsapp",
           recipient_type: "individual",
-          to: tenantConfig.whatsappPhone,
+          to: recipientPhone ?? tenantConfig.whatsappPhone,
           type: "text",
           text: {
             preview_url: false,

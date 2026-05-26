@@ -1,3 +1,13 @@
+export const ORDER_STATES = [
+  "pendiente",
+  "preparando",
+  "listo",
+  "entregado",
+  "cancelado",
+] as const;
+
+export type OrderState = (typeof ORDER_STATES)[number];
+
 export interface OrderItem {
   id:string;
   nombre:string;
@@ -20,11 +30,7 @@ export interface Order {
 
   total:number;
 
-  estado:
-  | "pendiente"
-  | "preparando"
-  | "listo"
-  | "entregado";
+  estado:OrderState;
 
   createdAt:number;
 
