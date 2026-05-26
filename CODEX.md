@@ -210,6 +210,24 @@ COMPLETE
 
 ---
 
+### Agent 07
+
+Name:
+
+Customer Status Notification Agent
+
+Responsibilities:
+
+- generar mensajes automáticos para el cliente cuando cambia el estado del pedido
+- operar solo dentro del flujo `dashboard_managed`
+- mantener separado el contenido del mensaje del envío por WhatsApp
+
+Status:
+
+COMPLETE
+
+---
+
 ## TASK SYSTEM
 
 Each task must follow:
@@ -434,6 +452,43 @@ Expected result:
 - badge visual de estado y botones condicionados por estado actual
 - cambios reflejados en tiempo real con `onSnapshot()`
 - sin notificaciones de WhatsApp todavía
+
+Status:
+
+COMPLETE
+
+---
+
+TASK-014
+
+Description:
+
+Implementar notificaciones automáticas al cliente cuando un pedido cambia de estado en modo dashboard_managed
+
+Dependencies:
+
+- TASK-011
+- TASK-013
+- orderStateAgent
+- whatsappSenderAgent
+- tenantOrderFlowConfigAgent
+
+Files:
+
+- src/modules/orders/agents/customerStatusNotificationAgent.ts
+- src/modules/orders/agents/orderStateAgent.ts
+- src/modules/orders/components/OrdersDashboardClient.tsx
+- src/app/api/orders/status/route.ts
+- docs/project-status.md
+- CODEX.md
+
+Expected result:
+
+- notificación automática por WhatsApp al cliente solo cuando `orderFlowMode === "dashboard_managed"`
+- no enviar mensaje si el estado no cambió realmente
+- reutilizar `whatsappSenderAgent` sin duplicar lógica de WhatsApp
+- mantener webhook sin cambios
+- mensajes separados en `customerStatusNotificationAgent`
 
 Status:
 

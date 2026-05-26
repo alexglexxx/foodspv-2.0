@@ -18,7 +18,6 @@ import {
   getAvailableOrderStateTransitions,
   getOrderStateLabel,
   isOrderState,
-  updateOrderStateAgent,
 } from "../agents/orderStateAgent";
 import type { Order, OrderState } from "../types/order";
 
@@ -52,6 +51,20 @@ type DashboardOrder = Order & {
   orderId: string;
   createdAtLabel: string | null;
 };
+
+type UpdateOrderStatusResponse =
+  | {
+      success: true;
+      changed: boolean;
+      customerStatusNotificationDelivery: {
+        success: boolean;
+        error: string | null;
+      } | null;
+    }
+  | {
+      success: false;
+      message: string;
+    };
 
 function isNonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
@@ -247,21 +260,54 @@ export function OrdersDashboardClient({
       [orderId]: null,
     }));
 
-    const result = await updateOrderStateAgent({
-      tenantId,
-      orderId,
-      nextState,
-    });
+    try {
+      const response = await fetch("/api/orders/status", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          tenantId,
+          orderId,
+          nextState,
+        }),
+      });
+      const result = (await response.json()) as UpdateOrderStatusResponse;
 
-    setUpdatingOrderIds((current) => ({
-      ...current,
-      [orderId]: false,
-    }));
+      if (!response.ok || !result.success) {
+        setOrderActionErrors((current) => ({
+          ...current,
+          [orderId]: result.success
+            ? "No se pudo actualizar el estado del pedido."
+            : result.message,
+        }));
+        return;
+      }
 
-    if (!result.success) {
+      const notificationDelivery = result.customerStatusNotificationDelivery;
+
+      if (notificationDelivery && !notificationDelivery.success) {
+        setOrderActionErrors((current) => ({
+          ...current,
+          [orderId]:
+            notificationDelivery.error ??
+            "Estado actualizado, pero falló la notificación al cliente.",
+        }));
+      }
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "No se pudo actualizar el estado del pedido.";
+
       setOrderActionErrors((current) => ({
         ...current,
-        [orderId]: result.message,
+        [orderId]: message,
+      }));
+    } finally {
+      setUpdatingOrderIds((current) => ({
+        ...current,
+        [orderId]: false,
       }));
     }
   }

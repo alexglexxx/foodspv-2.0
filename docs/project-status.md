@@ -1,3 +1,16 @@
+## TASK-014
+
+Estado: COMPLETE
+
+Resultado:
+
+- Nuevo `customerStatusNotificationAgent` para generar mensajes por estado del pedido
+- Nueva ruta `PATCH /api/orders/status` para actualizar estado server-side y reutilizar `whatsappSenderAgent`
+- El envío al cliente solo ocurre cuando el tenant está en `dashboard_managed`
+- Si el estado no cambió realmente, la ruta no reenvía WhatsApp
+- El dashboard usa la ruta de estado y conserva `onSnapshot()` como fuente visual en tiempo real
+- Webhook sin cambios
+
 ## TASK-013
 
 Estado: COMPLETE
