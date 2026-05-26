@@ -496,6 +496,44 @@ COMPLETE
 
 ---
 
+TASK-015
+
+Description:
+
+Preparar prueba End-to-End completa del MVP y checklist de deploy real
+
+Dependencies:
+
+- TASK-008
+- TASK-009
+- TASK-010
+- TASK-011
+- TASK-012
+- TASK-013
+- TASK-014
+- Firestore
+- Firebase Admin
+- Meta WhatsApp
+
+Files:
+
+- docs/testing/end-to-end-mvp-checklist.md
+- docs/project-status.md
+- CODEX.md
+
+Expected result:
+
+- checklist E2E completo para menú, carrito, pedido, WhatsApp negocio y cliente
+- validación documentada para flujos `simple_whatsapp` y `dashboard_managed`
+- checklist de deploy real con variables de entorno, Firebase Admin, Meta, build, lint y TypeScript
+- sin cambios de lógica funcional
+
+Status:
+
+COMPLETE
+
+---
+
 TASK-002
 
 Description:

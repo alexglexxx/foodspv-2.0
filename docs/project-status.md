@@ -1,3 +1,15 @@
+## TASK-015
+
+Estado: COMPLETE
+
+Resultado:
+
+- Nuevo checklist End-to-End del MVP en `docs/testing/end-to-end-mvp-checklist.md`
+- Checklist dividido por fases: menú/carrito, pedido, WhatsApp negocio, cliente y deploy
+- Validaciones documentadas para `simple_whatsapp` y `dashboard_managed`
+- Checklist de deploy real con Firebase Admin, Meta y verificaciones build/lint/TypeScript
+- Sin cambios de lógica funcional
+
 ## TASK-014
 
 Estado: COMPLETE
