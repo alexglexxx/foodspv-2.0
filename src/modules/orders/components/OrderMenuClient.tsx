@@ -9,7 +9,10 @@ import type { Product } from "@/types/product.types";
 
 import { CartDrawer } from "./CartDrawer";
 import { CartSummary } from "./CartSummary";
+import { CustomerInfoModal } from "./CustomerInfoModal";
 import { ProductCard } from "./ProductCard";
+import { createOrder } from "../services/orderService";
+import type { CustomerInfo, Order } from "../types/order";
 
 interface OrderMenuClientProps {
   tenantId: string;
@@ -23,12 +26,6 @@ interface FirestoreProductRecord {
   imageUrl?: unknown;
   available?: unknown;
   category?: unknown;
-}
-
-interface PendingOrderDraft {
-  tenantId: string;
-  items: CartItem[];
-  total: number;
 }
 
 function isNonEmptyString(value: unknown): value is string {
@@ -68,13 +65,44 @@ function formatCurrency(value: number): string {
   }).format(value);
 }
 
+function mapCartItemsToOrderItems(items: CartItem[]): Order["productos"] {
+  return items.map((item) => ({
+    id: item.productId,
+    nombre: item.productName,
+    precio: item.unitPrice,
+    cantidad: item.quantity,
+  }));
+}
+
+function buildOrder(
+  tenantId: string,
+  customerInfo: CustomerInfo,
+  items: CartItem[],
+  total: number
+): Order {
+  return {
+    tenantId,
+    cliente: customerInfo,
+    productos: mapCartItemsToOrderItems(items),
+    total,
+    estado: "pendiente",
+    createdAt: Date.now(),
+  };
+}
+
 export function OrderMenuClient({ tenantId }: OrderMenuClientProps) {
   const [products, setProducts] = useState<Product[]>([]);
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isCartOpen, setIsCartOpen] = useState<boolean>(false);
-  const [pendingOrder, setPendingOrder] = useState<PendingOrderDraft | null>(null);
+  const [isCustomerModalOpen, setIsCustomerModalOpen] = useState<boolean>(false);
+  const [customerModalSession, setCustomerModalSession] = useState<number>(0);
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [successOrderId, setSuccessOrderId] = useState<string | null>(null);
+  const [submittedTotal, setSubmittedTotal] = useState<number | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -195,18 +223,66 @@ export function OrderMenuClient({ tenantId }: OrderMenuClientProps) {
     );
   }
 
-  function generateOrder(): void {
+  function resetOrderFeedback(): void {
+    setSuccessMessage(null);
+    setSuccessOrderId(null);
+    setSubmittedTotal(null);
+    setSubmitError(null);
+  }
+
+  function openCustomerModal(): void {
     if (cartItems.length === 0) {
-      setPendingOrder(null);
       return;
     }
 
-    setPendingOrder({
-      tenantId,
-      items: cartItems,
-      total,
-    });
-    setIsCartOpen(true);
+    resetOrderFeedback();
+    setIsCartOpen(false);
+    setCustomerModalSession((currentValue) => currentValue + 1);
+    setIsCustomerModalOpen(true);
+  }
+
+  function closeCustomerModal(): void {
+    if (isSubmitting) {
+      return;
+    }
+
+    setIsCustomerModalOpen(false);
+    resetOrderFeedback();
+  }
+
+  async function submitOrder(customerInfo: CustomerInfo): Promise<void> {
+    if (cartItems.length === 0) {
+      return;
+    }
+
+    setIsSubmitting(true);
+    setSubmitError(null);
+
+    try {
+      const order = buildOrder(tenantId, customerInfo, cartItems, total);
+      const result = await createOrder(order);
+
+      if (!result.success) {
+        const validationMessage =
+          result.errors.length > 0 ? ` ${result.errors.join(" ")}` : "";
+
+        setSubmitError(`${result.message}${validationMessage}`);
+        return;
+      }
+
+      setSuccessMessage(result.message);
+      setSuccessOrderId(result.orderId);
+      setSubmittedTotal(total);
+      setCartItems([]);
+    } catch (error) {
+      setSubmitError(
+        error instanceof Error
+          ? error.message
+          : "Ocurrió un error inesperado al generar el pedido."
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -287,38 +363,46 @@ export function OrderMenuClient({ tenantId }: OrderMenuClientProps) {
           items={cartItems}
           total={total}
           onOpenCart={() => setIsCartOpen(true)}
-          onGenerateOrder={generateOrder}
+          onGenerateOrder={openCustomerModal}
         />
 
         <section className="mt-6 rounded-[2rem] border border-stone-200 bg-white p-6 shadow-sm">
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-amber-700">
-            Siguiente acción
+            Flujo conectado
           </p>
           <h2 className="mt-2 text-2xl font-semibold text-stone-900">
-            Botón generar pedido
+            Carrito integrado con la API de órdenes
           </h2>
           <p className="mt-3 text-sm leading-6 text-stone-600">
-            El flujo actual prepara un borrador local del pedido con `tenantId`,
-            items y total. Persistencia y envío pueden conectarse en la siguiente
-            tarea sin acoplar esta pantalla al backend.
+            El flujo ahora solicita nombre y teléfono, genera el payload con
+            `tenantId`, productos y total, y envía el pedido a `POST /api/orders`
+            desde este cliente.
           </p>
           <div className="mt-4 rounded-2xl bg-stone-950 p-4 text-sm text-stone-100">
             <pre className="overflow-x-auto whitespace-pre-wrap break-words">
               {JSON.stringify(
-                pendingOrder ?? {
+                {
                   tenantId,
-                  items: [],
-                  total: 0,
+                  cliente: {
+                    nombre: "",
+                    telefono: "",
+                  },
+                  productos: mapCartItemsToOrderItems(cartItems),
+                  total,
                 },
                 null,
                 2
               )}
             </pre>
           </div>
-          {pendingOrder ? (
+          {successMessage ? (
             <p className="mt-4 text-sm font-medium text-emerald-700">
-              Pedido listo para continuar: {formatCurrency(pendingOrder.total)}
+              Pedido generado correctamente por{" "}
+              {formatCurrency(submittedTotal ?? 0)}.
             </p>
+          ) : null}
+          {submitError ? (
+            <p className="mt-4 text-sm font-medium text-rose-700">{submitError}</p>
           ) : null}
         </section>
       </main>
@@ -331,8 +415,22 @@ export function OrderMenuClient({ tenantId }: OrderMenuClientProps) {
         onIncreaseItem={increaseItem}
         onDecreaseItem={decreaseItem}
         onRemoveItem={removeItem}
-        onGenerateOrder={generateOrder}
+        onGenerateOrder={openCustomerModal}
       />
+
+      {isCustomerModalOpen ? (
+        <CustomerInfoModal
+          key={customerModalSession}
+          isOpen={isCustomerModalOpen}
+          total={submittedTotal ?? total}
+          isSubmitting={isSubmitting}
+          successMessage={successMessage}
+          successOrderId={successOrderId}
+          errorMessage={submitError}
+          onClose={closeCustomerModal}
+          onSubmit={submitOrder}
+        />
+      ) : null}
     </div>
   );
 }

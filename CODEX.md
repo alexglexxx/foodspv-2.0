@@ -256,6 +256,39 @@ COMPLETE
 
 ---
 
+TASK-009
+
+Description:
+
+Conectar el carrito visual con la API real de órdenes
+
+Dependencies:
+
+- TASK-008
+- POST /api/orders
+- Order types existentes
+- Validación de cliente
+
+Files:
+
+- src/modules/orders/components/OrderMenuClient.tsx
+- src/modules/orders/components/CustomerInfoModal.tsx
+- src/modules/orders/services/orderService.ts
+
+Expected result:
+
+- modal obligatorio para nombre y teléfono
+- validación local de cliente con nombre mínimo 4 caracteres y teléfono mínimo 10 dígitos
+- envío real a `POST /api/orders`
+- estados `isSubmitting`, `success` y `error`
+- carrito mantiene el flujo visual anterior sin romper TASK-008
+
+Status:
+
+COMPLETE
+
+---
+
 TASK-002
 
 Description:
