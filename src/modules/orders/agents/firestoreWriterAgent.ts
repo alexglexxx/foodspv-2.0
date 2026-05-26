@@ -28,6 +28,8 @@ export async function firestoreWriterAgent(
     const orderRef = doc(
       collection(
         db,
+        "tenants",
+        order.tenantId,
         "orders"
       )
     );

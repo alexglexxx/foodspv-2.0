@@ -289,6 +289,40 @@ COMPLETE
 
 ---
 
+TASK-010
+
+Description:
+
+Crear dashboard básico de pedidos en vivo para tenant_admin
+
+Dependencies:
+
+- Firestore client SDK
+- tenantId por query string
+- onSnapshot
+- persistencia por tenant
+
+Files:
+
+- src/modules/orders/components/OrdersDashboardClient.tsx
+- src/app/admin/page.tsx
+- src/modules/orders/agents/firestoreWriterAgent.ts
+- src/modules/orders/utils/getSearchParamValue.ts
+
+Expected result:
+
+- lectura desde `tenants/{tenantId}/orders`
+- lista con orderId, cliente, teléfono, productos, total, estado y createdAt
+- escucha en tiempo real con `onSnapshot()`
+- estados loading, error, empty state y lista
+- dashboard funcional con `/admin?tenantId=demo-tenant`
+
+Status:
+
+COMPLETE
+
+---
+
 TASK-002
 
 Description:
