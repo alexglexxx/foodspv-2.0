@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import {
+  decideTenantWebhookAction,
   extractPhoneNumberId,
   logWebhookEvent,
   parseMetaWebhookPayload,
@@ -46,9 +47,11 @@ export async function POST(request: Request) {
     const payload = parseMetaWebhookPayload(rawPayload);
     const phoneNumberId = extractPhoneNumberId(payload);
     const tenantRoute = await routeWebhookByPhoneNumberId(phoneNumberId, payload);
+    const tenantAction = await decideTenantWebhookAction(tenantRoute, payload);
     const summary = summarizeMetaWebhookEvent(payload, tenantRoute);
 
     logWebhookEvent(summary);
+    console.info("Meta tenant action resolved", tenantAction);
   } catch (error) {
     console.error("Meta webhook payload could not be processed safely.", {
       error: error instanceof Error ? error.message : "unknown_error",

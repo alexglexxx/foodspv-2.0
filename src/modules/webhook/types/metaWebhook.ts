@@ -33,3 +33,19 @@ export interface WebhookEventSummary {
   hasMessages: boolean;
   hasStatuses: boolean;
 }
+
+export type TenantActionEventType =
+  | "message_received"
+  | "message_status"
+  | "unknown_event";
+
+export type TenantActionName =
+  | "process_customer_message"
+  | "update_message_status"
+  | "ignore_event";
+
+export interface TenantActionEngineResult {
+  eventType: TenantActionEventType;
+  action: TenantActionName;
+  shouldProcess: boolean;
+}

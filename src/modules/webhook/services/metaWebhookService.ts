@@ -1,6 +1,10 @@
+import {
+  tenantActionEngineAgent,
+} from "../agents/tenantActionEngineAgent";
 import { tenantRouterAgent, type TenantRouterResult } from "../agents/tenantRouterAgent";
 import type {
   MetaWebhookPayload,
+  TenantActionEngineResult,
   WebhookEventSummary,
 } from "../types/metaWebhook";
 
@@ -82,6 +86,25 @@ export async function routeWebhookByPhoneNumberId(
   return tenantRouterAgent({
     phoneNumberId,
     payload,
+  });
+}
+
+export async function decideTenantWebhookAction(
+  tenantRoute: TenantRouterResult,
+  payload: MetaWebhookPayload | null
+): Promise<TenantActionEngineResult> {
+  if (!tenantRoute.found) {
+    return {
+      eventType: "unknown_event",
+      action: "ignore_event",
+      shouldProcess: false,
+    };
+  }
+
+  return tenantActionEngineAgent({
+    tenantId: tenantRoute.tenantId,
+    payload,
+    tenant: tenantRoute.tenant,
   });
 }
 
