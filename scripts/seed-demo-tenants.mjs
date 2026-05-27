@@ -1,4 +1,5 @@
 import admin from "firebase-admin";
+import QRCode from "qrcode";
 
 const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "foodspv-14829";
 
@@ -10,6 +11,16 @@ if (!admin.apps.length) {
 }
 
 const db = admin.firestore();
+
+function generateTenantUrl(tenantId) {
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
+
+  if (typeof baseUrl === "string" && baseUrl.trim().length > 0) {
+    return `${baseUrl.replace(/\/$/, "")}/${tenantId}`;
+  }
+
+  return `/?tenantId=${tenantId}`;
+}
 
 const tenants = [
   {
@@ -141,11 +152,17 @@ const tenants = [
 
 for (const tenant of tenants) {
   const { tenantId, products, ...tenantData } = tenant;
+  const slug = tenantId;
+  const publicUrl = generateTenantUrl(tenantId);
+  const qrCode = await QRCode.toDataURL(publicUrl);
 
   await db.collection("tenants").doc(tenantId).set(
     {
       ...tenantData,
       tenantId,
+      slug,
+      publicUrl,
+      qrCode,
       status: "active",
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
