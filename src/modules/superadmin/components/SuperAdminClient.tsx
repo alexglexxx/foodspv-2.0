@@ -29,11 +29,17 @@ const EMPTY_TENANT_FORM: SuperAdminTenantInput = {
   location: "Puerto Vallarta",
   heroImageUrl: "",
   whatsappPhone: "",
+  metaPhoneNumberId: "",
   rating: "4.8",
   reviews: "0",
   status: "active",
   orderFlowMode: "simple_whatsapp",
   estimatedPreparationMinutes: 20,
+  orderConfirmationPolicy: {
+    enabled: false,
+    amountThreshold: 1,
+    action: "allow",
+  },
 };
 
 type TenantFormField = keyof SuperAdminTenantInput;
@@ -60,11 +66,13 @@ function getTenantFormFromSummary(
     location: tenant.location,
     heroImageUrl: tenant.heroImageUrl,
     whatsappPhone: tenant.whatsappPhone,
+    metaPhoneNumberId: tenant.metaPhoneNumberId,
     rating: tenant.rating,
     reviews: tenant.reviews,
     status: tenant.status,
     orderFlowMode: tenant.orderFlowMode,
     estimatedPreparationMinutes: tenant.estimatedPreparationMinutes,
+    orderConfirmationPolicy: tenant.orderConfirmationPolicy,
   };
 }
 
@@ -193,6 +201,30 @@ export function SuperAdminClient() {
     }));
   }
 
+  function updateOrderConfirmationEnabled(enabled: boolean): void {
+    setForm((currentForm) => ({
+      ...currentForm,
+      orderConfirmationPolicy: {
+        ...currentForm.orderConfirmationPolicy,
+        enabled,
+        action: enabled ? "require_manual_confirmation" : "allow",
+      },
+    }));
+  }
+
+  function updateOrderConfirmationThreshold(value: string): void {
+    setForm((currentForm) => ({
+      ...currentForm,
+      orderConfirmationPolicy: {
+        ...currentForm.orderConfirmationPolicy,
+        amountThreshold: Number.parseFloat(value) || 0,
+        action: currentForm.orderConfirmationPolicy.enabled
+          ? "require_manual_confirmation"
+          : "allow",
+      },
+    }));
+  }
+
   function resetForm(): void {
     setForm(EMPTY_TENANT_FORM);
     setEditingTenantId(null);
@@ -217,14 +249,41 @@ export function SuperAdminClient() {
       return;
     }
 
+    if (
+      !Number.isFinite(form.orderConfirmationPolicy.amountThreshold) ||
+      form.orderConfirmationPolicy.amountThreshold < 1
+    ) {
+      setMessage(null);
+      setErrorMessage(
+        "Monto desde es obligatorio y debe ser mayor o igual a 1."
+      );
+      return;
+    }
+
     setIsSaving(true);
     setMessage(null);
     setErrorMessage(null);
 
     try {
       const response = editingTenantId
-        ? await updateSuperAdminTenant(user, editingTenantId, form)
-        : await createSuperAdminTenant(user, form);
+        ? await updateSuperAdminTenant(user, editingTenantId, {
+            ...form,
+            orderConfirmationPolicy: {
+              ...form.orderConfirmationPolicy,
+              action: form.orderConfirmationPolicy.enabled
+                ? "require_manual_confirmation"
+                : "allow",
+            },
+          })
+        : await createSuperAdminTenant(user, {
+            ...form,
+            orderConfirmationPolicy: {
+              ...form.orderConfirmationPolicy,
+              action: form.orderConfirmationPolicy.enabled
+                ? "require_manual_confirmation"
+                : "allow",
+            },
+          });
 
       if (!response.success) {
         setErrorMessage(response.message);
@@ -480,6 +539,13 @@ export function SuperAdminClient() {
                   onChange={(value) => updateFormField("location", value)}
                 />
               </div>
+              <TextField
+                label="Meta Phone Number ID"
+                value={form.metaPhoneNumberId}
+                onChange={(value) => updateFormField("metaPhoneNumberId", value)}
+                helpText="ID del número de WhatsApp Business usado por Meta para enrutar mensajes al negocio."
+                required={form.orderFlowMode === "simple_whatsapp"}
+              />
               <div className="grid gap-4 sm:grid-cols-3">
                 <TextField
                   label="Rating"
@@ -524,6 +590,45 @@ export function SuperAdminClient() {
                     updateFormField("estimatedPreparationMinutes", value)
                   }
                 />
+              </div>
+              <div className="rounded-[1.5rem] border border-stone-200 bg-stone-50 p-5">
+                <h3 className="text-lg font-black">
+                  Protección de pedidos grandes
+                </h3>
+                <label className="mt-4 flex items-start gap-3">
+                  <input
+                    type="checkbox"
+                    checked={form.orderConfirmationPolicy.enabled}
+                    onChange={(event) =>
+                      updateOrderConfirmationEnabled(event.target.checked)
+                    }
+                    className="mt-1 h-5 w-5 rounded border-stone-300 text-orange-600 focus:ring-orange-500"
+                  />
+                  <span>
+                    <span className="block text-sm font-extrabold text-stone-900">
+                      Requerir confirmación en pedidos grandes
+                    </span>
+                    <span className="mt-1 block text-sm leading-6 text-stone-500">
+                      Los pedidos iguales o mayores a este monto requerirán confirmación del negocio antes de prepararse.
+                    </span>
+                  </span>
+                </label>
+                <label className="mt-4 block">
+                  <span className="text-sm font-extrabold text-stone-900">
+                    Monto desde
+                  </span>
+                  <input
+                    type="number"
+                    min={1}
+                    step="0.01"
+                    value={String(form.orderConfirmationPolicy.amountThreshold)}
+                    onChange={(event) =>
+                      updateOrderConfirmationThreshold(event.target.value)
+                    }
+                    required
+                    className="mt-2 w-full rounded-2xl border border-stone-300 bg-white px-4 py-3 text-sm font-semibold text-stone-950 outline-none transition focus:border-orange-500 focus:ring-4 focus:ring-orange-100"
+                  />
+                </label>
               </div>
             </div>
 
@@ -734,6 +839,7 @@ function TextField({
   type = "text",
   disabled = false,
   required = false,
+  helpText,
 }: {
   label: string;
   value: string;
@@ -741,10 +847,16 @@ function TextField({
   type?: "text" | "number";
   disabled?: boolean;
   required?: boolean;
+  helpText?: string;
 }) {
   return (
     <label className="block">
       <span className="text-sm font-extrabold text-stone-900">{label}</span>
+      {helpText ? (
+        <span className="mt-1 block text-xs font-semibold leading-5 text-stone-500">
+          {helpText}
+        </span>
+      ) : null}
       <input
         type={type}
         value={value}

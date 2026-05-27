@@ -1,4 +1,5 @@
 export const ORDER_STATES = [
+  "requires_confirmation",
   "pendiente",
   "preparando",
   "listo",

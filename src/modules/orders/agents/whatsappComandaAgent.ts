@@ -8,9 +8,13 @@ export function whatsappComandaAgent(order: Order): string {
   const productLines = order.productos.map((producto, index) => {
     return `${index + 1}. ${producto.cantidad} x ${producto.nombre}`;
   });
+  const header =
+    order.estado === "requires_confirmation"
+      ? "PEDIDO GRANDE - REQUIERE CONFIRMACIÓN"
+      : "NUEVA COMANDA";
 
   return [
-    "NUEVA COMANDA",
+    header,
     "",
     `Nombre: ${order.cliente.nombre}`,
     `Telefono: ${order.cliente.telefono}`,

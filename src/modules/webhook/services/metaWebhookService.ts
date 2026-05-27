@@ -83,10 +83,16 @@ export async function routeWebhookByPhoneNumberId(
   phoneNumberId: string | null,
   payload: MetaWebhookPayload | null
 ): Promise<TenantRouterResult> {
-  return tenantRouterAgent({
+  const tenantRoute = await tenantRouterAgent({
     phoneNumberId,
     payload,
   });
+
+  if (!tenantRoute.found) {
+    console.warn("No tenant found for phoneNumberId", { phoneNumberId });
+  }
+
+  return tenantRoute;
 }
 
 export async function decideTenantWebhookAction(

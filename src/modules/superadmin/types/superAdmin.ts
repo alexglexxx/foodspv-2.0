@@ -2,6 +2,16 @@ export type SuperAdminTenantStatus = "active" | "inactive";
 
 export type SuperAdminOrderFlowMode = "simple_whatsapp" | "dashboard_managed";
 
+export type SuperAdminOrderConfirmationAction =
+  | "allow"
+  | "require_manual_confirmation";
+
+export interface SuperAdminOrderConfirmationPolicy {
+  enabled: boolean;
+  amountThreshold: number;
+  action: SuperAdminOrderConfirmationAction;
+}
+
 export interface SuperAdminTenantStats {
   productsCount: number;
   activeProductsCount: number;
@@ -21,11 +31,13 @@ export interface SuperAdminTenantSummary {
   location: string;
   heroImageUrl: string;
   whatsappPhone: string;
+  metaPhoneNumberId: string;
   rating: string;
   reviews: string;
   status: SuperAdminTenantStatus;
   orderFlowMode: SuperAdminOrderFlowMode;
   estimatedPreparationMinutes: number;
+  orderConfirmationPolicy: SuperAdminOrderConfirmationPolicy;
   publicUrl: string;
   qrCode: string;
   stats: SuperAdminTenantStats;
@@ -42,11 +54,13 @@ export interface SuperAdminTenantInput {
   location: string;
   heroImageUrl: string;
   whatsappPhone: string;
+  metaPhoneNumberId: string;
   rating: string;
   reviews: string;
   status: SuperAdminTenantStatus;
   orderFlowMode: SuperAdminOrderFlowMode;
   estimatedPreparationMinutes: number;
+  orderConfirmationPolicy: SuperAdminOrderConfirmationPolicy;
 }
 
 export type SuperAdminTenantsResponse =

@@ -1,6 +1,7 @@
 import type { OrderState } from "../types/order";
 
 const ORDER_STATE_LABELS: Record<OrderState, string> = {
+  requires_confirmation: "Requiere confirmación",
   pendiente: "Pendiente",
   preparando: "Preparando",
   listo: "Listo",
@@ -9,6 +10,7 @@ const ORDER_STATE_LABELS: Record<OrderState, string> = {
 };
 
 const ORDER_STATE_TRANSITIONS: Record<OrderState, OrderState[]> = {
+  requires_confirmation: ["preparando", "cancelado"],
   pendiente: ["preparando", "cancelado"],
   preparando: ["listo", "cancelado"],
   listo: ["entregado"],
@@ -18,6 +20,7 @@ const ORDER_STATE_TRANSITIONS: Record<OrderState, OrderState[]> = {
 
 export function isOrderState(value: unknown): value is OrderState {
   return (
+    value === "requires_confirmation" ||
     value === "pendiente" ||
     value === "preparando" ||
     value === "listo" ||

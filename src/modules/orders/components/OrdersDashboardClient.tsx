@@ -159,6 +159,8 @@ function formatCurrency(value: number): string {
 
 function getStatusBadgeClassName(status: OrderState): string {
   switch (status) {
+    case "requires_confirmation":
+      return "border border-orange-200 bg-orange-50 text-orange-800";
     case "pendiente":
       return "border border-amber-200 bg-amber-50 text-amber-800";
     case "preparando":

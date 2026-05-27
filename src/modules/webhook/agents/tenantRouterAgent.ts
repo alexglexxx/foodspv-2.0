@@ -3,7 +3,7 @@ import { adminDb } from "@/lib/firebase-admin";
 import type { MetaWebhookPayload } from "../types/metaWebhook";
 
 interface TenantRouterTenant {
-  active: boolean;
+  active?: boolean;
   metaPhoneNumberId: string;
   [key: string]: unknown;
 }
@@ -43,8 +43,7 @@ export async function tenantRouterAgent(input: {
   const tenantSnapshot = await adminDb
     .collection("tenants")
     .where("metaPhoneNumberId", "==", phoneNumberId)
-    .where("active", "==", true)
-    .limit(1)
+    .limit(10)
     .get();
 
   if (tenantSnapshot.empty) {
@@ -54,13 +53,22 @@ export async function tenantRouterAgent(input: {
     };
   }
 
-  const tenantDocument = tenantSnapshot.docs[0];
+  const tenantDocument = tenantSnapshot.docs.find((document) => {
+    const tenantData = document.data();
+
+    return tenantData.active !== false;
+  });
+
+  if (!tenantDocument) {
+    return {
+      found: false,
+      tenantId: null,
+    };
+  }
+
   const tenantData = tenantDocument.data();
 
-  if (
-    !isNonEmptyString(tenantData.metaPhoneNumberId) ||
-    typeof tenantData.active !== "boolean"
-  ) {
+  if (!isNonEmptyString(tenantData.metaPhoneNumberId)) {
     return {
       found: false,
       tenantId: null,
@@ -72,7 +80,8 @@ export async function tenantRouterAgent(input: {
     tenantId: tenantDocument.id,
     tenant: {
       ...tenantData,
-      active: tenantData.active,
+      active:
+        typeof tenantData.active === "boolean" ? tenantData.active : undefined,
       metaPhoneNumberId: tenantData.metaPhoneNumberId.trim(),
     },
   };

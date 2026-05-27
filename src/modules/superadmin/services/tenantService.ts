@@ -5,6 +5,8 @@ import QRCode from "qrcode";
 
 import { adminDb } from "@/lib/firebase-admin";
 import type {
+  SuperAdminOrderConfirmationAction,
+  SuperAdminOrderConfirmationPolicy,
   SuperAdminOrderFlowMode,
   SuperAdminTenantInput,
   SuperAdminTenantStats,
@@ -25,11 +27,13 @@ interface TenantRecord {
   location?: unknown;
   heroImageUrl?: unknown;
   whatsappPhone?: unknown;
+  metaPhoneNumberId?: unknown;
   rating?: unknown;
   reviews?: unknown;
   status?: unknown;
   orderFlowMode?: unknown;
   estimatedPreparationMinutes?: unknown;
+  orderConfirmationPolicy?: unknown;
   publicUrl?: unknown;
   qrCode?: unknown;
 }
@@ -65,11 +69,17 @@ const DEFAULT_TENANT_INPUT: SuperAdminTenantInput = {
   location: "Puerto Vallarta",
   heroImageUrl: "",
   whatsappPhone: "",
+  metaPhoneNumberId: "",
   rating: "4.8",
   reviews: "0",
   status: "active",
   orderFlowMode: "simple_whatsapp",
   estimatedPreparationMinutes: 20,
+  orderConfirmationPolicy: {
+    enabled: false,
+    amountThreshold: 1,
+    action: "allow",
+  },
 };
 
 function isNonEmptyString(value: unknown): value is string {
@@ -88,12 +98,69 @@ function toOrderFlowMode(value: unknown): SuperAdminOrderFlowMode {
   return value === "dashboard_managed" ? "dashboard_managed" : "simple_whatsapp";
 }
 
+function isWhatsappActive(orderFlowMode: SuperAdminOrderFlowMode): boolean {
+  return orderFlowMode === "simple_whatsapp";
+}
+
 function toPreparationMinutes(value: unknown): number {
   if (typeof value !== "number" || !Number.isFinite(value)) {
     return DEFAULT_TENANT_INPUT.estimatedPreparationMinutes;
   }
 
   return Math.min(180, Math.max(1, Math.round(value)));
+}
+
+function isOrderConfirmationAction(
+  value: unknown
+): value is SuperAdminOrderConfirmationAction {
+  return value === "allow" || value === "require_manual_confirmation";
+}
+
+function normalizeOrderConfirmationPolicy(
+  value: unknown
+): SuperAdminOrderConfirmationPolicy | null {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+
+  const record = value as {
+    enabled?: unknown;
+    amountThreshold?: unknown;
+    action?: unknown;
+  };
+
+  if (typeof record.enabled !== "boolean") {
+    return null;
+  }
+
+  if (
+    typeof record.amountThreshold !== "number" ||
+    !Number.isFinite(record.amountThreshold) ||
+    record.amountThreshold < 1
+  ) {
+    return null;
+  }
+
+  const action = record.enabled ? "require_manual_confirmation" : "allow";
+
+  if (isOrderConfirmationAction(record.action) && record.action !== action) {
+    return null;
+  }
+
+  return {
+    enabled: record.enabled,
+    amountThreshold: Math.round(record.amountThreshold * 100) / 100,
+    action,
+  };
+}
+
+function getOrderConfirmationPolicy(
+  value: unknown
+): SuperAdminOrderConfirmationPolicy {
+  return (
+    normalizeOrderConfirmationPolicy(value) ??
+    DEFAULT_TENANT_INPUT.orderConfirmationPolicy
+  );
 }
 
 function toTenantId(value: unknown): string | null {
@@ -141,12 +208,16 @@ function mapTenantRecord(
     location: toStringValue(record.location, DEFAULT_TENANT_INPUT.location),
     heroImageUrl: toStringValue(record.heroImageUrl, ""),
     whatsappPhone: toStringValue(record.whatsappPhone, ""),
+    metaPhoneNumberId: toStringValue(record.metaPhoneNumberId, ""),
     rating: toStringValue(record.rating, DEFAULT_TENANT_INPUT.rating),
     reviews: toStringValue(record.reviews, DEFAULT_TENANT_INPUT.reviews),
     status: toTenantStatus(record.status),
     orderFlowMode: toOrderFlowMode(record.orderFlowMode),
     estimatedPreparationMinutes: toPreparationMinutes(
       record.estimatedPreparationMinutes
+    ),
+    orderConfirmationPolicy: getOrderConfirmationPolicy(
+      record.orderConfirmationPolicy
     ),
     publicUrl: toStringValue(record.publicUrl, ""),
     qrCode: toStringValue(record.qrCode, ""),
@@ -225,6 +296,11 @@ export function validateSuperAdminTenantInput(
   const estimatedPreparationMinutes = toPreparationMinutes(
     record.estimatedPreparationMinutes
   );
+  const orderFlowMode = toOrderFlowMode(record.orderFlowMode);
+  const metaPhoneNumberId = toStringValue(record.metaPhoneNumberId, "");
+  const orderConfirmationPolicy = normalizeOrderConfirmationPolicy(
+    record.orderConfirmationPolicy
+  );
 
   if (name.length < 3 || name.length > 80) {
     return {
@@ -237,6 +313,28 @@ export function validateSuperAdminTenantInput(
     return {
       valid: false,
       message: "La categoría debe tener entre 3 y 40 caracteres.",
+    };
+  }
+
+  if (!orderConfirmationPolicy) {
+    return {
+      valid: false,
+      message:
+        "Configura la protección de pedidos grandes con un monto desde válido mayor o igual a 1.",
+    };
+  }
+
+  if (isWhatsappActive(orderFlowMode) && metaPhoneNumberId.length === 0) {
+    return {
+      valid: false,
+      message: "Meta Phone Number ID es requerido cuando WhatsApp está activo.",
+    };
+  }
+
+  if (metaPhoneNumberId.length > 0 && metaPhoneNumberId.length < 5) {
+    return {
+      valid: false,
+      message: "Meta Phone Number ID debe tener al menos 5 caracteres.",
     };
   }
 
@@ -256,11 +354,13 @@ export function validateSuperAdminTenantInput(
       location: toStringValue(record.location, DEFAULT_TENANT_INPUT.location),
       heroImageUrl: toStringValue(record.heroImageUrl, ""),
       whatsappPhone: toStringValue(record.whatsappPhone, ""),
+      metaPhoneNumberId,
       rating: toStringValue(record.rating, DEFAULT_TENANT_INPUT.rating),
       reviews: toStringValue(record.reviews, DEFAULT_TENANT_INPUT.reviews),
       status: toTenantStatus(record.status),
-      orderFlowMode: toOrderFlowMode(record.orderFlowMode),
+      orderFlowMode,
       estimatedPreparationMinutes,
+      orderConfirmationPolicy,
     },
   };
 }
@@ -358,11 +458,13 @@ export async function updateSuperAdminTenant(
     location: input.location,
     heroImageUrl: input.heroImageUrl,
     whatsappPhone: input.whatsappPhone,
+    metaPhoneNumberId: input.metaPhoneNumberId,
     rating: input.rating,
     reviews: input.reviews,
     status: input.status,
     orderFlowMode: input.orderFlowMode,
     estimatedPreparationMinutes: input.estimatedPreparationMinutes,
+    orderConfirmationPolicy: input.orderConfirmationPolicy,
     updatedAt: FieldValue.serverTimestamp(),
   });
 

@@ -1,8 +1,17 @@
 export type OrderFlowMode = "simple_whatsapp" | "dashboard_managed";
+export type OrderConfirmationAction =
+  | "allow"
+  | "require_manual_confirmation";
 
 export interface TenantOrderFlowConfig {
   orderFlowMode: OrderFlowMode;
   estimatedPreparationMinutes: number;
+}
+
+export interface TenantOrderConfirmationPolicy {
+  enabled: boolean;
+  amountThreshold: number;
+  action: OrderConfirmationAction;
 }
 
 export interface Tenant {
@@ -23,6 +32,7 @@ export interface Tenant {
 
   phone?: string;
   whatsappPhone?: string;
+  metaPhoneNumberId?: string;
 
   logoUrl?: string;
   heroImageUrl?: string;
@@ -32,6 +42,7 @@ export interface Tenant {
 
   orderFlowMode?: OrderFlowMode;
   estimatedPreparationMinutes?: number;
+  orderConfirmationPolicy?: TenantOrderConfirmationPolicy;
 
   createdAt?: Date;
   updatedAt?: Date;

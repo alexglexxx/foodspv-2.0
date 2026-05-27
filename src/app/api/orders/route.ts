@@ -1,11 +1,85 @@
 import { NextResponse } from "next/server";
 
+import { adminDb } from "@/lib/firebase-admin";
 import { customerConfirmationAgent } from "@/modules/orders/agents/customerConfirmationAgent";
 import { firestoreWriterAgent } from "@/modules/orders/agents/firestoreWriterAgent";
 import { orderValidatorAgent } from "@/modules/orders/agents/orderValidatorAgent";
 import { tenantOrderFlowConfigAgent } from "@/modules/orders/agents/tenantOrderFlowConfigAgent";
 import { whatsappComandaAgent } from "@/modules/orders/agents/whatsappComandaAgent";
 import { whatsappSenderAgent } from "@/modules/orders/agents/whatsappSenderAgent";
+import type { Order } from "@/modules/orders/types/order";
+
+interface OrderConfirmationPolicyRecord {
+  enabled?: unknown;
+  amountThreshold?: unknown;
+  action?: unknown;
+}
+
+interface TenantOrderConfirmationPolicyRecord {
+  orderConfirmationPolicy?: unknown;
+}
+
+interface OrderConfirmationPolicy {
+  enabled: boolean;
+  amountThreshold: number;
+  action: "allow" | "require_manual_confirmation";
+}
+
+const DEFAULT_ORDER_CONFIRMATION_POLICY: OrderConfirmationPolicy = {
+  enabled: false,
+  amountThreshold: 1,
+  action: "allow",
+};
+
+function normalizeOrderConfirmationPolicy(
+  value: unknown
+): OrderConfirmationPolicy {
+  if (!value || typeof value !== "object") {
+    return DEFAULT_ORDER_CONFIRMATION_POLICY;
+  }
+
+  const record = value as OrderConfirmationPolicyRecord;
+  const enabled = record.enabled === true;
+  const amountThreshold =
+    typeof record.amountThreshold === "number" &&
+    Number.isFinite(record.amountThreshold) &&
+    record.amountThreshold >= 1
+      ? record.amountThreshold
+      : DEFAULT_ORDER_CONFIRMATION_POLICY.amountThreshold;
+
+  return {
+    enabled,
+    amountThreshold,
+    action: enabled ? "require_manual_confirmation" : "allow",
+  };
+}
+
+async function getOrderConfirmationPolicy(
+  tenantId: string
+): Promise<OrderConfirmationPolicy> {
+  const tenantSnapshot = await adminDb.collection("tenants").doc(tenantId).get();
+  const tenantRecord = (tenantSnapshot.data() ?? {}) as TenantOrderConfirmationPolicyRecord;
+
+  return normalizeOrderConfirmationPolicy(tenantRecord.orderConfirmationPolicy);
+}
+
+function applyOrderConfirmationPolicy(
+  order: Order,
+  policy: OrderConfirmationPolicy
+): { order: Order; requiresConfirmation: boolean } {
+  const requiresConfirmation =
+    policy.enabled &&
+    policy.action === "require_manual_confirmation" &&
+    order.total >= policy.amountThreshold;
+
+  return {
+    order: {
+      ...order,
+      estado: requiresConfirmation ? "requires_confirmation" : order.estado,
+    },
+    requiresConfirmation,
+  };
+}
 
 export async function POST(request: Request) {
   try {
@@ -24,7 +98,15 @@ export async function POST(request: Request) {
       );
     }
 
-    const persistedOrder = await firestoreWriterAgent(validation.data);
+    const orderConfirmationPolicy = await getOrderConfirmationPolicy(
+      validation.data.tenantId
+    );
+    const orderConfirmation = applyOrderConfirmationPolicy(
+      validation.data,
+      orderConfirmationPolicy
+    );
+
+    const persistedOrder = await firestoreWriterAgent(orderConfirmation.order);
 
     if (!persistedOrder.success) {
       return NextResponse.json(
@@ -37,19 +119,20 @@ export async function POST(request: Request) {
     }
 
     const tenantOrderFlow = await tenantOrderFlowConfigAgent(
-      validation.data.tenantId
+      orderConfirmation.order.tenantId
     );
-    const whatsappMessage = whatsappComandaAgent(validation.data);
+    const whatsappMessage = whatsappComandaAgent(orderConfirmation.order);
     const whatsappDelivery = await whatsappSenderAgent({
-      tenantId: validation.data.tenantId,
+      tenantId: orderConfirmation.order.tenantId,
       whatsappMessage,
     });
     const shouldSendCustomerConfirmation =
       tenantOrderFlow.config.orderFlowMode === "simple_whatsapp" &&
-      whatsappDelivery.success;
+      whatsappDelivery.success &&
+      !orderConfirmation.requiresConfirmation;
     const customerConfirmationMessage = shouldSendCustomerConfirmation
       ? customerConfirmationAgent({
-          order: validation.data,
+          order: orderConfirmation.order,
           tenantName: tenantOrderFlow.tenantName,
           estimatedPreparationMinutes:
             tenantOrderFlow.config.estimatedPreparationMinutes,
@@ -57,9 +140,9 @@ export async function POST(request: Request) {
       : null;
     const customerConfirmationDelivery = customerConfirmationMessage
       ? await whatsappSenderAgent({
-          tenantId: validation.data.tenantId,
+          tenantId: orderConfirmation.order.tenantId,
           whatsappMessage: customerConfirmationMessage,
-          recipientPhone: validation.data.cliente.telefono,
+          recipientPhone: orderConfirmation.order.cliente.telefono,
         })
       : null;
     const deliveredCustomerConfirmation =
@@ -77,7 +160,8 @@ export async function POST(request: Request) {
         success: true,
         message,
         orderId: persistedOrder.orderId,
-        order: validation.data,
+        order: orderConfirmation.order,
+        requiresConfirmation: orderConfirmation.requiresConfirmation,
         tenantOrderFlow,
         whatsappMessage,
         whatsappDelivery,

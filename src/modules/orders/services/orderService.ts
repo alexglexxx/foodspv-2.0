@@ -6,6 +6,7 @@ interface CreateOrderResponseBody {
   message?: string;
   orderId?: string;
   errors?: string[];
+  requiresConfirmation?: boolean;
   tenantOrderFlow?: {
     config?: TenantOrderFlowConfig;
     source?: "tenant" | "default";
@@ -35,6 +36,7 @@ export type CreateOrderResult =
       success: true;
       message: string;
       orderId: string;
+      requiresConfirmation: boolean;
       tenantOrderFlow?: {
         config: TenantOrderFlowConfig;
         source: "tenant" | "default";
@@ -62,6 +64,7 @@ export async function createOrder(order: Order): Promise<CreateOrderResult> {
       success: true,
       message: payload.message ?? "Pedido generado correctamente.",
       orderId: payload.orderId,
+      requiresConfirmation: payload.requiresConfirmation === true,
       tenantOrderFlow: toTenantOrderFlow(payload.tenantOrderFlow),
     };
   }
