@@ -1,6 +1,4 @@
-export type OrderFlowMode =
-  | "simple_whatsapp"
-  | "dashboard_managed";
+export type OrderFlowMode = "simple_whatsapp" | "dashboard_managed";
 
 export interface TenantOrderFlowConfig {
   orderFlowMode: OrderFlowMode;
@@ -9,18 +7,32 @@ export interface TenantOrderFlowConfig {
 
 export interface Tenant {
   id: string;
-  name: string;
-  slug: string;
+  tenantId?: string;
 
-  phone: string;
+  name: string;
+  slug?: string;
+  category?: string;
+  featuredCategory?: string;
+
+  description?: string;
+  greeting?: string;
+  rating?: string;
+  reviews?: string;
+  estimatedTime?: string;
+  location?: string;
+
+  phone?: string;
   whatsappPhone?: string;
 
   logoUrl?: string;
+  heroImageUrl?: string;
 
-  active: boolean;
-  orderFlowMode: OrderFlowMode;
-  estimatedPreparationMinutes: number;
+  active?: boolean;
+  status?: "active" | "inactive";
 
-  createdAt: Date;
-  updatedAt: Date;
+  orderFlowMode?: OrderFlowMode;
+  estimatedPreparationMinutes?: number;
+
+  createdAt?: Date;
+  updatedAt?: Date;
 }

@@ -16,11 +16,20 @@ const tenants = [
     tenantId: "postres-demo",
     name: "Dulce Mordida",
     category: "Postres",
+    featuredCategory: "Postres",
+    description: "Brownies, pasteles, pays y postres caseros para endulzar el día.",
+    greeting: "Antojo dulce por aquí 🍰",
+    rating: "4.8",
+    reviews: "96",
+    estimatedTime: "10–15 min",
+    location: "Puerto Vallarta",
+    heroImageUrl:
+      "https://images.unsplash.com/photo-1488477181946-6428a0291777?q=80&w=1400&auto=format&fit=crop",
     whatsappPhone: "+523221110001",
     products: [
-      ["brownie-chocolate", "Brownie de chocolate", "Brownie húmedo con nuez.", 45, "Brownies"],
-      ["cheesecake-fresa", "Cheesecake de fresa", "Rebanada cremosa con fresa.", 70, "Pasteles"],
-      ["pay-limon", "Pay de limón", "Pay frío con base de galleta.", 55, "Pays"],
+      ["brownie-chocolate", "Brownie de chocolate", "Brownie húmedo con nuez.", 45, "Postres"],
+      ["cheesecake-fresa", "Cheesecake de fresa", "Rebanada cremosa con fresa.", 70, "Postres"],
+      ["pay-limon", "Pay de limón", "Pay frío con base de galleta.", 55, "Postres"],
       ["flan-napolitano", "Flan napolitano", "Flan casero con caramelo.", 38, "Clásicos"],
       ["tres-leches", "Pastel tres leches", "Rebanada suave y húmeda.", 60, "Pasteles"],
       ["galletas-chispas", "Galletas con chispas", "Paquete de 4 piezas.", 35, "Galletas"],
@@ -32,6 +41,15 @@ const tenants = [
     tenantId: "hamburguesas-demo",
     name: "Burger Barrio",
     category: "Hamburguesas",
+    featuredCategory: "Hamburguesas",
+    description: "Hamburguesas jugosas, papas crujientes y malteadas bien frías.",
+    greeting: "Hoy toca burger 🍔",
+    rating: "4.7",
+    reviews: "143",
+    estimatedTime: "20–25 min",
+    location: "Puerto Vallarta",
+    heroImageUrl:
+      "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?q=80&w=1400&auto=format&fit=crop",
     whatsappPhone: "+523221110002",
     products: [
       ["clasica", "Hamburguesa clásica", "Carne, queso, lechuga y tomate.", 95, "Hamburguesas"],
@@ -48,6 +66,15 @@ const tenants = [
     tenantId: "tacos-demo",
     name: "Taquería Los Compas",
     category: "Tacos",
+    featuredCategory: "Tacos",
+    description: "Tacos al pastor, asada, chorizo y especialidades hechas al momento.",
+    greeting: "¡Qué onda! 👋",
+    rating: "4.9",
+    reviews: "128",
+    estimatedTime: "15–20 min",
+    location: "Puerto Vallarta",
+    heroImageUrl:
+      "https://images.unsplash.com/photo-1613514785940-daed07799d9b?q=80&w=1400&auto=format&fit=crop",
     whatsappPhone: "+523221110003",
     products: [
       ["taco-asada", "Taco de asada", "Con cebolla, cilantro y salsa.", 28, "Tacos"],
@@ -64,11 +91,20 @@ const tenants = [
     tenantId: "nieves-demo",
     name: "Nieves La Bahía",
     category: "Nieves",
+    featuredCategory: "Nieves",
+    description: "Nieves, helados, malteadas y especialidades frías para el calor.",
+    greeting: "Algo fresco para hoy 🍨",
+    rating: "4.8",
+    reviews: "87",
+    estimatedTime: "10–15 min",
+    location: "Puerto Vallarta",
+    heroImageUrl:
+      "https://images.unsplash.com/photo-1563805042-7684c019e1cb?q=80&w=1400&auto=format&fit=crop",
     whatsappPhone: "+523221110004",
     products: [
-      ["nieve-limon", "Nieve de limón", "Vaso chico.", 25, "Nieves de agua"],
-      ["nieve-mango", "Nieve de mango", "Vaso chico.", 25, "Nieves de agua"],
-      ["nieve-fresa", "Nieve de fresa", "Vaso chico.", 25, "Nieves de agua"],
+      ["nieve-limon", "Nieve de limón", "Vaso chico.", 25, "Nieves"],
+      ["nieve-mango", "Nieve de mango", "Vaso chico.", 25, "Nieves"],
+      ["nieve-fresa", "Nieve de fresa", "Vaso chico.", 25, "Nieves"],
       ["helado-vainilla", "Helado de vainilla", "Vaso chico.", 35, "Helados"],
       ["helado-chocolate", "Helado de chocolate", "Vaso chico.", 35, "Helados"],
       ["helado-fresa", "Helado de fresa", "Vaso chico.", 35, "Helados"],
@@ -80,6 +116,15 @@ const tenants = [
     tenantId: "elotes-demo",
     name: "Elotes Don Chuy",
     category: "Elotes",
+    featuredCategory: "Elotes",
+    description: "Elotes, esquites y antojitos preparados con mucho queso y chile.",
+    greeting: "Se armó el antojo 🌽",
+    rating: "4.9",
+    reviews: "112",
+    estimatedTime: "10–20 min",
+    location: "Puerto Vallarta",
+    heroImageUrl:
+      "https://images.unsplash.com/photo-1551754655-cd27e38d2076?q=80&w=1400&auto=format&fit=crop",
     whatsappPhone: "+523221110005",
     products: [
       ["elote-vaso", "Elote en vaso", "Con mantequilla.", 45, "Elotes"],
@@ -111,10 +156,12 @@ for (const tenant of tenants) {
   for (const [id, name, description, price, category] of products) {
     await db.collection("tenants").doc(tenantId).collection("products").doc(id).set(
       {
+        tenantId,
         name,
         description,
         price,
         category,
+        available: true,
         active: true,
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
       },
@@ -125,4 +172,4 @@ for (const tenant of tenants) {
   console.log(`✅ ${tenantId} creado con ${products.length} productos`);
 }
 
-console.log("🔥 Seed completo: 5 tenants demo creados");
+console.log("🔥 Seed completo: 5 tenants demo creados con perfil visual");
