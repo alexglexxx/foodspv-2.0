@@ -1,3 +1,18 @@
+## TASK-016
+
+Estado: COMPLETE
+
+Resultado:
+
+- Nuevo módulo SuperAdmin en `/superadmin`
+- Login con Firebase Auth desde cliente
+- APIs protegidas en `/api/superadmin/tenants`
+- Autorización server-side para rol `superadmin`
+- Gestión global de tenants: listar, crear, editar y eliminar
+- Métricas por tenant y globales: productos, pedidos, pendientes y ventas
+- Firestore Admin aislado en backend; frontend consume DTOs vía Route Handlers
+- Build verificado con `npm run build`
+
 ## TASK-015
 
 Estado: COMPLETE

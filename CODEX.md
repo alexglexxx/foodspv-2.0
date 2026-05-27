@@ -534,6 +534,49 @@ COMPLETE
 
 ---
 
+TASK-016
+
+Description:
+
+Construir módulo SuperAdmin para gestión global de tenants
+
+Dependencies:
+
+- Firebase Auth
+- Firebase Admin
+- Firestore
+- App Router Route Handlers
+- arquitectura multi-tenant `tenants/{tenantId}`
+
+Files:
+
+- src/app/superadmin/page.tsx
+- src/app/api/superadmin/tenants/route.ts
+- src/app/api/superadmin/tenants/[tenantId]/route.ts
+- src/modules/superadmin/agents/superAdminAuthAgent.ts
+- src/modules/superadmin/agents/superAdminTenantAgent.ts
+- src/modules/superadmin/components/SuperAdminClient.tsx
+- src/modules/superadmin/services/superAdminApiService.ts
+- src/modules/superadmin/types/superAdmin.ts
+- src/lib/firebase-admin.ts
+- docs/project-status.md
+- CODEX.md
+
+Expected result:
+
+- página `/superadmin` con acceso por Firebase Auth
+- autorización backend para rol `superadmin`
+- listado global de tenants con métricas de productos, pedidos, pendientes y ventas
+- alta, edición y eliminación de tenants desde Route Handlers protegidos
+- Firebase Admin aislado en backend y sin consultas privilegiadas desde frontend
+- compatibilidad con App Router y Firebase App Hosting
+
+Status:
+
+COMPLETE
+
+---
+
 TASK-002
 
 Description:
