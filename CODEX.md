@@ -228,6 +228,24 @@ COMPLETE
 
 ---
 
+### Agent 08
+
+Name:
+
+Tenant Public Access Agent
+
+Responsibilities:
+
+- generar URL pública por tenant desde `NEXT_PUBLIC_BASE_URL`
+- generar QR automático para el acceso público del tenant
+- exponer URL y QR en SuperAdmin sin tocar pedidos ni carrito
+
+Status:
+
+COMPLETE
+
+---
+
 ## TASK SYSTEM
 
 Each task must follow:
@@ -570,6 +588,46 @@ Expected result:
 - alta, edición y eliminación de tenants desde Route Handlers protegidos
 - Firebase Admin aislado en backend y sin consultas privilegiadas desde frontend
 - compatibilidad con App Router y Firebase App Hosting
+
+Status:
+
+COMPLETE
+
+---
+
+TASK-017
+
+Description:
+
+Agregar URL pública y QR automático por tenant desde SuperAdmin
+
+Dependencies:
+
+- TASK-016
+- NEXT_PUBLIC_BASE_URL
+- qrcode
+- SuperAdmin Route Handlers
+
+Files:
+
+- src/modules/superadmin/types/superAdmin.ts
+- src/modules/superadmin/services/tenantService.ts
+- src/modules/superadmin/components/SuperAdminClient.tsx
+- src/app/api/superadmin/tenants/route.ts
+- src/types/qrcode.d.ts
+- package.json
+- package-lock.json
+- docs/project-status.md
+- CODEX.md
+
+Expected result:
+
+- crear tenants con `publicUrl` y `qrCode`
+- mostrar URL pública y QR en cada tarjeta de SuperAdmin
+- permitir copiar URL y descargar QR como `tenant-{tenantId}-qr.png`
+- mostrar estados vacíos para URL o QR no disponibles
+- reportar `NEXT_PUBLIC_BASE_URL no configurada` si falta la variable
+- no modificar pedidos, webhooks, auth, dashboard actual ni flujo carrito
 
 Status:
 

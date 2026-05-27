@@ -1,3 +1,16 @@
+## TASK-017
+
+Estado: COMPLETE
+
+Resultado:
+
+- Tenants creados desde SuperAdmin ahora guardan `publicUrl` y `qrCode`
+- URL pública generada desde `NEXT_PUBLIC_BASE_URL` + `tenantId`
+- QR generado automáticamente como PNG Data URL con `qrcode`
+- SuperAdmin muestra URL pública, QR, copia de URL y descarga del PNG
+- Si falta `NEXT_PUBLIC_BASE_URL`, la API responde `NEXT_PUBLIC_BASE_URL no configurada` sin romper build
+- Sin cambios en pedidos, webhooks, auth, dashboard actual ni carrito
+
 ## TASK-016
 
 Estado: COMPLETE

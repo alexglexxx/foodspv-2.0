@@ -26,6 +26,8 @@ export interface SuperAdminTenantSummary {
   status: SuperAdminTenantStatus;
   orderFlowMode: SuperAdminOrderFlowMode;
   estimatedPreparationMinutes: number;
+  publicUrl: string;
+  qrCode: string;
   stats: SuperAdminTenantStats;
 }
 

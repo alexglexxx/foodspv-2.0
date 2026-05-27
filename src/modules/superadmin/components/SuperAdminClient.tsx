@@ -265,15 +265,49 @@ export function SuperAdminClient() {
         resetForm();
       }
 
-      setMessage("Tenant eliminado.");
+      setMessage("Tenant desactivado.");
       await loadTenants(user);
     } catch (error) {
       setErrorMessage(
-        error instanceof Error ? error.message : "No se pudo eliminar el tenant."
+        error instanceof Error ? error.message : "No se pudo desactivar el tenant."
       );
     } finally {
       setDeletingTenantId(null);
     }
+  }
+
+  async function copyTenantUrl(tenant: SuperAdminTenantSummary): Promise<void> {
+    if (!tenant.publicUrl) {
+      setErrorMessage("No configurada");
+      setMessage(null);
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(tenant.publicUrl);
+      setMessage("URL pública copiada.");
+      setErrorMessage(null);
+    } catch {
+      setErrorMessage("No se pudo copiar la URL pública.");
+      setMessage(null);
+    }
+  }
+
+  function downloadTenantQr(tenant: SuperAdminTenantSummary): void {
+    if (!tenant.qrCode) {
+      setErrorMessage("QR no disponible");
+      setMessage(null);
+      return;
+    }
+
+    const link = document.createElement("a");
+    link.href = tenant.qrCode;
+    link.download = `tenant-${tenant.tenantId}-qr.png`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setMessage("QR descargado.");
+    setErrorMessage(null);
   }
 
   if (!authReady) {
@@ -595,8 +629,8 @@ export function SuperAdminClient() {
                         className="rounded-full border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-extrabold text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
                       >
                         {deletingTenantId === tenant.tenantId
-                          ? "Eliminando..."
-                          : "Eliminar"}
+                          ? "Desactivando..."
+                          : "Desactivar"}
                       </button>
                     </div>
                   </div>
@@ -616,6 +650,50 @@ export function SuperAdminClient() {
                       label="Ventas"
                       value={formatCurrency(tenant.stats.totalSales)}
                     />
+                  </div>
+
+                  <div className="mt-5 grid gap-4 rounded-2xl bg-stone-50 p-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
+                    <div className="min-w-0">
+                      <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-stone-400">
+                        URL pública
+                      </p>
+                      <p className="mt-2 break-all text-sm font-bold text-stone-700">
+                        {tenant.publicUrl || "No configurada"}
+                      </p>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={() => void copyTenantUrl(tenant)}
+                          disabled={!tenant.publicUrl}
+                          className="rounded-full border border-stone-300 bg-white px-4 py-2 text-sm font-extrabold transition hover:bg-stone-100 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          Copiar URL
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => downloadTenantQr(tenant)}
+                          disabled={!tenant.qrCode}
+                          className="rounded-full border border-stone-300 bg-white px-4 py-2 text-sm font-extrabold transition hover:bg-stone-100 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          Descargar QR
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="flex h-32 w-32 items-center justify-center rounded-2xl bg-white p-3 ring-1 ring-stone-200">
+                      {tenant.qrCode ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={tenant.qrCode}
+                          alt={`QR público de ${tenant.name}`}
+                          className="h-full w-full object-contain"
+                        />
+                      ) : (
+                        <span className="text-center text-xs font-extrabold text-stone-400">
+                          QR no disponible
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </article>
               ))}

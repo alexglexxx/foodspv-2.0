@@ -15,6 +15,16 @@ function getTenantMutationError(error: unknown): { message: string; status: numb
     };
   }
 
+  if (
+    error instanceof Error &&
+    error.message === "NEXT_PUBLIC_BASE_URL_NOT_CONFIGURED"
+  ) {
+    return {
+      message: "NEXT_PUBLIC_BASE_URL no configurada",
+      status: 500,
+    };
+  }
+
   return {
     message: "No se pudo guardar el tenant.",
     status: 500,

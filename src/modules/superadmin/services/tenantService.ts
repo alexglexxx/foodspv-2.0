@@ -1,6 +1,7 @@
 import "server-only";
 
 import { FieldValue } from "firebase-admin/firestore";
+import QRCode from "qrcode";
 
 import { adminDb } from "@/lib/firebase-admin";
 import type {
@@ -29,6 +30,8 @@ interface TenantRecord {
   status?: unknown;
   orderFlowMode?: unknown;
   estimatedPreparationMinutes?: unknown;
+  publicUrl?: unknown;
+  qrCode?: unknown;
 }
 
 interface ProductRecord {
@@ -103,6 +106,20 @@ function toTenantId(value: unknown): string | null {
   return /^[a-z0-9][a-z0-9-]{2,60}$/.test(tenantId) ? tenantId : null;
 }
 
+export function generateTenantUrl(tenantId: string): string {
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
+
+  if (!isNonEmptyString(baseUrl)) {
+    throw new Error("NEXT_PUBLIC_BASE_URL_NOT_CONFIGURED");
+  }
+
+  return `${baseUrl.replace(/\/$/, "")}/${tenantId}`;
+}
+
+export async function generateTenantQRCode(url: string): Promise<string> {
+  return await QRCode.toDataURL(url);
+}
+
 function mapTenantRecord(
   tenantId: string,
   record: TenantRecord,
@@ -131,6 +148,8 @@ function mapTenantRecord(
     estimatedPreparationMinutes: toPreparationMinutes(
       record.estimatedPreparationMinutes
     ),
+    publicUrl: toStringValue(record.publicUrl, ""),
+    qrCode: toStringValue(record.qrCode, ""),
     stats,
   };
 }
@@ -297,9 +316,14 @@ export async function createSuperAdminTenant(
     throw new Error("TENANT_ALREADY_EXISTS");
   }
 
+  const publicUrl = generateTenantUrl(input.tenantId);
+  const qrCode = await generateTenantQRCode(publicUrl);
+
   await tenantRef.set({
     ...input,
     tenantId: input.tenantId,
+    publicUrl,
+    qrCode,
     createdAt: FieldValue.serverTimestamp(),
     updatedAt: FieldValue.serverTimestamp(),
   });
