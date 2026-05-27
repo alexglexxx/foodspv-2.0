@@ -465,39 +465,39 @@ export function OrderMenuClient({ tenantId }: OrderMenuClientProps) {
   }
 
   return (
-    <div className="min-h-screen bg-[#faf5ed] text-stone-950">
+    <div className="min-h-screen bg-[#120f0b] text-[#fff7ed]">
       <main className="mx-auto flex w-full max-w-5xl flex-col pb-32">
-        <section className="relative overflow-hidden border-b border-stone-200 bg-[#fffaf2] px-5 pb-5 pt-4 sm:px-8 sm:pb-6 sm:pt-5">
+        <section className="relative overflow-hidden border-b border-[#3a2d22] bg-[#1c1712] px-5 pb-5 pt-4 sm:px-8 sm:pb-6 sm:pt-5">
           <div
             className="absolute inset-y-0 right-0 w-[58%] bg-cover bg-center opacity-95"
             style={{
-              backgroundImage: `linear-gradient(90deg, #fffaf2 0%, rgba(255,250,242,0.86) 30%, rgba(255,250,242,0.2) 68%), url(${restaurantProfile.heroImageUrl})`,
+              backgroundImage: `linear-gradient(90deg, #1c1712 0%, rgba(28,23,18,0.92) 34%, rgba(28,23,18,0.25) 72%), url(${restaurantProfile.heroImageUrl})`,
             }}
             aria-hidden="true"
           />
 
           <div className="relative z-10">
             <div className="mb-5 flex items-center justify-end sm:mb-6">
-              <div className="inline-flex max-w-[75%] items-center gap-2 rounded-full bg-white/80 px-3 py-2 text-xs font-bold text-stone-900 shadow-sm ring-1 ring-stone-200 backdrop-blur sm:text-sm">
+              <div className="inline-flex max-w-[75%] items-center gap-2 rounded-full bg-[#241d16]/85 px-3 py-2 text-xs font-bold text-[#fff7ed] shadow-sm ring-1 ring-[#3a2d22] backdrop-blur sm:text-sm">
                 <span aria-hidden="true">🏪</span>
                 <span className="truncate">{restaurantProfile.name}</span>
                 <span aria-hidden="true">⌄</span>
               </div>
             </div>
 
-            <p className="text-sm font-extrabold text-orange-600">
+            <p className="text-sm font-extrabold text-orange-300">
               {restaurantProfile.greeting}
             </p>
 
-            <h1 className="mt-2 max-w-[14rem] text-3xl font-black leading-[1.05] tracking-tight text-stone-950 sm:max-w-md sm:text-4xl">
+            <h1 className="mt-2 max-w-[14rem] text-3xl font-black leading-[1.05] tracking-tight text-[#fff7ed] sm:max-w-md sm:text-4xl">
               {restaurantProfile.name}
             </h1>
 
-            <p className="mt-3 line-clamp-2 max-w-[17rem] text-sm font-medium leading-6 text-stone-600 sm:max-w-md">
+            <p className="mt-3 line-clamp-2 max-w-[17rem] text-sm font-medium leading-6 text-[#c8b8a3] sm:max-w-md">
               {restaurantProfile.description}
             </p>
 
-            <div className="mt-4 flex flex-wrap items-center gap-2 text-xs font-bold text-stone-900 sm:text-sm">
+            <div className="mt-4 flex flex-wrap items-center gap-2 text-xs font-bold text-[#fff7ed] sm:text-sm">
               <span className="inline-flex items-center gap-2">
                 <span aria-hidden="true">⭐</span>
                 {restaurantProfile.rating} ({restaurantProfile.reviews})
@@ -508,7 +508,7 @@ export function OrderMenuClient({ tenantId }: OrderMenuClientProps) {
                 {restaurantProfile.estimatedTime}
               </span>
 
-              <span className="inline-flex items-center gap-2 rounded-full bg-white/75 px-3 py-1.5 shadow-sm ring-1 ring-stone-200 backdrop-blur">
+              <span className="inline-flex items-center gap-2 rounded-full bg-[#241d16]/85 px-3 py-1.5 shadow-sm ring-1 ring-[#3a2d22] backdrop-blur">
                 <span aria-hidden="true">📍</span>
                 {restaurantProfile.location}
               </span>
@@ -519,11 +519,11 @@ export function OrderMenuClient({ tenantId }: OrderMenuClientProps) {
         <section className="px-5 py-5 sm:px-8">
           <div className="mb-4 flex flex-col gap-4">
             <div className="flex items-center justify-between gap-4">
-              <h2 className="text-3xl font-black tracking-tight text-stone-950">
+              <h2 className="text-3xl font-black tracking-tight text-[#fff7ed]">
                 Menú
               </h2>
 
-              <div className="hidden rounded-full bg-white px-4 py-3 text-sm font-medium text-stone-400 shadow-sm ring-1 ring-stone-200 sm:block">
+              <div className="hidden rounded-full bg-[#241d16] px-4 py-3 text-sm font-medium text-[#9f8f7a] shadow-sm ring-1 ring-[#3a2d22] sm:block">
                 🔎 Buscar productos...
               </div>
             </div>
@@ -536,8 +536,8 @@ export function OrderMenuClient({ tenantId }: OrderMenuClientProps) {
                   onClick={() => scrollToCategory(categoryKey)}
                   className={
                     index === 0
-                      ? "shrink-0 rounded-full bg-orange-600 px-5 py-3 text-sm font-extrabold text-white shadow-sm transition hover:bg-orange-700"
-                      : "shrink-0 rounded-full bg-white px-5 py-3 text-sm font-extrabold text-stone-900 shadow-sm ring-1 ring-stone-200 transition hover:bg-stone-50"
+                      ? "shrink-0 rounded-full bg-orange-600 px-5 py-3 text-sm font-extrabold text-white shadow-sm transition hover:bg-orange-500"
+                      : "shrink-0 rounded-full bg-[#241d16] px-5 py-3 text-sm font-extrabold text-[#fff7ed] shadow-sm ring-1 ring-[#3a2d22] transition hover:bg-[#2b231a]"
                   }
                 >
                   <span className="mr-2" aria-hidden="true">
@@ -550,19 +550,19 @@ export function OrderMenuClient({ tenantId }: OrderMenuClientProps) {
           </div>
 
           {isLoading ? (
-            <div className="rounded-[2rem] border border-stone-200 bg-white p-6 text-sm font-medium text-stone-500 shadow-sm">
+            <div className="rounded-[2rem] border border-[#3a2d22] bg-[#1c1712] p-6 text-sm font-medium text-[#c8b8a3] shadow-sm">
               Preparando el menú...
             </div>
           ) : null}
 
           {errorMessage ? (
-            <div className="rounded-[2rem] border border-rose-200 bg-rose-50 p-6 text-sm font-medium text-rose-700 shadow-sm">
+            <div className="rounded-[2rem] border border-rose-500/30 bg-rose-500/15 p-6 text-sm font-medium text-rose-300 shadow-sm">
               No se pudo cargar el menú. Intenta de nuevo en unos minutos.
             </div>
           ) : null}
 
           {!isLoading && !errorMessage && products.length === 0 ? (
-            <div className="rounded-[2rem] border border-dashed border-stone-300 bg-white p-6 text-sm font-medium text-stone-500 shadow-sm">
+            <div className="rounded-[2rem] border border-dashed border-[#3a2d22] bg-[#1c1712] p-6 text-sm font-medium text-[#c8b8a3] shadow-sm">
               Por ahora no hay productos disponibles.
             </div>
           ) : null}
@@ -574,19 +574,19 @@ export function OrderMenuClient({ tenantId }: OrderMenuClientProps) {
                 ref={(element) => {
                   categoryRefs.current[categoryKey] = element;
                 }}
-                className="rounded-[1.75rem] bg-white p-5 shadow-sm ring-1 ring-stone-200"
+                className="rounded-[1.75rem] bg-[#1c1712] p-5 shadow-sm ring-1 ring-[#3a2d22]"
               >
                 <div className="mb-4 flex flex-wrap items-center gap-3">
                   <span className="text-2xl" aria-hidden="true">
                     {getCategoryIcon(categoryKey)}
                   </span>
 
-                  <h3 className="text-2xl font-black text-stone-950">
+                  <h3 className="text-2xl font-black text-[#fff7ed]">
                     {getCategoryLabel(categoryKey)}
                   </h3>
 
                   {index === 0 ? (
-                    <span className="rounded-full bg-orange-50 px-3 py-1 text-xs font-extrabold text-orange-600">
+                    <span className="rounded-full bg-orange-500/15 px-3 py-1 text-xs font-extrabold text-orange-300">
                       Los favoritos de la casa
                     </span>
                   ) : null}
@@ -614,13 +614,13 @@ export function OrderMenuClient({ tenantId }: OrderMenuClientProps) {
           </div>
 
           {successMessage ? (
-            <p className="mt-6 rounded-2xl bg-emerald-50 p-4 text-sm font-bold text-emerald-700">
+            <p className="mt-6 rounded-2xl border border-emerald-500/30 bg-emerald-500/15 p-4 text-sm font-bold text-emerald-300">
               {successMessage}
             </p>
           ) : null}
 
           {submitError ? (
-            <p className="mt-6 rounded-2xl bg-rose-50 p-4 text-sm font-bold text-rose-700">
+            <p className="mt-6 rounded-2xl border border-rose-500/30 bg-rose-500/15 p-4 text-sm font-bold text-rose-300">
               {submitError}
             </p>
           ) : null}

@@ -27,16 +27,16 @@ export function CartSummary({
   const hasItems = itemCount > 0;
 
   return (
-    <section className="fixed inset-x-0 bottom-0 z-50 border-t border-stone-200 bg-white/95 px-4 py-3 shadow-[0_-12px_30px_rgba(0,0,0,0.12)] backdrop-blur">
+    <section className="fixed inset-x-0 bottom-0 z-50 border-t border-[#3a2d22] bg-[#1c1712]/95 px-4 py-3 shadow-[0_-12px_30px_rgba(0,0,0,0.28)] backdrop-blur">
       <div className="mx-auto flex w-full max-w-3xl items-center gap-3">
         <button
           type="button"
           onClick={onOpenCart}
           disabled={!hasItems}
-          className="flex min-w-0 flex-1 items-center justify-between rounded-2xl bg-stone-950 px-4 py-3 text-left text-white transition hover:bg-stone-800 disabled:cursor-not-allowed disabled:bg-stone-300 disabled:text-stone-600"
+          className="flex min-w-0 flex-1 items-center justify-between rounded-2xl bg-[#241d16] px-4 py-3 text-left text-[#fff7ed] ring-1 ring-[#3a2d22] transition hover:bg-[#2b231a] disabled:cursor-not-allowed disabled:text-[#9f8f7a]"
         >
           <span className="min-w-0">
-            <span className="block text-xs font-semibold uppercase tracking-[0.16em] text-amber-300">
+            <span className="block text-xs font-semibold uppercase tracking-[0.16em] text-orange-300">
               Carrito
             </span>
             <span className="block truncate text-sm font-semibold">
@@ -55,7 +55,7 @@ export function CartSummary({
           type="button"
           onClick={onGenerateOrder}
           disabled={!hasItems}
-          className="shrink-0 rounded-2xl bg-amber-400 px-4 py-3 text-sm font-bold text-stone-950 transition hover:bg-amber-300 disabled:cursor-not-allowed disabled:bg-stone-300 disabled:text-stone-500"
+          className="shrink-0 rounded-2xl bg-orange-600 px-4 py-3 text-sm font-bold text-white transition hover:bg-orange-500 disabled:cursor-not-allowed disabled:bg-[#3a2d22] disabled:text-[#9f8f7a]"
         >
           Pedir
         </button>
