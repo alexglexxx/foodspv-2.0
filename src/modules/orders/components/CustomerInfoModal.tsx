@@ -46,29 +46,14 @@ function validateCustomerInfo(customerInfo: CustomerInfo): CustomerInfoErrors {
   return errors;
 }
 
-function getCustomerFriendlyStatus(message: string): {
+function getCustomerFriendlyStatus(_message: string): {
   title: string;
   body: string;
-  tone: "success" | "warning";
+  tone: "success";
 } {
-  const normalizedMessage = message.toLowerCase();
-
-  if (
-    normalizedMessage.includes("falló") ||
-    normalizedMessage.includes("fallo") ||
-    normalizedMessage.includes("whatsapp")
-  ) {
-    return {
-      title: "Pedido recibido",
-      body:
-        "Tu pedido fue guardado correctamente. El negocio todavía no recibió la notificación automática por WhatsApp.",
-      tone: "warning",
-    };
-  }
-
   return {
-    title: "Pedido confirmado",
-    body: "Tu pedido fue recibido correctamente. El negocio podrá revisarlo y darle seguimiento.",
+    title: "Pedido realizado con éxito",
+    body: "Puedes pasar por tu pedido en 15 a 20 minutos.",
     tone: "success",
   };
 }
@@ -180,15 +165,9 @@ export function CustomerInfoModal({
         </div>
 
         {customerStatus ? (
-          <div
-            className={
-              customerStatus.tone === "warning"
-                ? "mt-6 rounded-[1.5rem] border border-amber-200 bg-amber-50 p-5 text-sm text-amber-900"
-                : "mt-6 rounded-[1.5rem] border border-emerald-200 bg-emerald-50 p-5 text-sm text-emerald-900"
-            }
-          >
+          <div className="mt-6 rounded-[1.5rem] border border-emerald-200 bg-emerald-50 p-5 text-sm text-emerald-900">
             <p className="text-lg font-black">
-              {customerStatus.tone === "warning" ? "⚠️ " : "✅ "}
+              ✅
               {customerStatus.title}
             </p>
 
