@@ -8,6 +8,7 @@ import {
   routeWebhookByPhoneNumberId,
   summarizeMetaWebhookEvent,
 } from "@/modules/webhook/services/metaWebhookService";
+import { whatsappWorkerAgent } from "@/modules/whatsapp/agents/whatsappWorkerAgent";
 
 export const dynamic = "force-dynamic";
 
@@ -48,10 +49,16 @@ export async function POST(request: Request) {
     const phoneNumberId = extractPhoneNumberId(payload);
     const tenantRoute = await routeWebhookByPhoneNumberId(phoneNumberId, payload);
     const tenantAction = await decideTenantWebhookAction(tenantRoute, payload);
+    const workerResult = await whatsappWorkerAgent({
+      tenantAction,
+      payload,
+      tenantRoute,
+    });
     const summary = summarizeMetaWebhookEvent(payload, tenantRoute);
 
     logWebhookEvent(summary);
     console.info("Meta tenant action resolved", tenantAction);
+    console.info("WhatsApp worker result", workerResult);
   } catch (error) {
     console.error("Meta webhook payload could not be processed safely.", {
       error: error instanceof Error ? error.message : "unknown_error",
