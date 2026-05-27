@@ -1,3 +1,11 @@
+import type { TenantTheme } from "@/modules/theme/types/theme";
+
+export type {
+  TenantTheme,
+  TenantThemeTypography,
+  TenantThemeVisualStyle,
+} from "@/modules/theme/types/theme";
+
 export type OrderFlowMode = "simple_whatsapp" | "dashboard_managed";
 export type OrderConfirmationAction =
   | "allow"
@@ -43,6 +51,7 @@ export interface Tenant {
   orderFlowMode?: OrderFlowMode;
   estimatedPreparationMinutes?: number;
   orderConfirmationPolicy?: TenantOrderConfirmationPolicy;
+  tenantTheme?: TenantTheme;
 
   createdAt?: Date;
   updatedAt?: Date;

@@ -1,3 +1,16 @@
+## TASK-019
+
+Estado: COMPLETE
+
+Resultado:
+
+- Nueva arquitectura inicial `src/modules/theme` con tipos, presets, normalización y `designerAgent`
+- Modelo tenant extendido con `tenantTheme` para colores, tipografía y estilo visual
+- SuperAdmin ahora permite configurar "Diseño visual" con colores, typography, visual style y presets rápidos
+- El menú público lee `tenantTheme` desde Firestore y aplica tokens con CSS variables
+- Si un tenant no tiene theme, el menú conserva el fallback visual actual
+- Sin cambios en webhook, QR, Meta, modifiers, roles ni lógica de pedidos
+
 ## TASK-018
 
 Estado: COMPLETE

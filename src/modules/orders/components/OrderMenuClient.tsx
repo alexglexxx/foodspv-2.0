@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { collection, doc, getDoc, getDocs, query } from "firebase/firestore";
 
 import { db } from "@/lib/firebase/client";
+import { normalizeTenantTheme } from "@/modules/theme/services/themeService";
+import type { TenantTheme } from "@/modules/theme/types/theme";
 import type { CartItem } from "@/types/cart.types";
 import type { Product } from "@/types/product.types";
 
@@ -28,6 +30,7 @@ interface RestaurantProfile {
   location: string;
   heroImageUrl: string;
   featuredCategory: string;
+  tenantTheme: TenantTheme;
 }
 
 interface FirestoreTenantRecord {
@@ -41,6 +44,7 @@ interface FirestoreTenantRecord {
   heroImageUrl?: unknown;
   featuredCategory?: unknown;
   category?: unknown;
+  tenantTheme?: unknown;
 }
 
 interface FirestoreProductRecord {
@@ -65,6 +69,7 @@ const DEFAULT_PROFILE: RestaurantProfile = {
   featuredCategory: "Favoritos",
   heroImageUrl:
     "https://images.unsplash.com/photo-1504674900247-0877df9cc836?q=80&w=1400&auto=format&fit=crop",
+  tenantTheme: normalizeTenantTheme(null),
 };
 
 const CATEGORY_ICONS: Record<string, string> = {
@@ -159,6 +164,33 @@ function getCategoryPriority(categoryKey: string, featuredCategoryKey: string): 
   return 50;
 }
 
+function getTypographyClassName(typography: TenantTheme["typography"]): string {
+  if (typography === "soft") {
+    return "font-medium";
+  }
+
+  if (typography === "modern") {
+    return "font-sans";
+  }
+
+  return "font-black";
+}
+
+function getTenantThemeStyle(theme: TenantTheme): CSSProperties {
+  void theme;
+
+  return {
+    "--tenant-primary": "#ea580c",
+    "--tenant-primary-hover": "#f97316",
+    "--tenant-secondary": "#35271b",
+    "--tenant-background": "#20170f",
+    "--tenant-surface": "#2a1f16",
+    "--tenant-text": "#fff7ed",
+    "--tenant-muted": "#d8c7ad",
+    "--tenant-ring": "#5a402b",
+  } as CSSProperties;
+}
+
 function mapTenantProfile(record: FirestoreTenantRecord | undefined): RestaurantProfile {
   const featuredCategory =
     toOptionalString(record?.featuredCategory) ??
@@ -177,6 +209,7 @@ function mapTenantProfile(record: FirestoreTenantRecord | undefined): Restaurant
     heroImageUrl:
       toOptionalString(record?.heroImageUrl) ?? DEFAULT_PROFILE.heroImageUrl,
     featuredCategory,
+    tenantTheme: normalizeTenantTheme(record?.tenantTheme),
   };
 }
 
@@ -252,6 +285,10 @@ export function OrderMenuClient({ tenantId }: OrderMenuClientProps) {
   const categoryRefs = useRef<Record<string, HTMLElement | null>>({});
 
   const featuredCategoryKey = normalizeCategory(restaurantProfile.featuredCategory);
+  const tenantThemeStyle = getTenantThemeStyle(restaurantProfile.tenantTheme);
+  const typographyClassName = getTypographyClassName(
+    restaurantProfile.tenantTheme.typography
+  );
 
   useEffect(() => {
     let isMounted = true;
@@ -465,20 +502,24 @@ export function OrderMenuClient({ tenantId }: OrderMenuClientProps) {
   }
 
   return (
-    <div className="min-h-screen bg-[#120f0b] text-[#fff7ed]">
+    <div
+      className={`min-h-screen bg-[#20170f] text-[#fff7ed] ${typographyClassName}`}
+      style={tenantThemeStyle}
+    >
       <main className="mx-auto flex w-full max-w-5xl flex-col pb-32">
-        <section className="relative overflow-hidden border-b border-[#3a2d22] bg-[#1c1712] px-5 pb-5 pt-4 sm:px-8 sm:pb-6 sm:pt-5">
+        <section className="relative overflow-hidden border-b border-[#5a402b] bg-[#2a1f16] px-5 pb-5 pt-4 sm:px-8 sm:pb-6 sm:pt-5">
           <div
-            className="absolute inset-y-0 right-0 w-[58%] bg-cover bg-center opacity-95"
+            className="absolute inset-0 bg-cover bg-center opacity-50"
             style={{
-              backgroundImage: `linear-gradient(90deg, #1c1712 0%, rgba(28,23,18,0.92) 34%, rgba(28,23,18,0.25) 72%), url(${restaurantProfile.heroImageUrl})`,
+              backgroundImage: `linear-gradient(90deg, rgba(42,31,22,0.98) 0%, rgba(42,31,22,0.94) 45%, rgba(42,31,22,0.78) 100%), url(${restaurantProfile.heroImageUrl})`,
             }}
             aria-hidden="true"
           />
+          <div className="absolute inset-0 bg-[#20170f]/55" aria-hidden="true" />
 
-          <div className="relative z-10">
+          <div className="relative z-10 drop-shadow-[0_2px_8px_rgba(32,23,15,0.9)]">
             <div className="mb-5 flex items-center justify-end sm:mb-6">
-              <div className="inline-flex max-w-[75%] items-center gap-2 rounded-full bg-[#241d16]/85 px-3 py-2 text-xs font-bold text-[#fff7ed] shadow-sm ring-1 ring-[#3a2d22] backdrop-blur sm:text-sm">
+              <div className="inline-flex max-w-[75%] items-center gap-2 rounded-full bg-[#35271b]/90 px-3 py-2 text-xs font-bold text-[#fff7ed] shadow-sm ring-1 ring-[#5a402b] backdrop-blur sm:text-sm">
                 <span aria-hidden="true">🏪</span>
                 <span className="truncate">{restaurantProfile.name}</span>
                 <span aria-hidden="true">⌄</span>
@@ -493,7 +534,7 @@ export function OrderMenuClient({ tenantId }: OrderMenuClientProps) {
               {restaurantProfile.name}
             </h1>
 
-            <p className="mt-3 line-clamp-2 max-w-[17rem] text-sm font-medium leading-6 text-[#c8b8a3] sm:max-w-md">
+            <p className="mt-3 line-clamp-2 max-w-[17rem] text-sm font-medium leading-6 text-[#d8c7ad] sm:max-w-md">
               {restaurantProfile.description}
             </p>
 
@@ -508,7 +549,7 @@ export function OrderMenuClient({ tenantId }: OrderMenuClientProps) {
                 {restaurantProfile.estimatedTime}
               </span>
 
-              <span className="inline-flex items-center gap-2 rounded-full bg-[#241d16]/85 px-3 py-1.5 shadow-sm ring-1 ring-[#3a2d22] backdrop-blur">
+              <span className="inline-flex items-center gap-2 rounded-full bg-[#35271b]/90 px-3 py-1.5 shadow-sm ring-1 ring-[#5a402b] backdrop-blur">
                 <span aria-hidden="true">📍</span>
                 {restaurantProfile.location}
               </span>
@@ -523,7 +564,7 @@ export function OrderMenuClient({ tenantId }: OrderMenuClientProps) {
                 Menú
               </h2>
 
-              <div className="hidden rounded-full bg-[#241d16] px-4 py-3 text-sm font-medium text-[#9f8f7a] shadow-sm ring-1 ring-[#3a2d22] sm:block">
+              <div className="hidden rounded-full bg-[#35271b] px-4 py-3 text-sm font-medium text-[#d8c7ad] shadow-sm ring-1 ring-[#5a402b] sm:block">
                 🔎 Buscar productos...
               </div>
             </div>
@@ -537,7 +578,7 @@ export function OrderMenuClient({ tenantId }: OrderMenuClientProps) {
                   className={
                     index === 0
                       ? "shrink-0 rounded-full bg-orange-600 px-5 py-3 text-sm font-extrabold text-white shadow-sm transition hover:bg-orange-500"
-                      : "shrink-0 rounded-full bg-[#241d16] px-5 py-3 text-sm font-extrabold text-[#fff7ed] shadow-sm ring-1 ring-[#3a2d22] transition hover:bg-[#2b231a]"
+                      : "shrink-0 rounded-full bg-[#35271b] px-5 py-3 text-sm font-extrabold text-[#fff7ed] shadow-sm ring-1 ring-[#5a402b] transition hover:bg-[#3d2d1f]"
                   }
                 >
                   <span className="mr-2" aria-hidden="true">
@@ -550,7 +591,7 @@ export function OrderMenuClient({ tenantId }: OrderMenuClientProps) {
           </div>
 
           {isLoading ? (
-            <div className="rounded-[2rem] border border-[#3a2d22] bg-[#1c1712] p-6 text-sm font-medium text-[#c8b8a3] shadow-sm">
+            <div className="rounded-[2rem] border border-[#5a402b] bg-[#2a1f16] p-6 text-sm font-medium text-[#d8c7ad] shadow-sm">
               Preparando el menú...
             </div>
           ) : null}
@@ -562,7 +603,7 @@ export function OrderMenuClient({ tenantId }: OrderMenuClientProps) {
           ) : null}
 
           {!isLoading && !errorMessage && products.length === 0 ? (
-            <div className="rounded-[2rem] border border-dashed border-[#3a2d22] bg-[#1c1712] p-6 text-sm font-medium text-[#c8b8a3] shadow-sm">
+            <div className="rounded-[2rem] border border-dashed border-[#5a402b] bg-[#2a1f16] p-6 text-sm font-medium text-[#d8c7ad] shadow-sm">
               Por ahora no hay productos disponibles.
             </div>
           ) : null}
@@ -574,7 +615,7 @@ export function OrderMenuClient({ tenantId }: OrderMenuClientProps) {
                 ref={(element) => {
                   categoryRefs.current[categoryKey] = element;
                 }}
-                className="rounded-[1.75rem] bg-[#1c1712] p-5 shadow-sm ring-1 ring-[#3a2d22]"
+                className="rounded-[1.75rem] bg-[#2a1f16] p-5 shadow-sm ring-1 ring-[#5a402b]"
               >
                 <div className="mb-4 flex flex-wrap items-center gap-3">
                   <span className="text-2xl" aria-hidden="true">

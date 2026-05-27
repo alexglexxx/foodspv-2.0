@@ -1,3 +1,5 @@
+import type { TenantTheme } from "@/modules/theme/types/theme";
+
 export type SuperAdminTenantStatus = "active" | "inactive";
 
 export type SuperAdminOrderFlowMode = "simple_whatsapp" | "dashboard_managed";
@@ -38,6 +40,7 @@ export interface SuperAdminTenantSummary {
   orderFlowMode: SuperAdminOrderFlowMode;
   estimatedPreparationMinutes: number;
   orderConfirmationPolicy: SuperAdminOrderConfirmationPolicy;
+  tenantTheme: TenantTheme;
   publicUrl: string;
   qrCode: string;
   stats: SuperAdminTenantStats;
@@ -61,6 +64,7 @@ export interface SuperAdminTenantInput {
   orderFlowMode: SuperAdminOrderFlowMode;
   estimatedPreparationMinutes: number;
   orderConfirmationPolicy: SuperAdminOrderConfirmationPolicy;
+  tenantTheme: TenantTheme;
 }
 
 export type SuperAdminTenantsResponse =

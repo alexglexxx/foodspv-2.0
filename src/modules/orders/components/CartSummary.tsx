@@ -27,16 +27,16 @@ export function CartSummary({
   const hasItems = itemCount > 0;
 
   return (
-    <section className="fixed inset-x-0 bottom-0 z-50 border-t border-[#3a2d22] bg-[#1c1712]/95 px-4 py-3 shadow-[0_-12px_30px_rgba(0,0,0,0.28)] backdrop-blur">
+    <section className="fixed inset-x-0 bottom-0 z-50 border-t border-[var(--tenant-secondary)] bg-[var(--tenant-surface)]/95 px-4 py-3 shadow-[0_-12px_30px_rgba(0,0,0,0.28)] backdrop-blur">
       <div className="mx-auto flex w-full max-w-3xl items-center gap-3">
         <button
           type="button"
           onClick={onOpenCart}
           disabled={!hasItems}
-          className="flex min-w-0 flex-1 items-center justify-between rounded-2xl bg-[#241d16] px-4 py-3 text-left text-[#fff7ed] ring-1 ring-[#3a2d22] transition hover:bg-[#2b231a] disabled:cursor-not-allowed disabled:text-[#9f8f7a]"
+          className="flex min-w-0 flex-1 items-center justify-between rounded-2xl bg-[var(--tenant-secondary)] px-4 py-3 text-left text-[var(--tenant-text)] ring-1 ring-[var(--tenant-secondary)] transition brightness-100 hover:brightness-110 disabled:cursor-not-allowed disabled:text-[color-mix(in_srgb,var(--tenant-text)_58%,transparent)]"
         >
           <span className="min-w-0">
-            <span className="block text-xs font-semibold uppercase tracking-[0.16em] text-orange-300">
+            <span className="block text-xs font-semibold uppercase tracking-[0.16em] text-[var(--tenant-accent)]">
               Carrito
             </span>
             <span className="block truncate text-sm font-semibold">
@@ -55,7 +55,7 @@ export function CartSummary({
           type="button"
           onClick={onGenerateOrder}
           disabled={!hasItems}
-          className="shrink-0 rounded-2xl bg-orange-600 px-4 py-3 text-sm font-bold text-white transition hover:bg-orange-500 disabled:cursor-not-allowed disabled:bg-[#3a2d22] disabled:text-[#9f8f7a]"
+          className="shrink-0 rounded-2xl bg-[var(--tenant-primary)] px-4 py-3 text-sm font-bold text-white transition brightness-100 hover:brightness-110 disabled:cursor-not-allowed disabled:bg-[var(--tenant-secondary)] disabled:text-[color-mix(in_srgb,var(--tenant-text)_58%,transparent)]"
         >
           Pedir
         </button>

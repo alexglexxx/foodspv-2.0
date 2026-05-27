@@ -4,6 +4,9 @@ import { FieldValue } from "firebase-admin/firestore";
 import QRCode from "qrcode";
 
 import { adminDb } from "@/lib/firebase-admin";
+import { generateThemeFromCategory } from "@/modules/theme/agents/designerAgent";
+import { DEFAULT_TENANT_THEME } from "@/modules/theme/constants/themePresets";
+import { normalizeTenantTheme } from "@/modules/theme/services/themeService";
 import type {
   SuperAdminOrderConfirmationAction,
   SuperAdminOrderConfirmationPolicy,
@@ -34,6 +37,7 @@ interface TenantRecord {
   orderFlowMode?: unknown;
   estimatedPreparationMinutes?: unknown;
   orderConfirmationPolicy?: unknown;
+  tenantTheme?: unknown;
   publicUrl?: unknown;
   qrCode?: unknown;
 }
@@ -80,6 +84,7 @@ const DEFAULT_TENANT_INPUT: SuperAdminTenantInput = {
     amountThreshold: 1,
     action: "allow",
   },
+  tenantTheme: DEFAULT_TENANT_THEME,
 };
 
 function isNonEmptyString(value: unknown): value is string {
@@ -219,6 +224,7 @@ function mapTenantRecord(
     orderConfirmationPolicy: getOrderConfirmationPolicy(
       record.orderConfirmationPolicy
     ),
+    tenantTheme: normalizeTenantTheme(record.tenantTheme),
     publicUrl: toStringValue(record.publicUrl, ""),
     qrCode: toStringValue(record.qrCode, ""),
     stats,
@@ -301,6 +307,10 @@ export function validateSuperAdminTenantInput(
   const orderConfirmationPolicy = normalizeOrderConfirmationPolicy(
     record.orderConfirmationPolicy
   );
+  const tenantTheme =
+    record.tenantTheme && typeof record.tenantTheme === "object"
+      ? normalizeTenantTheme(record.tenantTheme)
+      : generateThemeFromCategory(category);
 
   if (name.length < 3 || name.length > 80) {
     return {
@@ -361,6 +371,7 @@ export function validateSuperAdminTenantInput(
       orderFlowMode,
       estimatedPreparationMinutes,
       orderConfirmationPolicy,
+      tenantTheme,
     },
   };
 }
@@ -465,6 +476,7 @@ export async function updateSuperAdminTenant(
     orderFlowMode: input.orderFlowMode,
     estimatedPreparationMinutes: input.estimatedPreparationMinutes,
     orderConfirmationPolicy: input.orderConfirmationPolicy,
+    tenantTheme: input.tenantTheme,
     updatedAt: FieldValue.serverTimestamp(),
   });
 

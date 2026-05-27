@@ -667,6 +667,51 @@ COMPLETE
 
 ---
 
+TASK-019
+
+Description:
+
+Crear arquitectura inicial de tenant themes y agente diseñador para branding visual dinámico
+
+Dependencies:
+
+- TASK-016
+- TASK-018
+- Firestore tenant config
+- Menú público existente
+
+Files:
+
+- src/modules/theme/types/theme.ts
+- src/modules/theme/constants/themePresets.ts
+- src/modules/theme/services/themeService.ts
+- src/modules/theme/agents/designerAgent.ts
+- src/types/tenant.types.ts
+- src/modules/superadmin/types/superAdmin.ts
+- src/modules/superadmin/services/tenantService.ts
+- src/modules/superadmin/components/SuperAdminClient.tsx
+- src/modules/orders/components/OrderMenuClient.tsx
+- src/modules/orders/components/ProductCard.tsx
+- src/modules/orders/components/CartSummary.tsx
+- src/modules/orders/components/CartDrawer.tsx
+- docs/project-status.md
+- CODEX.md
+
+Expected result:
+
+- tenants pueden guardar `tenantTheme` con tokens visuales
+- SuperAdmin permite configurar diseño visual y aplicar presets rápidos
+- `generateThemeFromCategory(category)` resuelve un preset inicial sin IA externa
+- el menú público aplica colores, fondos, botones, badges y tipografía mediante CSS variables
+- tenants sin theme mantienen fallback visual actual
+- sin tocar webhook, QR, Meta, modifiers, roles ni lógica de pedidos
+
+Status:
+
+COMPLETE
+
+---
+
 TASK-002
 
 Description:
