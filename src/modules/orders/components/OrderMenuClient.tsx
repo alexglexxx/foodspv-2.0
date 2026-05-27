@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { collection, doc, getDoc, getDocs, query } from "firebase/firestore";
 
 import { db } from "@/lib/firebase/client";
@@ -249,6 +249,7 @@ export function OrderMenuClient({ tenantId }: OrderMenuClientProps) {
   const [successOrderId, setSuccessOrderId] = useState<string | null>(null);
   const [submittedTotal, setSubmittedTotal] = useState<number | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const categoryRefs = useRef<Record<string, HTMLElement | null>>({});
 
   const featuredCategoryKey = normalizeCategory(restaurantProfile.featuredCategory);
 
@@ -375,6 +376,13 @@ export function OrderMenuClient({ tenantId }: OrderMenuClientProps) {
     });
   }
 
+  function scrollToCategory(categoryKey: string): void {
+    categoryRefs.current[categoryKey]?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  }
+
   function increaseItem(productId: string): void {
     setCartItems((currentItems) =>
       currentItems.map((item) =>
@@ -437,21 +445,18 @@ export function OrderMenuClient({ tenantId }: OrderMenuClientProps) {
       const result = await createOrder(order);
 
       if (!result.success) {
-        const validationMessage =
-          result.errors.length > 0 ? ` ${result.errors.join(" ")}` : "";
-
-        setSubmitError(`${result.message}${validationMessage}`);
+        setSubmitError("No se pudo generar el pedido. Intenta de nuevo.");
         return;
       }
 
-      setSuccessMessage(result.message);
+      setSuccessMessage("Pedido generado correctamente.");
       setSuccessOrderId(result.orderId);
       setSubmittedTotal(total);
       setCartItems([]);
     } catch (error) {
       setSubmitError(
         error instanceof Error
-          ? error.message
+          ? "No se pudo generar el pedido. Intenta de nuevo."
           : "Ocurrió un error inesperado al generar el pedido."
       );
     } finally {
@@ -462,9 +467,9 @@ export function OrderMenuClient({ tenantId }: OrderMenuClientProps) {
   return (
     <div className="min-h-screen bg-[#faf5ed] text-stone-950">
       <main className="mx-auto flex w-full max-w-5xl flex-col pb-32">
-        <section className="relative overflow-hidden border-b border-stone-200 bg-[#fffaf2] px-5 pb-8 pt-6 sm:px-8">
+        <section className="relative overflow-hidden border-b border-stone-200 bg-[#fffaf2] px-5 pb-5 pt-4 sm:px-8 sm:pb-6 sm:pt-5">
           <div
-            className="absolute inset-y-0 right-0 w-[62%] bg-cover bg-center opacity-95"
+            className="absolute inset-y-0 right-0 w-[58%] bg-cover bg-center opacity-95"
             style={{
               backgroundImage: `linear-gradient(90deg, #fffaf2 0%, rgba(255,250,242,0.86) 30%, rgba(255,250,242,0.2) 68%), url(${restaurantProfile.heroImageUrl})`,
             }}
@@ -472,8 +477,8 @@ export function OrderMenuClient({ tenantId }: OrderMenuClientProps) {
           />
 
           <div className="relative z-10">
-            <div className="mb-12 flex items-center justify-end">
-              <div className="inline-flex max-w-[75%] items-center gap-2 rounded-full bg-white/80 px-4 py-3 text-sm font-bold text-stone-900 shadow-sm ring-1 ring-stone-200 backdrop-blur">
+            <div className="mb-5 flex items-center justify-end sm:mb-6">
+              <div className="inline-flex max-w-[75%] items-center gap-2 rounded-full bg-white/80 px-3 py-2 text-xs font-bold text-stone-900 shadow-sm ring-1 ring-stone-200 backdrop-blur sm:text-sm">
                 <span aria-hidden="true">🏪</span>
                 <span className="truncate">{restaurantProfile.name}</span>
                 <span aria-hidden="true">⌄</span>
@@ -484,15 +489,15 @@ export function OrderMenuClient({ tenantId }: OrderMenuClientProps) {
               {restaurantProfile.greeting}
             </p>
 
-            <h1 className="mt-4 max-w-[14rem] text-5xl font-black leading-[1.05] tracking-tight text-stone-950 sm:max-w-md sm:text-6xl">
+            <h1 className="mt-2 max-w-[14rem] text-3xl font-black leading-[1.05] tracking-tight text-stone-950 sm:max-w-md sm:text-4xl">
               {restaurantProfile.name}
             </h1>
 
-            <p className="mt-5 max-w-[17rem] text-base font-medium leading-8 text-stone-600 sm:max-w-md">
+            <p className="mt-3 line-clamp-2 max-w-[17rem] text-sm font-medium leading-6 text-stone-600 sm:max-w-md">
               {restaurantProfile.description}
             </p>
 
-            <div className="mt-8 flex flex-wrap items-center gap-3 text-sm font-bold text-stone-900">
+            <div className="mt-4 flex flex-wrap items-center gap-2 text-xs font-bold text-stone-900 sm:text-sm">
               <span className="inline-flex items-center gap-2">
                 <span aria-hidden="true">⭐</span>
                 {restaurantProfile.rating} ({restaurantProfile.reviews})
@@ -503,7 +508,7 @@ export function OrderMenuClient({ tenantId }: OrderMenuClientProps) {
                 {restaurantProfile.estimatedTime}
               </span>
 
-              <span className="inline-flex items-center gap-2 rounded-full bg-white/75 px-3 py-2 shadow-sm ring-1 ring-stone-200 backdrop-blur">
+              <span className="inline-flex items-center gap-2 rounded-full bg-white/75 px-3 py-1.5 shadow-sm ring-1 ring-stone-200 backdrop-blur">
                 <span aria-hidden="true">📍</span>
                 {restaurantProfile.location}
               </span>
@@ -511,10 +516,10 @@ export function OrderMenuClient({ tenantId }: OrderMenuClientProps) {
           </div>
         </section>
 
-        <section className="px-5 py-7 sm:px-8">
-          <div className="mb-6 flex flex-col gap-4">
+        <section className="px-5 py-5 sm:px-8">
+          <div className="mb-4 flex flex-col gap-4">
             <div className="flex items-center justify-between gap-4">
-              <h2 className="text-4xl font-black tracking-tight text-stone-950">
+              <h2 className="text-3xl font-black tracking-tight text-stone-950">
                 Menú
               </h2>
 
@@ -525,19 +530,21 @@ export function OrderMenuClient({ tenantId }: OrderMenuClientProps) {
 
             <div className="flex gap-3 overflow-x-auto pb-1">
               {groupedProducts.map(([categoryKey], index) => (
-                <div
+                <button
                   key={categoryKey}
+                  type="button"
+                  onClick={() => scrollToCategory(categoryKey)}
                   className={
                     index === 0
-                      ? "shrink-0 rounded-full bg-orange-600 px-5 py-3 text-sm font-extrabold text-white shadow-sm"
-                      : "shrink-0 rounded-full bg-white px-5 py-3 text-sm font-extrabold text-stone-900 shadow-sm ring-1 ring-stone-200"
+                      ? "shrink-0 rounded-full bg-orange-600 px-5 py-3 text-sm font-extrabold text-white shadow-sm transition hover:bg-orange-700"
+                      : "shrink-0 rounded-full bg-white px-5 py-3 text-sm font-extrabold text-stone-900 shadow-sm ring-1 ring-stone-200 transition hover:bg-stone-50"
                   }
                 >
                   <span className="mr-2" aria-hidden="true">
                     {getCategoryIcon(categoryKey)}
                   </span>
                   {getCategoryLabel(categoryKey)}
-                </div>
+                </button>
               ))}
             </div>
           </div>
@@ -564,6 +571,9 @@ export function OrderMenuClient({ tenantId }: OrderMenuClientProps) {
             {groupedProducts.map(([categoryKey, categoryProducts], index) => (
               <section
                 key={categoryKey}
+                ref={(element) => {
+                  categoryRefs.current[categoryKey] = element;
+                }}
                 className="rounded-[1.75rem] bg-white p-5 shadow-sm ring-1 ring-stone-200"
               >
                 <div className="mb-4 flex flex-wrap items-center gap-3">
