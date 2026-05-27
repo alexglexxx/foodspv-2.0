@@ -635,6 +635,38 @@ COMPLETE
 
 ---
 
+TASK-018
+
+Description:
+
+Crear ruta pública dinámica por tenant
+
+Dependencies:
+
+- TASK-008
+- TASK-017
+- App Router dynamic route segments
+- Firestore Admin
+
+Files:
+
+- src/app/[tenant]/page.tsx
+- docs/project-status.md
+- CODEX.md
+
+Expected result:
+
+- URLs públicas `/{tenantId}` renderizan el menú público existente
+- validar existencia del tenant en `tenants/{tenantId}`
+- usar `notFound()` si el tenant no existe o está desactivado
+- no duplicar menú ni tocar SuperAdmin, QR, webhook, App Hosting, carrito o pedidos
+
+Status:
+
+COMPLETE
+
+---
+
 TASK-002
 
 Description:

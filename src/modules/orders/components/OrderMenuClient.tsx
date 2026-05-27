@@ -592,7 +592,7 @@ export function OrderMenuClient({ tenantId }: OrderMenuClientProps) {
                   ) : null}
                 </div>
 
-                <div className="grid gap-4 md:grid-cols-2">
+                <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 [-webkit-overflow-scrolling:touch]">
                   {categoryProducts.map((product) => {
                     const cartItem = cartItems.find(
                       (item) => item.productId === product.id
@@ -601,6 +601,7 @@ export function OrderMenuClient({ tenantId }: OrderMenuClientProps) {
                     return (
                       <ProductCard
                         key={product.id}
+                        className="shrink-0 snap-start"
                         product={product}
                         quantityInCart={cartItem?.quantity ?? 0}
                         onAddProduct={addProduct}

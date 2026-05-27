@@ -1,3 +1,15 @@
+## TASK-018
+
+Estado: COMPLETE
+
+Resultado:
+
+- Nueva ruta pública dinámica `/{tenantId}` en `src/app/[tenant]/page.tsx`
+- La página valida `tenants/{tenantId}` con Firestore Admin antes de renderizar
+- Si el tenant no existe o `active === false`, responde con `notFound()`
+- El menú público reutiliza `OrderMenuClient` con el `tenantId` de la URL
+- Sin cambios en SuperAdmin, QR, webhook, Firebase App Hosting, carrito ni pedidos
+
 ## TASK-017
 
 Estado: COMPLETE
