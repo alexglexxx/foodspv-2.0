@@ -57,14 +57,6 @@ function mapProduct(
   };
 }
 
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat("es-MX", {
-    style: "currency",
-    currency: "MXN",
-    maximumFractionDigits: 2,
-  }).format(value);
-}
-
 function mapCartItemsToOrderItems(items: CartItem[]): Order["productos"] {
   return items.map((item) => ({
     id: item.productId,
@@ -116,25 +108,17 @@ export function OrderMenuClient({ tenantId }: OrderMenuClientProps) {
         const snapshot = await getDocs(productsQuery);
         const loadedProducts = snapshot.docs
           .map((document) =>
-            mapProduct(
-              document.id,
-              tenantId,
-              document.data() as FirestoreProductRecord
-            )
+            mapProduct(document.id, tenantId, document.data() as FirestoreProductRecord)
           )
           .filter((product): product is Product => product !== null);
 
-        if (!isMounted) {
-          return;
-        }
+        if (!isMounted) return;
 
         setProducts(
           loadedProducts.sort((left, right) => left.name.localeCompare(right.name))
         );
       } catch (error) {
-        if (!isMounted) {
-          return;
-        }
+        if (!isMounted) return;
 
         setErrorMessage(
           error instanceof Error
@@ -142,9 +126,7 @@ export function OrderMenuClient({ tenantId }: OrderMenuClientProps) {
             : "No se pudieron cargar los productos."
         );
       } finally {
-        if (isMounted) {
-          setIsLoading(false);
-        }
+        if (isMounted) setIsLoading(false);
       }
     }
 
@@ -180,10 +162,7 @@ export function OrderMenuClient({ tenantId }: OrderMenuClientProps) {
 
       return currentItems.map((item) =>
         item.productId === product.id
-          ? {
-              ...item,
-              quantity: item.quantity + 1,
-            }
+          ? { ...item, quantity: item.quantity + 1 }
           : item
       );
     });
@@ -193,10 +172,7 @@ export function OrderMenuClient({ tenantId }: OrderMenuClientProps) {
     setCartItems((currentItems) =>
       currentItems.map((item) =>
         item.productId === productId
-          ? {
-              ...item,
-              quantity: item.quantity + 1,
-            }
+          ? { ...item, quantity: item.quantity + 1 }
           : item
       )
     );
@@ -207,10 +183,7 @@ export function OrderMenuClient({ tenantId }: OrderMenuClientProps) {
       currentItems
         .map((item) =>
           item.productId === productId
-            ? {
-                ...item,
-                quantity: item.quantity - 1,
-              }
+            ? { ...item, quantity: item.quantity - 1 }
             : item
         )
         .filter((item) => item.quantity > 0)
@@ -231,9 +204,7 @@ export function OrderMenuClient({ tenantId }: OrderMenuClientProps) {
   }
 
   function openCustomerModal(): void {
-    if (cartItems.length === 0) {
-      return;
-    }
+    if (cartItems.length === 0) return;
 
     resetOrderFeedback();
     setIsCartOpen(false);
@@ -242,18 +213,14 @@ export function OrderMenuClient({ tenantId }: OrderMenuClientProps) {
   }
 
   function closeCustomerModal(): void {
-    if (isSubmitting) {
-      return;
-    }
+    if (isSubmitting) return;
 
     setIsCustomerModalOpen(false);
     resetOrderFeedback();
   }
 
   async function submitOrder(customerInfo: CustomerInfo): Promise<void> {
-    if (cartItems.length === 0) {
-      return;
-    }
+    if (cartItems.length === 0) return;
 
     setIsSubmitting(true);
     setSubmitError(null);
@@ -287,7 +254,7 @@ export function OrderMenuClient({ tenantId }: OrderMenuClientProps) {
 
   return (
     <div className="min-h-screen bg-[#f7f1e8] text-stone-900">
-      <main className="mx-auto flex w-full max-w-7xl flex-col px-4 py-8 sm:px-6 lg:px-8">
+      <main className="mx-auto flex w-full max-w-7xl flex-col px-4 pb-32 pt-6 sm:px-6 lg:px-8">
         <section className="overflow-hidden rounded-[2rem] bg-stone-950 px-6 py-8 text-white shadow-2xl sm:px-8">
           <p className="text-xs font-semibold uppercase tracking-[0.3em] text-amber-300">
             FoodSPV
@@ -296,8 +263,7 @@ export function OrderMenuClient({ tenantId }: OrderMenuClientProps) {
             Menú dinámico conectado al carrito del tenant
           </h1>
           <p className="mt-4 max-w-2xl text-sm leading-7 text-stone-300 sm:text-base">
-            Explora productos cargados desde Firestore, agrega al carrito y
-            recalcula el total en tiempo real antes de generar el pedido.
+            Explora productos cargados desde Firestore, agrega al carrito y genera tu pedido.
           </p>
           <div className="mt-6 inline-flex rounded-full bg-white/10 px-4 py-2 text-sm text-stone-200">
             tenantId: {tenantId}
@@ -314,13 +280,6 @@ export function OrderMenuClient({ tenantId }: OrderMenuClientProps) {
                 Productos disponibles
               </h2>
             </div>
-            <button
-              type="button"
-              onClick={() => setIsCartOpen(true)}
-              className="rounded-full border border-stone-300 bg-white px-4 py-2 text-sm font-semibold text-stone-900 transition hover:border-stone-400 hover:bg-stone-50"
-            >
-              Abrir carrito
-            </button>
           </div>
 
           {isLoading ? (
@@ -359,53 +318,25 @@ export function OrderMenuClient({ tenantId }: OrderMenuClientProps) {
           </div>
         </section>
 
-        <CartSummary
-          items={cartItems}
-          total={total}
-          onOpenCart={() => setIsCartOpen(true)}
-          onGenerateOrder={openCustomerModal}
-        />
+        {successMessage ? (
+          <p className="mt-6 rounded-2xl bg-emerald-50 p-4 text-sm font-medium text-emerald-700">
+            {successMessage}
+          </p>
+        ) : null}
 
-        <section className="mt-6 rounded-[2rem] border border-stone-200 bg-white p-6 shadow-sm">
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-amber-700">
-            Flujo conectado
+        {submitError ? (
+          <p className="mt-6 rounded-2xl bg-rose-50 p-4 text-sm font-medium text-rose-700">
+            {submitError}
           </p>
-          <h2 className="mt-2 text-2xl font-semibold text-stone-900">
-            Carrito integrado con la API de órdenes
-          </h2>
-          <p className="mt-3 text-sm leading-6 text-stone-600">
-            El flujo ahora solicita nombre y teléfono, genera el payload con
-            `tenantId`, productos y total, y envía el pedido a `POST /api/orders`
-            desde este cliente.
-          </p>
-          <div className="mt-4 rounded-2xl bg-stone-950 p-4 text-sm text-stone-100">
-            <pre className="overflow-x-auto whitespace-pre-wrap break-words">
-              {JSON.stringify(
-                {
-                  tenantId,
-                  cliente: {
-                    nombre: "",
-                    telefono: "",
-                  },
-                  productos: mapCartItemsToOrderItems(cartItems),
-                  total,
-                },
-                null,
-                2
-              )}
-            </pre>
-          </div>
-          {successMessage ? (
-            <p className="mt-4 text-sm font-medium text-emerald-700">
-              Pedido generado correctamente por{" "}
-              {formatCurrency(submittedTotal ?? 0)}.
-            </p>
-          ) : null}
-          {submitError ? (
-            <p className="mt-4 text-sm font-medium text-rose-700">{submitError}</p>
-          ) : null}
-        </section>
+        ) : null}
       </main>
+
+      <CartSummary
+        items={cartItems}
+        total={total}
+        onOpenCart={() => setIsCartOpen(true)}
+        onGenerateOrder={openCustomerModal}
+      />
 
       <CartDrawer
         isOpen={isCartOpen}

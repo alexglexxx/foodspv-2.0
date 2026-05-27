@@ -24,42 +24,41 @@ export function CartSummary({
   onGenerateOrder,
 }: CartSummaryProps) {
   const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
+  const hasItems = itemCount > 0;
 
   return (
-    <section className="sticky bottom-4 z-20 mt-8 rounded-[2rem] border border-stone-900 bg-stone-950 p-5 text-white shadow-2xl">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-amber-300">
-            Carrito activo
-          </p>
-          <h2 className="mt-2 text-2xl font-semibold">
-            {itemCount} producto{itemCount === 1 ? "" : "s"} seleccionados
-          </h2>
-          <p className="mt-1 text-sm text-stone-300">
-            Total actualizado automáticamente conforme agregas productos.
-          </p>
-        </div>
+    <section className="fixed inset-x-0 bottom-0 z-50 border-t border-stone-200 bg-white/95 px-4 py-3 shadow-[0_-12px_30px_rgba(0,0,0,0.12)] backdrop-blur">
+      <div className="mx-auto flex w-full max-w-3xl items-center gap-3">
+        <button
+          type="button"
+          onClick={onOpenCart}
+          disabled={!hasItems}
+          className="flex min-w-0 flex-1 items-center justify-between rounded-2xl bg-stone-950 px-4 py-3 text-left text-white transition hover:bg-stone-800 disabled:cursor-not-allowed disabled:bg-stone-300 disabled:text-stone-600"
+        >
+          <span className="min-w-0">
+            <span className="block text-xs font-semibold uppercase tracking-[0.16em] text-amber-300">
+              Carrito
+            </span>
+            <span className="block truncate text-sm font-semibold">
+              {hasItems
+                ? `${itemCount} producto${itemCount === 1 ? "" : "s"}`
+                : "Sin productos"}
+            </span>
+          </span>
 
-        <div className="flex flex-col gap-3 sm:items-end">
-          <p className="text-3xl font-semibold">{formatCurrency(total)}</p>
-          <div className="flex flex-col gap-3 sm:flex-row">
-            <button
-              type="button"
-              onClick={onOpenCart}
-              className="rounded-full border border-white/20 px-4 py-2 text-sm font-semibold text-white transition hover:border-white/40 hover:bg-white/10"
-            >
-              Ver carrito
-            </button>
-            <button
-              type="button"
-              onClick={onGenerateOrder}
-              disabled={items.length === 0}
-              className="rounded-full bg-amber-400 px-4 py-2 text-sm font-semibold text-stone-950 transition hover:bg-amber-300 disabled:cursor-not-allowed disabled:bg-stone-600 disabled:text-stone-300"
-            >
-              Generar pedido
-            </button>
-          </div>
-        </div>
+          <span className="shrink-0 text-base font-bold">
+            {formatCurrency(total)}
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={onGenerateOrder}
+          disabled={!hasItems}
+          className="shrink-0 rounded-2xl bg-amber-400 px-4 py-3 text-sm font-bold text-stone-950 transition hover:bg-amber-300 disabled:cursor-not-allowed disabled:bg-stone-300 disabled:text-stone-500"
+        >
+          Pedir
+        </button>
       </div>
     </section>
   );
