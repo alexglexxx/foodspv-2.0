@@ -27,6 +27,7 @@ import type {
   SuperAdminTenantStatus,
   SuperAdminTenantSummary,
 } from "../types/superAdmin";
+import { ProductManager } from "./ProductManager";
 
 const EMPTY_TENANT_FORM: SuperAdminTenantInput = {
   tenantId: "",
@@ -137,6 +138,13 @@ export function SuperAdminClient() {
         }
       ),
     [tenants]
+  );
+  const selectedTenant = useMemo(
+    () =>
+      editingTenantId
+        ? tenants.find((tenant) => tenant.tenantId === editingTenantId) ?? null
+        : null,
+    [editingTenantId, tenants]
   );
 
   useEffect(() => {
@@ -932,6 +940,16 @@ export function SuperAdminClient() {
             </div>
           </section>
         </section>
+
+        {selectedTenant ? (
+          <ProductManager
+            key={selectedTenant.tenantId}
+            user={user}
+            tenantId={selectedTenant.tenantId}
+            tenantName={selectedTenant.name}
+            onProductsChanged={() => loadTenants(user)}
+          />
+        ) : null}
       </main>
     </div>
   );

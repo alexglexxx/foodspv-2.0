@@ -1,6 +1,9 @@
 import type { User } from "firebase/auth";
 
 import type {
+  SuperAdminProductInput,
+  SuperAdminProductMutationResponse,
+  SuperAdminProductsResponse,
   SuperAdminTenantInput,
   SuperAdminTenantMutationResponse,
   SuperAdminTenantsResponse,
@@ -60,4 +63,69 @@ export async function deleteSuperAdminTenant(
   });
 
   return (await response.json()) as SuperAdminTenantMutationResponse;
+}
+
+export async function fetchSuperAdminTenantProducts(
+  user: User,
+  tenantId: string
+): Promise<SuperAdminProductsResponse> {
+  const response = await fetch(
+    `/api/superadmin/tenants/${tenantId}/products`,
+    {
+      headers: await getAuthorizationHeaders(user),
+    }
+  );
+
+  return (await response.json()) as SuperAdminProductsResponse;
+}
+
+export async function createSuperAdminProduct(
+  user: User,
+  tenantId: string,
+  input: SuperAdminProductInput
+): Promise<SuperAdminProductMutationResponse> {
+  const response = await fetch(
+    `/api/superadmin/tenants/${tenantId}/products`,
+    {
+      method: "POST",
+      headers: await getAuthorizationHeaders(user),
+      body: JSON.stringify(input),
+    }
+  );
+
+  return (await response.json()) as SuperAdminProductMutationResponse;
+}
+
+export async function updateSuperAdminProduct(
+  user: User,
+  tenantId: string,
+  productId: string,
+  input: SuperAdminProductInput
+): Promise<SuperAdminProductMutationResponse> {
+  const response = await fetch(
+    `/api/superadmin/tenants/${tenantId}/products/${productId}`,
+    {
+      method: "PATCH",
+      headers: await getAuthorizationHeaders(user),
+      body: JSON.stringify(input),
+    }
+  );
+
+  return (await response.json()) as SuperAdminProductMutationResponse;
+}
+
+export async function deleteSuperAdminProduct(
+  user: User,
+  tenantId: string,
+  productId: string
+): Promise<SuperAdminProductMutationResponse> {
+  const response = await fetch(
+    `/api/superadmin/tenants/${tenantId}/products/${productId}`,
+    {
+      method: "DELETE",
+      headers: await getAuthorizationHeaders(user),
+    }
+  );
+
+  return (await response.json()) as SuperAdminProductMutationResponse;
 }

@@ -4,6 +4,11 @@ export type SuperAdminTenantStatus = "active" | "inactive";
 
 export type SuperAdminOrderFlowMode = "simple_whatsapp" | "dashboard_managed";
 
+export type SuperAdminProductPricingMode =
+  | "included"
+  | "additive"
+  | "tier_upgrade";
+
 export type SuperAdminOrderConfirmationAction =
   | "allow"
   | "require_manual_confirmation";
@@ -67,6 +72,39 @@ export interface SuperAdminTenantInput {
   tenantTheme: TenantTheme;
 }
 
+export interface SuperAdminProductModifier {
+  id: string;
+  name: string;
+  pricingMode: SuperAdminProductPricingMode;
+  priceDelta: number;
+  active: boolean;
+}
+
+export interface SuperAdminProductSummary {
+  productId: string;
+  name: string;
+  description: string;
+  price: number;
+  category: string;
+  imageUrl: string;
+  active: boolean;
+  available: boolean;
+  modifiers: SuperAdminProductModifier[];
+  createdAt: number | null;
+  updatedAt: number | null;
+}
+
+export interface SuperAdminProductInput {
+  name: string;
+  description: string;
+  price: number;
+  category: string;
+  imageUrl: string;
+  active: boolean;
+  available: boolean;
+  modifiers?: SuperAdminProductModifier[];
+}
+
 export type SuperAdminTenantsResponse =
   | {
       success: true;
@@ -81,6 +119,26 @@ export type SuperAdminTenantMutationResponse =
   | {
       success: true;
       tenant: SuperAdminTenantSummary | null;
+    }
+  | {
+      success: false;
+      message: string;
+    };
+
+export type SuperAdminProductsResponse =
+  | {
+      success: true;
+      products: SuperAdminProductSummary[];
+    }
+  | {
+      success: false;
+      message: string;
+    };
+
+export type SuperAdminProductMutationResponse =
+  | {
+      success: true;
+      product: SuperAdminProductSummary | null;
     }
   | {
       success: false;

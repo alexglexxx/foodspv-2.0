@@ -1,3 +1,17 @@
+## TASK-020
+
+Estado: COMPLETE
+
+Resultado:
+
+- Nuevas rutas protegidas de SuperAdmin para `tenants/{tenantId}/products`
+- Nuevo servicio backend `productService` con validación estricta de productos y modifiers
+- Tipos SuperAdmin extendidos para productos, modifiers y respuestas de mutación/listado
+- SuperAdmin ahora permite cargar, crear, editar y desactivar productos del tenant seleccionado
+- UI separada en `ProductManager`, `ProductForm` y `ModifierEditor`
+- Modifiers soportan `included`, `additive` y `tier_upgrade`, con activación/desactivación
+- Sin cambios en webhook, Meta, QR, roles, App Hosting ni carrito público
+
 ## TASK-019
 
 Estado: COMPLETE

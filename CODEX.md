@@ -712,6 +712,53 @@ COMPLETE
 
 ---
 
+TASK-020
+
+Description:
+
+Crear editor visual de productos y modifiers en SuperAdmin
+
+Dependencies:
+
+- TASK-016
+- TASK-008
+- Firestore `tenants/{tenantId}/products`
+- SuperAdmin Route Handlers protegidos
+
+Files:
+
+- src/app/api/superadmin/tenants/[tenantId]/products/route.ts
+- src/app/api/superadmin/tenants/[tenantId]/products/[productId]/route.ts
+- src/modules/superadmin/services/productService.ts
+- src/modules/superadmin/services/superAdminApiService.ts
+- src/modules/superadmin/types/superAdmin.ts
+- src/modules/superadmin/components/SuperAdminClient.tsx
+- src/modules/superadmin/components/ProductManager.tsx
+- src/modules/superadmin/components/ProductForm.tsx
+- src/modules/superadmin/components/ModifierEditor.tsx
+- docs/project-status.md
+- CODEX.md
+
+Expected result:
+
+- SuperAdmin puede listar productos del tenant seleccionado
+- SuperAdmin puede crear, editar y desactivar productos sin tocar Firestore manualmente
+- productos guardan `active`, `available`, precio, categoría, imagen y timestamps
+- productos guardan modifiers con `included`, `additive` y `tier_upgrade`
+- modifiers pueden crearse, editarse, quitarse y activarse/desactivarse desde UI
+- rutas usan `requireSuperAdminAuth` y validación de tenant, product e input
+- sin tocar webhook, Meta, QR, roles, App Hosting ni carrito público
+
+Status:
+
+COMPLETE
+
+Review output:
+
+PASSED
+
+---
+
 TASK-002
 
 Description:
