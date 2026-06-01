@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { collection, doc, getDoc, getDocs, query } from "firebase/firestore";
 
+import { AppButton } from "@/components/ui/AppButton";
 import { db } from "@/lib/firebase/client";
 import {
   getTenantThemeCssVariables,
@@ -275,6 +276,7 @@ export function OrderMenuClient({ tenantId }: OrderMenuClientProps) {
   const [submittedTotal, setSubmittedTotal] = useState<number | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const categoryRefs = useRef<Record<string, HTMLElement | null>>({});
+  const isSubmittingRef = useRef<boolean>(false);
 
   const featuredCategoryKey = normalizeCategory(restaurantProfile.featuredCategory);
   const tenantThemeStyle = getTenantThemeStyle(restaurantProfile.tenantTheme);
@@ -380,6 +382,10 @@ export function OrderMenuClient({ tenantId }: OrderMenuClientProps) {
   );
 
   function addProduct(product: Product): void {
+    if (!product.available) {
+      return;
+    }
+
     setCartItems((currentItems) => {
       const existingItem = currentItems.find(
         (item) => item.productId === product.id
@@ -464,8 +470,9 @@ export function OrderMenuClient({ tenantId }: OrderMenuClientProps) {
   }
 
   async function submitOrder(customerInfo: CustomerInfo): Promise<void> {
-    if (cartItems.length === 0) return;
+    if (cartItems.length === 0 || isSubmittingRef.current) return;
 
+    isSubmittingRef.current = true;
     setIsSubmitting(true);
     setSubmitError(null);
 
@@ -489,6 +496,7 @@ export function OrderMenuClient({ tenantId }: OrderMenuClientProps) {
           : "Ocurrió un error inesperado al generar el pedido."
       );
     } finally {
+      isSubmittingRef.current = false;
       setIsSubmitting(false);
     }
   }
@@ -566,21 +574,21 @@ export function OrderMenuClient({ tenantId }: OrderMenuClientProps) {
 
             <div className="flex gap-3 overflow-x-auto pb-1">
               {groupedProducts.map(([categoryKey], index) => (
-                <button
+                <AppButton
                   key={categoryKey}
-                  type="button"
                   onClick={() => scrollToCategory(categoryKey)}
+                  variant={index === 0 ? "primary" : "secondary"}
                   className={
                     index === 0
-                      ? "shrink-0 rounded-full bg-orange-600 px-5 py-3 text-sm font-extrabold text-[#fff7ed] shadow-sm transition hover:bg-orange-500"
-                      : "shrink-0 rounded-full bg-[#463426] px-5 py-3 text-sm font-extrabold text-[#e7d4b8] shadow-sm ring-1 ring-[#6b5138] transition hover:bg-[#5a422e]"
+                      ? "shrink-0 !border-orange-600 !bg-orange-600 px-5 py-3 text-sm text-[#fff7ed] hover:!bg-orange-500 active:!bg-orange-700 focus-visible:ring-offset-[#2b2118]"
+                      : "shrink-0 !border-[#6b5138] !bg-[#463426] px-5 py-3 text-sm text-[#e7d4b8] shadow-sm ring-1 ring-[#6b5138] hover:!bg-[#5a422e] active:!bg-[#3a2b1f] focus-visible:ring-offset-[#2b2118]"
                   }
                 >
                   <span className="mr-2" aria-hidden="true">
                     {getCategoryIcon(categoryKey)}
                   </span>
                   {getCategoryLabel(categoryKey)}
-                </button>
+                </AppButton>
               ))}
             </div>
           </div>

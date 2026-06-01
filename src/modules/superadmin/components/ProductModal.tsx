@@ -2,6 +2,8 @@
 
 import { type FormEvent } from "react";
 
+import { AppButton } from "@/components/ui/AppButton";
+
 import type { SuperAdminProductInput } from "../types/superAdmin";
 import { ProductForm } from "./ProductForm";
 
@@ -28,7 +30,11 @@ export function ProductModal({
       role="dialog"
       aria-modal="true"
       aria-labelledby="product-modal-title"
-      onMouseDown={onCancel}
+      onMouseDown={() => {
+        if (!isSaving) {
+          onCancel();
+        }
+      }}
     >
       <div
         className="max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-2xl bg-white shadow-2xl"
@@ -46,14 +52,16 @@ export function ProductModal({
               {isEditing ? "Editar producto" : "Crear producto"}
             </h2>
           </div>
-          <button
-            type="button"
+          <AppButton
             onClick={onCancel}
-            className="flex h-10 w-10 items-center justify-center rounded-full border border-stone-200 bg-white text-xl font-black text-stone-700 transition hover:bg-stone-100"
+            variant="secondary"
+            size="sm"
+            disabled={isSaving}
+            className="h-10 w-10 min-h-10 px-0 text-xl text-stone-700"
             aria-label="Cerrar modal"
           >
             x
-          </button>
+          </AppButton>
         </div>
 
         <div className="p-5">

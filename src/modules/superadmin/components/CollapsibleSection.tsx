@@ -28,7 +28,7 @@ export function CollapsibleSection({
         onClick={onToggle}
         disabled={disabled}
         aria-expanded={isOpen}
-        className="flex w-full flex-col gap-3 px-5 py-4 text-left transition hover:bg-orange-50/60 disabled:cursor-not-allowed disabled:opacity-60 sm:flex-row sm:items-center sm:justify-between"
+        className="flex w-full cursor-pointer select-none touch-manipulation flex-col gap-3 px-5 py-4 text-left transition-all duration-150 hover:bg-orange-50/60 active:scale-[0.99] active:bg-orange-100/70 disabled:cursor-not-allowed disabled:opacity-60 sm:flex-row sm:items-center sm:justify-between"
       >
         <span>
           <span className="block text-lg font-black text-stone-950">
@@ -47,8 +47,15 @@ export function CollapsibleSection({
               {badge}
             </span>
           ) : null}
-          <span className="flex h-9 w-9 items-center justify-center rounded-full border border-stone-200 bg-white text-xl font-black text-orange-700">
-            {isOpen ? "-" : "+"}
+          <span className="flex h-9 w-9 items-center justify-center rounded-full border border-stone-200 bg-white text-xl font-black text-orange-700 shadow-sm transition-transform duration-150">
+            <span
+              className={`transition-transform duration-150 ${
+                isOpen ? "rotate-180" : "rotate-0"
+              }`}
+              aria-hidden="true"
+            >
+              ⌄
+            </span>
           </span>
         </span>
       </button>

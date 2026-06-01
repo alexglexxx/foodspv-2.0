@@ -1,5 +1,7 @@
 "use client";
 
+import { AppButton } from "@/components/ui/AppButton";
+
 import type { SuperAdminTenantSummary } from "../types/superAdmin";
 
 interface TenantAccessCardProps {
@@ -27,22 +29,24 @@ export function TenantAccessCard({
             {tenant.publicUrl || "URL pública no configurada"}
           </p>
           <div className="mt-4 flex flex-wrap gap-2">
-            <button
-              type="button"
+            <AppButton
               onClick={() => onCopyUrl(tenant)}
               disabled={!tenant.publicUrl}
-              className="rounded-full border border-orange-200 bg-white px-4 py-2 text-sm font-extrabold text-orange-800 transition hover:bg-orange-100 disabled:cursor-not-allowed disabled:opacity-60"
+              variant="secondary"
+              size="sm"
+              className="border-orange-200 text-orange-800 hover:bg-orange-100"
             >
               Copiar URL
-            </button>
-            <button
-              type="button"
+            </AppButton>
+            <AppButton
               onClick={() => onDownloadQr(tenant)}
               disabled={!tenant.qrCode}
-              className="rounded-full border border-orange-200 bg-white px-4 py-2 text-sm font-extrabold text-orange-800 transition hover:bg-orange-100 disabled:cursor-not-allowed disabled:opacity-60"
+              variant="secondary"
+              size="sm"
+              className="border-orange-200 text-orange-800 hover:bg-orange-100"
             >
               Descargar QR
-            </button>
+            </AppButton>
           </div>
         </div>
 

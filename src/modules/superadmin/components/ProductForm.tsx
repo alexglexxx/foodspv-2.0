@@ -2,6 +2,8 @@
 
 import { type FormEvent } from "react";
 
+import { AppButton } from "@/components/ui/AppButton";
+
 import type { SuperAdminProductInput } from "../types/superAdmin";
 import { ModifierEditor } from "./ModifierEditor";
 
@@ -103,14 +105,16 @@ export function ProductForm({
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
             {PRODUCT_QUICK_PRESETS.map((preset) => (
-              <button
+              <AppButton
                 key={preset.label}
-                type="button"
                 onClick={() => applyProductPreset(preset.product)}
-                className="rounded-full border border-stone-300 bg-white px-3 py-2 text-xs font-extrabold text-stone-800 transition hover:bg-stone-100"
+                variant="secondary"
+                size="sm"
+                disabled={isSaving}
+                className="min-h-10 text-xs"
               >
                 {preset.label}
-              </button>
+              </AppButton>
             ))}
           </div>
         </div>
@@ -190,20 +194,20 @@ export function ProductForm({
       </div>
 
       <div className="mt-5 flex flex-col gap-3 sm:flex-row">
-        <button
+        <AppButton
           type="submit"
-          disabled={isSaving}
-          className="rounded-full bg-orange-700 px-5 py-3 text-sm font-extrabold text-white transition hover:bg-orange-800 disabled:cursor-not-allowed disabled:opacity-60"
+          loading={isSaving}
+          loadingText="Guardando..."
         >
-          {isSaving ? "Guardando..." : "Guardar producto"}
-        </button>
-        <button
-          type="button"
+          Guardar producto
+        </AppButton>
+        <AppButton
           onClick={onCancel}
-          className="rounded-full border border-stone-300 bg-white px-5 py-3 text-sm font-extrabold text-stone-800 transition hover:bg-stone-100"
+          variant="secondary"
+          disabled={isSaving}
         >
           Cancelar
-        </button>
+        </AppButton>
       </div>
     </form>
   );

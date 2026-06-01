@@ -1,7 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import type { User } from "firebase/auth";
+
+import { AppButton } from "@/components/ui/AppButton";
 
 import {
   createSuperAdminProduct,
@@ -72,8 +74,16 @@ export function ProductManager({
   const [deletingProductId, setDeletingProductId] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const isLoadingProductsRef = useRef<boolean>(false);
+  const isSavingProductRef = useRef<boolean>(false);
+  const deletingProductRef = useRef<string | null>(null);
 
   const loadProducts = useCallback(async (): Promise<void> => {
+    if (isLoadingProductsRef.current) {
+      return;
+    }
+
+    isLoadingProductsRef.current = true;
     setIsLoading(true);
     setMessage(null);
     setErrorMessage(null);
@@ -94,6 +104,7 @@ export function ProductManager({
           : "No se pudieron cargar productos."
       );
     } finally {
+      isLoadingProductsRef.current = false;
       setIsLoading(false);
     }
   }, [tenantId, user]);
@@ -107,6 +118,10 @@ export function ProductManager({
   }, [loadProducts]);
 
   function startNewProduct(): void {
+    if (isSaving) {
+      return;
+    }
+
     setForm({ ...EMPTY_PRODUCT_FORM, modifiers: [] });
     setEditingProductId(null);
     setIsProductModalOpen(true);
@@ -132,6 +147,12 @@ export function ProductManager({
     event: FormEvent<HTMLFormElement>
   ): Promise<void> {
     event.preventDefault();
+
+    if (isSavingProductRef.current) {
+      return;
+    }
+
+    isSavingProductRef.current = true;
     setIsSaving(true);
     setMessage(null);
     setErrorMessage(null);
@@ -155,11 +176,17 @@ export function ProductManager({
         error instanceof Error ? error.message : "No se pudo guardar producto."
       );
     } finally {
+      isSavingProductRef.current = false;
       setIsSaving(false);
     }
   }
 
   async function handleDeleteProduct(productId: string): Promise<void> {
+    if (deletingProductRef.current !== null) {
+      return;
+    }
+
+    deletingProductRef.current = productId;
     setDeletingProductId(productId);
     setMessage(null);
     setErrorMessage(null);
@@ -186,6 +213,7 @@ export function ProductManager({
           : "No se pudo desactivar producto."
       );
     } finally {
+      deletingProductRef.current = null;
       setDeletingProductId(null);
     }
   }
@@ -201,21 +229,20 @@ export function ProductManager({
         </div>
 
         <div className="flex flex-col gap-2 sm:flex-row">
-          <button
-            type="button"
+          <AppButton
             onClick={() => void loadProducts()}
-            disabled={isLoading}
-            className="rounded-full border border-stone-300 bg-white px-5 py-3 text-sm font-extrabold text-stone-800 transition hover:bg-stone-100 disabled:cursor-not-allowed disabled:opacity-60"
+            loading={isLoading}
+            loadingText="Cargando..."
+            variant="secondary"
           >
-            {isLoading ? "Cargando..." : "Actualizar productos"}
-          </button>
-          <button
-            type="button"
+            Actualizar productos
+          </AppButton>
+          <AppButton
             onClick={startNewProduct}
-            className="rounded-full bg-orange-700 px-5 py-3 text-sm font-extrabold text-white transition hover:bg-orange-800"
+            disabled={isSaving}
           >
             Agregar producto
-          </button>
+          </AppButton>
         </div>
       </div>
 
@@ -287,23 +314,27 @@ export function ProductManager({
               </p>
 
               <div className="mt-5 flex flex-wrap gap-2">
-                <button
-                  type="button"
+                <AppButton
                   onClick={() => editProduct(product)}
-                  className="rounded-full border border-stone-300 bg-white px-4 py-2 text-sm font-extrabold transition hover:bg-stone-100"
+                  variant="secondary"
+                  size="sm"
+                  disabled={isSaving || deletingProductId !== null}
                 >
                   Editar
-                </button>
-                <button
-                  type="button"
+                </AppButton>
+                <AppButton
                   onClick={() => void handleDeleteProduct(product.productId)}
-                  disabled={deletingProductId === product.productId}
-                  className="rounded-full border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-extrabold text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
+                  disabled={
+                    deletingProductId !== null &&
+                    deletingProductId !== product.productId
+                  }
+                  loading={deletingProductId === product.productId}
+                  loadingText="Desactivando..."
+                  variant="danger"
+                  size="sm"
                 >
-                  {deletingProductId === product.productId
-                    ? "Desactivando..."
-                    : "Desactivar"}
-                </button>
+                  Desactivar
+                </AppButton>
               </div>
             </article>
           );

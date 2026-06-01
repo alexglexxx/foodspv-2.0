@@ -4,6 +4,7 @@ import type {
   SuperAdminProductModifier,
   SuperAdminProductPricingMode,
 } from "../types/superAdmin";
+import { AppButton } from "@/components/ui/AppButton";
 
 interface ModifierEditorProps {
   modifiers: SuperAdminProductModifier[];
@@ -78,13 +79,13 @@ export function ModifierEditor({ modifiers, onChange }: ModifierEditorProps) {
     <div className="rounded-[1.5rem] border border-stone-200 bg-stone-50 p-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h3 className="text-lg font-black">Modificadores</h3>
-        <button
-          type="button"
+        <AppButton
           onClick={addModifier}
-          className="rounded-full border border-stone-300 bg-white px-4 py-2 text-sm font-extrabold text-stone-800 transition hover:bg-stone-100"
+          variant="secondary"
+          size="sm"
         >
           + Agregar modificador
-        </button>
+        </AppButton>
       </div>
 
       {modifiers.length === 0 ? (
@@ -178,13 +179,13 @@ export function ModifierEditor({ modifiers, onChange }: ModifierEditorProps) {
                 </span>
               </label>
 
-              <button
-                type="button"
+              <AppButton
                 onClick={() => removeModifier(modifier.id)}
-                className="rounded-full border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-extrabold text-rose-700 transition hover:bg-rose-100"
+                variant="danger"
+                size="sm"
               >
                 Quitar
-              </button>
+              </AppButton>
             </div>
           </div>
         ))}

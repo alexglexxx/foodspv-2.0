@@ -1,5 +1,6 @@
 "use client";
 
+import { AppButton } from "@/components/ui/AppButton";
 import type { Product } from "@/types/product.types";
 
 interface ProductCardProps {
@@ -25,7 +26,7 @@ export function ProductCard({
 }: ProductCardProps) {
   return (
     <article
-      className={`flex w-[220px] gap-3 rounded-2xl bg-[#463426] p-3 shadow-sm ring-1 ring-[#6b5138] ${className}`}
+      className={`flex w-[220px] gap-3 rounded-2xl bg-[#463426] p-3 shadow-sm ring-1 ring-[#6b5138] transition-all duration-150 ${className}`}
     >
       <div className="h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-[#3a2b1f] sm:h-24 sm:w-24">
         {product.imageUrl ? (
@@ -68,14 +69,15 @@ export function ProductCard({
             {quantityInCart > 0 ? `${quantityInCart} en carrito` : ""}
           </div>
 
-          <button
-            type="button"
+          <AppButton
             onClick={() => onAddProduct(product)}
             disabled={!product.available}
-            className="shrink-0 rounded-full bg-orange-600 px-3 py-1.5 text-xs font-bold text-[#fff7ed] transition hover:bg-orange-500 disabled:cursor-not-allowed disabled:bg-[#6b5138] disabled:text-[#b99f80]"
+            size="sm"
+            loadingText="Agregando..."
+            className="min-h-[44px] shrink-0 !border-orange-600 !bg-orange-600 px-3 text-xs text-[#fff7ed] hover:!bg-orange-500 active:!bg-orange-700 focus-visible:ring-offset-[#463426] disabled:!bg-[#6b5138] disabled:text-[#b99f80]"
           >
             {product.available ? "Agregar" : "No disponible"}
-          </button>
+          </AppButton>
         </div>
       </div>
     </article>

@@ -2,6 +2,8 @@
 
 import { useState, type FormEvent } from "react";
 
+import { AppButton } from "@/components/ui/AppButton";
+
 import type { CustomerInfo } from "../types/order";
 
 interface CustomerInfoModalProps {
@@ -99,6 +101,10 @@ export function CustomerInfoModal({
   function handleSubmit(event: FormEvent<HTMLFormElement>): void {
     event.preventDefault();
 
+    if (isSubmitting) {
+      return;
+    }
+
     const normalizedCustomerInfo: CustomerInfo = {
       nombre: customerInfo.nombre.trim(),
       telefono: customerInfo.telefono.trim().replace(/\D/g, ""),
@@ -125,7 +131,7 @@ export function CustomerInfoModal({
         aria-label="Cerrar datos del cliente"
         onClick={onClose}
         disabled={isSubmitting}
-        className="absolute inset-0 bg-[#2b2118]/70 backdrop-blur-[2px]"
+        className="absolute inset-0 touch-manipulation bg-[#2b2118]/70 backdrop-blur-[2px] transition-all duration-150 active:bg-[#2b2118]/80"
       />
 
       <div className="relative z-10 max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-[2rem] bg-[#3a2b1f] p-6 shadow-2xl ring-1 ring-[#6b5138] sm:p-8">
@@ -144,14 +150,15 @@ export function CustomerInfoModal({
             </p>
           </div>
 
-          <button
-            type="button"
+          <AppButton
             onClick={onClose}
             disabled={isSubmitting}
-            className="shrink-0 rounded-full border border-[#6b5138] bg-[#463426] px-4 py-2 text-sm font-extrabold text-[#fff7ed] shadow-sm transition hover:bg-[#5a422e] disabled:cursor-not-allowed disabled:opacity-60"
+            variant="secondary"
+            size="sm"
+            className="shrink-0 !border-[#6b5138] !bg-[#463426] text-[#fff7ed] hover:!bg-[#5a422e] active:!bg-[#3a2b1f] focus-visible:ring-offset-[#3a2b1f]"
           >
             Cerrar
-          </button>
+          </AppButton>
         </div>
 
         <div className="mt-6 rounded-[1.5rem] border border-[#6b5138] bg-[#463426] p-5 shadow-sm">
@@ -184,13 +191,12 @@ export function CustomerInfoModal({
               </div>
             ) : null}
 
-            <button
-              type="button"
+            <AppButton
               onClick={onClose}
-              className="mt-5 w-full rounded-full bg-orange-600 px-5 py-3 text-sm font-extrabold text-[#fff7ed] transition hover:bg-orange-500"
+              className="mt-5 w-full !border-orange-600 !bg-orange-600 px-5 py-3 text-sm text-[#fff7ed] hover:!bg-orange-500 active:!bg-orange-700 focus-visible:ring-offset-[#3a2b1f]"
             >
               Entendido
-            </button>
+            </AppButton>
           </div>
         ) : (
           <form className="mt-6 space-y-5" onSubmit={handleSubmit}>
@@ -245,13 +251,14 @@ export function CustomerInfoModal({
               </div>
             ) : null}
 
-            <button
+            <AppButton
               type="submit"
-              disabled={isSubmitting}
-              className="w-full rounded-full bg-orange-600 px-5 py-4 text-base font-black text-[#fff7ed] shadow-lg shadow-[#2b2118]/25 transition hover:bg-orange-500 disabled:cursor-not-allowed disabled:bg-[#6b5138] disabled:text-[#b99f80]"
+              loading={isSubmitting}
+              loadingText="Enviando..."
+              className="w-full !border-orange-600 !bg-orange-600 px-5 py-4 text-base text-[#fff7ed] shadow-lg shadow-[#2b2118]/25 hover:!bg-orange-500 active:!bg-orange-700 focus-visible:ring-offset-[#3a2b1f] disabled:!bg-[#6b5138] disabled:text-[#b99f80]"
             >
-              {isSubmitting ? "Confirmando pedido..." : "Confirmar pedido"}
-            </button>
+              Confirmar pedido
+            </AppButton>
           </form>
         )}
       </div>

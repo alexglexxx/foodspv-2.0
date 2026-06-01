@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
@@ -8,6 +8,7 @@ import {
   type User,
 } from "firebase/auth";
 
+import { AppButton } from "@/components/ui/AppButton";
 import { auth } from "@/lib/firebase/client";
 import { DEFAULT_TENANT_THEME } from "@/modules/theme/constants/themePresets";
 
@@ -106,6 +107,11 @@ export function SuperAdminClient() {
     useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const isLoadingTenantsRef = useRef<boolean>(false);
+  const isSigningInRef = useRef<boolean>(false);
+  const isSavingTenantRef = useRef<boolean>(false);
+  const deletingTenantRef = useRef<string | null>(null);
+  const permanentlyDeletingTenantRef = useRef<string | null>(null);
 
   const selectedTenant = useMemo(
     () =>
@@ -145,6 +151,11 @@ export function SuperAdminClient() {
   }
 
   async function loadTenants(currentUser: User): Promise<void> {
+    if (isLoadingTenantsRef.current) {
+      return;
+    }
+
+    isLoadingTenantsRef.current = true;
     setIsLoading(true);
     setErrorMessage(null);
 
@@ -162,12 +173,19 @@ export function SuperAdminClient() {
         error instanceof Error ? error.message : "No se pudieron cargar tenants."
       );
     } finally {
+      isLoadingTenantsRef.current = false;
       setIsLoading(false);
     }
   }
 
   async function handleSignIn(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
+
+    if (isSigningInRef.current) {
+      return;
+    }
+
+    isSigningInRef.current = true;
     setIsSigningIn(true);
     setErrorMessage(null);
     setMessage(null);
@@ -178,6 +196,7 @@ export function SuperAdminClient() {
     } catch {
       setErrorMessage("No se pudo iniciar sesión con esas credenciales.");
     } finally {
+      isSigningInRef.current = false;
       setIsSigningIn(false);
     }
   }
@@ -209,6 +228,10 @@ export function SuperAdminClient() {
   ): Promise<void> {
     event.preventDefault();
 
+    if (isSavingTenantRef.current) {
+      return;
+    }
+
     if (!user) {
       setErrorMessage("Sesión requerida.");
       return;
@@ -225,6 +248,7 @@ export function SuperAdminClient() {
       return;
     }
 
+    isSavingTenantRef.current = true;
     setIsSaving(true);
     setMessage(null);
     setErrorMessage(null);
@@ -273,16 +297,25 @@ export function SuperAdminClient() {
         error instanceof Error ? error.message : "No se pudo guardar el tenant."
       );
     } finally {
+      isSavingTenantRef.current = false;
       setIsSaving(false);
     }
   }
 
   async function handleDeleteTenant(tenantId: string): Promise<void> {
+    if (
+      deletingTenantRef.current !== null ||
+      permanentlyDeletingTenantRef.current !== null
+    ) {
+      return;
+    }
+
     if (!user) {
       setErrorMessage("Sesión requerida.");
       return;
     }
 
+    deletingTenantRef.current = tenantId;
     setDeletingTenantId(tenantId);
     setMessage(null);
     setErrorMessage(null);
@@ -309,11 +342,19 @@ export function SuperAdminClient() {
           : "No se pudo desactivar el tenant."
       );
     } finally {
+      deletingTenantRef.current = null;
       setDeletingTenantId(null);
     }
   }
 
   async function handlePermanentDeleteTenant(tenantId: string): Promise<void> {
+    if (
+      deletingTenantRef.current !== null ||
+      permanentlyDeletingTenantRef.current !== null
+    ) {
+      return;
+    }
+
     if (!user) {
       setErrorMessage("Sesión requerida.");
       return;
@@ -333,6 +374,7 @@ export function SuperAdminClient() {
       return;
     }
 
+    permanentlyDeletingTenantRef.current = tenantId;
     setPermanentlyDeletingTenantId(tenantId);
     setMessage(null);
     setErrorMessage(null);
@@ -365,6 +407,7 @@ export function SuperAdminClient() {
           : "No se pudo eliminar el negocio."
       );
     } finally {
+      permanentlyDeletingTenantRef.current = null;
       setPermanentlyDeletingTenantId(null);
     }
   }
@@ -457,13 +500,14 @@ export function SuperAdminClient() {
             </p>
           ) : null}
 
-          <button
+          <AppButton
             type="submit"
-            disabled={isSigningIn}
-            className="mt-6 w-full rounded-full bg-orange-700 px-5 py-3 text-sm font-extrabold text-white transition hover:bg-orange-800 disabled:cursor-not-allowed disabled:opacity-60"
+            loading={isSigningIn}
+            loadingText="Entrando..."
+            className="mt-6 w-full"
           >
-            {isSigningIn ? "Entrando..." : "Entrar"}
-          </button>
+            Entrar
+          </AppButton>
         </form>
       </main>
     );
@@ -482,13 +526,13 @@ export function SuperAdminClient() {
             </p>
           </div>
 
-          <button
-            type="button"
+          <AppButton
             onClick={() => void signOut(auth)}
-            className="rounded-full border border-orange-200 bg-white px-5 py-3 text-sm font-extrabold text-orange-800 transition hover:bg-orange-50"
+            variant="secondary"
+            className="border-orange-200 text-orange-800 hover:bg-orange-50"
           >
             Salir
-          </button>
+          </AppButton>
         </header>
 
         {message ? (
@@ -626,13 +670,11 @@ function ThemePreview({
           <InfoItem label="Tipografía" value={theme.typography} />
         </div>
       </div>
-      <button
-        type="button"
+      <AppButton
         onClick={() => onEdit(tenant)}
-        className="rounded-full bg-orange-700 px-5 py-3 text-sm font-extrabold text-white transition hover:bg-orange-800"
       >
         Editar theme
-      </button>
+      </AppButton>
     </div>
   );
 }
@@ -670,13 +712,11 @@ function OperationsPreview({
         />
         <InfoItem label="WhatsApp" value={tenant.whatsappPhone || "No configurado"} />
       </div>
-      <button
-        type="button"
+      <AppButton
         onClick={() => onEdit(tenant)}
-        className="rounded-full bg-orange-700 px-5 py-3 text-sm font-extrabold text-white transition hover:bg-orange-800"
       >
         Editar configuración
-      </button>
+      </AppButton>
     </div>
   );
 }

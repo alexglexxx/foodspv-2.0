@@ -1,5 +1,6 @@
 "use client";
 
+import { AppButton } from "@/components/ui/AppButton";
 import type { CartItem } from "@/types/cart.types";
 
 interface CartDrawerProps {
@@ -38,7 +39,7 @@ export function CartDrawer({
           type="button"
           aria-label="Cerrar carrito"
           onClick={onClose}
-          className="fixed inset-0 z-30 bg-[#2b2118]/70"
+          className="fixed inset-0 z-30 touch-manipulation bg-[#2b2118]/70 transition-all duration-150 active:bg-[#2b2118]/80"
         />
       ) : null}
 
@@ -57,13 +58,14 @@ export function CartDrawer({
               Carrito
             </h2>
           </div>
-          <button
-            type="button"
+          <AppButton
             onClick={onClose}
-            className="rounded-full border border-[#6b5138] bg-[#463426] px-3 py-2 text-sm font-semibold text-[#fff7ed] transition hover:bg-[#5a422e]"
+            variant="secondary"
+            size="sm"
+            className="!border-[#6b5138] !bg-[#463426] text-[#fff7ed] hover:!bg-[#5a422e] active:!bg-[#3a2b1f] focus-visible:ring-offset-[#3a2b1f]"
           >
             Cerrar
-          </button>
+          </AppButton>
         </div>
 
         <div className="flex-1 space-y-4 overflow-y-auto px-6 py-5">
@@ -93,34 +95,39 @@ export function CartDrawer({
                   ) : null}
                 </div>
 
-                <button
-                  type="button"
+                <AppButton
                   onClick={() => onRemoveItem(item.productId)}
-                  className="text-sm font-semibold text-rose-300 transition hover:text-rose-200"
+                  variant="ghost"
+                  size="sm"
+                  className="min-h-[44px] text-rose-300 hover:!bg-rose-500/10 hover:text-rose-200 active:!bg-rose-500/20 focus-visible:ring-offset-[#463426]"
                 >
                   Quitar
-                </button>
+                </AppButton>
               </div>
 
               <div className="mt-4 flex items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
-                  <button
-                    type="button"
+                  <AppButton
                     onClick={() => onDecreaseItem(item.productId)}
-                    className="flex h-9 w-9 items-center justify-center rounded-full border border-[#6b5138] bg-[#2b2118] text-lg font-semibold text-[#fff7ed] transition hover:bg-[#3a2b1f]"
+                    variant="secondary"
+                    size="sm"
+                    className="h-11 w-11 !border-[#6b5138] !bg-[#2b2118] px-0 text-lg text-[#fff7ed] hover:!bg-[#3a2b1f] active:!bg-[#463426] focus-visible:ring-offset-[#463426]"
+                    aria-label={`Quitar una unidad de ${item.productName}`}
                   >
                     -
-                  </button>
+                  </AppButton>
                   <span className="min-w-6 text-center text-sm font-semibold text-[#fff7ed]">
                     {item.quantity}
                   </span>
-                  <button
-                    type="button"
+                  <AppButton
                     onClick={() => onIncreaseItem(item.productId)}
-                    className="flex h-9 w-9 items-center justify-center rounded-full border border-[#6b5138] bg-[#2b2118] text-lg font-semibold text-[#fff7ed] transition hover:bg-[#3a2b1f]"
+                    variant="secondary"
+                    size="sm"
+                    className="h-11 w-11 !border-[#6b5138] !bg-[#2b2118] px-0 text-lg text-[#fff7ed] hover:!bg-[#3a2b1f] active:!bg-[#463426] focus-visible:ring-offset-[#463426]"
+                    aria-label={`Agregar una unidad de ${item.productName}`}
                   >
                     +
-                  </button>
+                  </AppButton>
                 </div>
 
                 <p className="text-base font-semibold text-amber-300">
@@ -138,14 +145,13 @@ export function CartDrawer({
               {formatCurrency(total)}
             </span>
           </div>
-          <button
-            type="button"
+          <AppButton
             onClick={onGenerateOrder}
             disabled={items.length === 0}
-            className="w-full rounded-full bg-orange-600 px-5 py-3 text-sm font-semibold text-[#fff7ed] transition hover:bg-orange-500 disabled:cursor-not-allowed disabled:bg-[#463426] disabled:text-[#b99f80]"
+            className="w-full !border-orange-600 !bg-orange-600 px-5 py-3 text-sm text-[#fff7ed] hover:!bg-orange-500 active:!bg-orange-700 focus-visible:ring-offset-[#3a2b1f] disabled:!bg-[#463426] disabled:text-[#b99f80]"
           >
             Generar pedido
-          </button>
+          </AppButton>
         </div>
       </aside>
     </>

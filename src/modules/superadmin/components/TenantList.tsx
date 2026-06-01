@@ -4,6 +4,7 @@ import type {
   SuperAdminTenantStatus,
   SuperAdminTenantSummary,
 } from "../types/superAdmin";
+import { AppButton } from "@/components/ui/AppButton";
 
 interface TenantListProps {
   tenants: SuperAdminTenantSummary[];
@@ -42,14 +43,14 @@ export function TenantList({
         <p className="text-sm font-semibold leading-6 text-stone-500">
           Lista compacta para seleccionar el negocio que quieres administrar.
         </p>
-        <button
-          type="button"
+        <AppButton
           onClick={onRefresh}
-          disabled={isLoading}
-          className="rounded-full border border-stone-300 bg-white px-5 py-3 text-sm font-extrabold text-stone-800 transition hover:bg-stone-100 disabled:cursor-not-allowed disabled:opacity-60"
+          loading={isLoading}
+          loadingText="Cargando..."
+          variant="secondary"
         >
-          {isLoading ? "Cargando..." : "Actualizar"}
-        </button>
+          Actualizar
+        </AppButton>
       </div>
 
       {isLoading ? (
@@ -97,47 +98,47 @@ export function TenantList({
                 </div>
 
                 <div className="flex flex-wrap gap-2">
-                  <button
-                    type="button"
+                  <AppButton
                     onClick={() => onSelect(tenant)}
-                    className="rounded-full bg-orange-700 px-4 py-2 text-sm font-extrabold text-white transition hover:bg-orange-800"
+                    size="sm"
                   >
                     Seleccionar
-                  </button>
-                  <button
-                    type="button"
+                  </AppButton>
+                  <AppButton
                     onClick={() => onEdit(tenant)}
-                    className="rounded-full border border-stone-300 bg-white px-4 py-2 text-sm font-extrabold text-stone-800 transition hover:bg-stone-100"
+                    variant="secondary"
+                    size="sm"
                   >
                     Editar
-                  </button>
-                  <button
-                    type="button"
+                  </AppButton>
+                  <AppButton
                     onClick={() => onDeactivate(tenant.tenantId)}
                     disabled={
                       deletingTenantId === tenant.tenantId ||
                       permanentlyDeletingTenantId === tenant.tenantId
                     }
-                    className="rounded-full border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-extrabold text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
+                    loading={deletingTenantId === tenant.tenantId}
+                    loadingText="Desactivando..."
+                    variant="danger"
+                    size="sm"
                   >
-                    {deletingTenantId === tenant.tenantId
-                      ? "Desactivando..."
-                      : "Desactivar"}
-                  </button>
-                  <button
-                    type="button"
+                    Desactivar
+                  </AppButton>
+                  <AppButton
                     onClick={() => onPermanentDelete(tenant.tenantId)}
                     disabled={
                       !tenant.tenantId ||
                       deletingTenantId === tenant.tenantId ||
                       permanentlyDeletingTenantId === tenant.tenantId
                     }
-                    className="rounded-full border border-rose-300 bg-white px-4 py-2 text-sm font-extrabold text-rose-800 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
+                    loading={permanentlyDeletingTenantId === tenant.tenantId}
+                    loadingText="Eliminando..."
+                    variant="danger"
+                    size="sm"
+                    className="bg-white"
                   >
-                    {permanentlyDeletingTenantId === tenant.tenantId
-                      ? "Eliminando..."
-                      : "Eliminar"}
-                  </button>
+                    Eliminar
+                  </AppButton>
                 </div>
               </div>
             </article>

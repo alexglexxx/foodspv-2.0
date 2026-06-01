@@ -2,6 +2,7 @@
 
 import { type FormEvent } from "react";
 
+import { AppButton } from "@/components/ui/AppButton";
 import { generateThemeFromCategory } from "@/modules/theme/agents/designerAgent";
 import {
   TENANT_THEME_PRESET_OPTIONS,
@@ -219,22 +220,24 @@ export function TenantFormSection({
         <div className="rounded-2xl border border-orange-100 bg-orange-50/60 p-5">
           <h3 className="text-lg font-black text-stone-950">Diseño visual</h3>
           <div className="mt-4 flex flex-wrap gap-2">
-            <button
-              type="button"
+            <AppButton
               onClick={applyTenantThemeFromCategory}
-              className="rounded-full border border-orange-200 bg-white px-3 py-2 text-xs font-extrabold text-orange-800 transition hover:bg-orange-100"
+              variant="secondary"
+              size="sm"
+              className="min-h-10 border-orange-200 text-xs text-orange-800 hover:bg-orange-100"
             >
               Usar categoría
-            </button>
+            </AppButton>
             {TENANT_THEME_PRESET_OPTIONS.map((preset) => (
-              <button
+              <AppButton
                 key={preset.key}
-                type="button"
                 onClick={() => applyTenantThemePreset(preset.key)}
-                className="rounded-full border border-stone-300 bg-white px-3 py-2 text-xs font-extrabold text-stone-800 transition hover:bg-stone-100"
+                variant="secondary"
+                size="sm"
+                className="min-h-10 text-xs"
               >
                 {preset.label}
-              </button>
+              </AppButton>
             ))}
           </div>
           <div className="mt-4 flex items-center gap-3 rounded-2xl bg-white px-4 py-3 ring-1 ring-orange-100">
@@ -301,20 +304,20 @@ export function TenantFormSection({
       </div>
 
       <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-        <button
+        <AppButton
           type="submit"
-          disabled={isSaving}
-          className="rounded-full bg-orange-700 px-5 py-3 text-sm font-extrabold text-white transition hover:bg-orange-800 disabled:cursor-not-allowed disabled:opacity-60"
+          loading={isSaving}
+          loadingText="Guardando..."
         >
-          {isSaving ? "Guardando..." : "Guardar negocio"}
-        </button>
-        <button
-          type="button"
+          Guardar negocio
+        </AppButton>
+        <AppButton
           onClick={onReset}
-          className="rounded-full border border-stone-300 bg-white px-5 py-3 text-sm font-extrabold text-stone-800 transition hover:bg-stone-100"
+          variant="secondary"
+          disabled={isSaving}
         >
           Limpiar
-        </button>
+        </AppButton>
       </div>
     </form>
   );
