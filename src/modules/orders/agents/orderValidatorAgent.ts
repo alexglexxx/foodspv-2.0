@@ -43,6 +43,13 @@ export function orderValidatorAgent(input: unknown): ValidationResult {
     ) {
       errors.push("El teléfono del cliente parece inválido.");
     }
+
+    if (
+      order.cliente.customerCode !== undefined &&
+      typeof order.cliente.customerCode !== "string"
+    ) {
+      errors.push("Código de cliente inválido.");
+    }
   }
 
   if (!Array.isArray(order.productos) || order.productos.length === 0) {
@@ -115,6 +122,16 @@ export function orderValidatorAgent(input: unknown): ValidationResult {
 
   if (!order.createdAt) {
     order.createdAt = Date.now();
+  }
+
+  if (typeof order.tenantSlug !== "string" || order.tenantSlug.trim().length === 0) {
+    delete order.tenantSlug;
+  } else {
+    order.tenantSlug = order.tenantSlug.trim();
+  }
+
+  if (order.cliente?.customerCode) {
+    order.cliente.customerCode = order.cliente.customerCode.trim();
   }
 
   if (errors.length > 0) {

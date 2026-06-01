@@ -352,7 +352,6 @@ type Role=
 | "superadmin"
 | "tenant_admin"
 | "employee"
-| "customer"
 ```
 
 ---
@@ -372,10 +371,6 @@ tenant_admin:
 employee:
 
 - pedidos
-
-customer:
-
-- pedidos propios
 
 ---
 

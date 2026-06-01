@@ -22,6 +22,7 @@ import type { CustomerInfo, Order } from "../types/order";
 
 interface OrderMenuClientProps {
   tenantId: string;
+  tenantSlug: string;
 }
 
 interface RestaurantProfile {
@@ -64,6 +65,22 @@ interface FirestoreProductRecord {
   available?: unknown;
   active?: unknown;
   category?: unknown;
+}
+
+interface StoredCustomerProfile {
+  customerId: string;
+  customerCode: string;
+  displayName: string;
+}
+
+interface CustomerProfileLookupResponse {
+  found?: boolean;
+  customer?: {
+    customerId?: unknown;
+    customerCode?: unknown;
+    displayName?: unknown;
+  };
+  message?: string;
 }
 
 const DEFAULT_PROFILE: RestaurantProfile = {
@@ -196,6 +213,75 @@ function getTenantThemeStyle(theme: TenantTheme): CSSProperties {
   return getTenantThemeCssVariables(theme) as CSSProperties;
 }
 
+function getCustomerCodeStorageKey(tenantId: string): string {
+  return `foodspv_customer_code_${tenantId}`;
+}
+
+function normalizeCustomerCodeInput(customerCode: string): string {
+  const [rawPrefix, rawSuffix] = customerCode.includes("-")
+    ? customerCode.split("-", 2)
+    : ["", ""];
+  const cleanPrefix = rawPrefix.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+  const cleanSuffix = rawSuffix.replace(/\D/g, "");
+
+  if (cleanPrefix.length > 0 && cleanSuffix.length > 0) {
+    return `${cleanPrefix.slice(0, 4)}-${cleanSuffix}`;
+  }
+
+  const cleanCode = customerCode.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+  const suffix = cleanCode.slice(-5);
+  const prefix = cleanCode.slice(0, -5).slice(0, 4);
+
+  if (prefix.length === 0 || suffix.length === 0) {
+    return cleanCode;
+  }
+
+  return `${prefix}-${suffix}`;
+}
+
+function toStoredCustomerProfile(
+  response: CustomerProfileLookupResponse
+): StoredCustomerProfile | null {
+  const customer = response.customer;
+
+  if (
+    response.found !== true ||
+    !customer ||
+    !isNonEmptyString(customer.customerId) ||
+    !isNonEmptyString(customer.customerCode) ||
+    !isNonEmptyString(customer.displayName)
+  ) {
+    return null;
+  }
+
+  return {
+    customerId: customer.customerId.trim(),
+    customerCode: customer.customerCode.trim(),
+    displayName: customer.displayName.trim(),
+  };
+}
+
+async function lookupCustomerProfile(
+  tenantId: string,
+  customerCode: string
+): Promise<StoredCustomerProfile | null> {
+  const params = new URLSearchParams({
+    tenantId,
+    customerCode,
+  });
+  const response = await fetch(`/api/customers/profile?${params.toString()}`, {
+    method: "GET",
+  });
+
+  if (!response.ok) {
+    return null;
+  }
+
+  return toStoredCustomerProfile(
+    (await response.json()) as CustomerProfileLookupResponse
+  );
+}
+
 function mapTenantProfile(record: FirestoreTenantRecord | undefined): RestaurantProfile {
   const featuredCategory =
     toOptionalString(record?.featuredCategory) ??
@@ -260,6 +346,7 @@ function mapCartItemsToOrderItems(items: CartItem[]): Order["productos"] {
 
 function buildOrder(
   tenantId: string,
+  tenantSlug: string,
   customerInfo: CustomerInfo,
   items: CartItem[],
   total: number,
@@ -281,6 +368,7 @@ function buildOrder(
 
   return {
     tenantId,
+    tenantSlug,
     cliente: customerInfo,
     productos: mapCartItemsToOrderItems(items),
     total,
@@ -290,7 +378,7 @@ function buildOrder(
   };
 }
 
-export function OrderMenuClient({ tenantId }: OrderMenuClientProps) {
+export function OrderMenuClient({ tenantId, tenantSlug }: OrderMenuClientProps) {
   const [restaurantProfile, setRestaurantProfile] =
     useState<RestaurantProfile>(DEFAULT_PROFILE);
   const [products, setProducts] = useState<Product[]>([]);
@@ -309,6 +397,16 @@ export function OrderMenuClient({ tenantId }: OrderMenuClientProps) {
     "pickup"
   );
   const [deliveryAddress, setDeliveryAddress] = useState<string>("");
+  const [storedCustomerCode, setStoredCustomerCode] = useState<string>("");
+  const [storedCustomerProfile, setStoredCustomerProfile] =
+    useState<StoredCustomerProfile | null>(null);
+  const [isLoadingStoredCustomerProfile, setIsLoadingStoredCustomerProfile] =
+    useState<boolean>(false);
+  const [successCustomerCode, setSuccessCustomerCode] = useState<string | null>(
+    null
+  );
+  const [successCustomerCodeWasProvided, setSuccessCustomerCodeWasProvided] =
+    useState<boolean>(false);
   const categoryRefs = useRef<Record<string, HTMLElement | null>>({});
   const isSubmittingRef = useRef<boolean>(false);
 
@@ -392,6 +490,48 @@ export function OrderMenuClient({ tenantId }: OrderMenuClientProps) {
 
     return () => {
       isMounted = false;
+    };
+  }, [tenantId]);
+
+  useEffect(() => {
+    let isMounted = true;
+    const storageKey = getCustomerCodeStorageKey(tenantId);
+    const savedCustomerCode = window.localStorage.getItem(storageKey);
+    const timeoutId = window.setTimeout(() => {
+      if (!isMounted) return;
+
+      if (!savedCustomerCode) {
+        setStoredCustomerCode("");
+        setStoredCustomerProfile(null);
+        setIsLoadingStoredCustomerProfile(false);
+        return;
+      }
+
+      const normalizedCustomerCode = normalizeCustomerCodeInput(savedCustomerCode);
+
+      setStoredCustomerCode(normalizedCustomerCode);
+      setStoredCustomerProfile(null);
+      setIsLoadingStoredCustomerProfile(true);
+
+      lookupCustomerProfile(tenantId, normalizedCustomerCode)
+        .then((profile) => {
+          if (!isMounted) return;
+
+          setStoredCustomerProfile(profile);
+        })
+        .catch(() => {
+          if (!isMounted) return;
+
+          setStoredCustomerProfile(null);
+        })
+        .finally(() => {
+          if (isMounted) setIsLoadingStoredCustomerProfile(false);
+        });
+    }, 0);
+
+    return () => {
+      isMounted = false;
+      window.clearTimeout(timeoutId);
     };
   }, [tenantId]);
 
@@ -496,8 +636,27 @@ export function OrderMenuClient({ tenantId }: OrderMenuClientProps) {
   function resetOrderFeedback(): void {
     setSuccessMessage(null);
     setSuccessOrderId(null);
+    setSuccessCustomerCode(null);
+    setSuccessCustomerCodeWasProvided(false);
     setSubmittedTotal(null);
     setSubmitError(null);
+  }
+
+  function forgetStoredCustomerCode(): void {
+    window.localStorage.removeItem(getCustomerCodeStorageKey(tenantId));
+    setStoredCustomerCode("");
+    setStoredCustomerProfile(null);
+  }
+
+  function updateStoredCustomerCode(customerCode: string): void {
+    setStoredCustomerCode(customerCode);
+
+    if (
+      storedCustomerProfile &&
+      normalizeCustomerCodeInput(customerCode) !== storedCustomerProfile.customerCode
+    ) {
+      setStoredCustomerProfile(null);
+    }
   }
 
   function openCustomerModal(): void {
@@ -534,6 +693,7 @@ export function OrderMenuClient({ tenantId }: OrderMenuClientProps) {
 
       const order = buildOrder(
         tenantId,
+        tenantSlug,
         customerInfo,
         cartItems,
         total,
@@ -546,6 +706,28 @@ export function OrderMenuClient({ tenantId }: OrderMenuClientProps) {
       if (!result.success) {
         setSubmitError("No se pudo generar el pedido. Intenta de nuevo.");
         return;
+      }
+
+      if (result.customerCode) {
+        const normalizedSubmittedCustomerCode = customerInfo.customerCode
+          ? normalizeCustomerCodeInput(customerInfo.customerCode)
+          : "";
+
+        window.localStorage.setItem(
+          getCustomerCodeStorageKey(tenantId),
+          result.customerCode
+        );
+        setStoredCustomerCode(result.customerCode);
+        setSuccessCustomerCode(result.customerCode);
+        setSuccessCustomerCodeWasProvided(
+          normalizedSubmittedCustomerCode.length > 0 &&
+            normalizedSubmittedCustomerCode === result.customerCode &&
+            !result.customerProfileWarning
+        );
+
+        lookupCustomerProfile(tenantId, result.customerCode)
+          .then((profile) => setStoredCustomerProfile(profile))
+          .catch(() => setStoredCustomerProfile(null));
       }
 
       setSuccessMessage(
@@ -768,9 +950,16 @@ export function OrderMenuClient({ tenantId }: OrderMenuClientProps) {
           isSubmitting={isSubmitting}
           successMessage={successMessage}
           successOrderId={successOrderId}
+          successCustomerCode={successCustomerCode}
+          successCustomerCodeWasProvided={successCustomerCodeWasProvided}
           errorMessage={submitError}
+          initialCustomerCode={storedCustomerCode}
+          customerDisplayName={storedCustomerProfile?.displayName ?? null}
+          isLoadingCustomerProfile={isLoadingStoredCustomerProfile}
           onDeliveryTypeChange={setDeliveryType}
           onDeliveryAddressChange={setDeliveryAddress}
+          onCustomerCodeChange={updateStoredCustomerCode}
+          onForgetCustomerCode={forgetStoredCustomerCode}
           onClose={closeCustomerModal}
           onSubmit={submitOrder}
         />

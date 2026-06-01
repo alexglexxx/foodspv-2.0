@@ -7,6 +7,7 @@ export const dynamic = "force-dynamic";
 
 interface TenantRecord {
   active?: unknown;
+  slug?: unknown;
 }
 
 export default async function TenantPage(props: PageProps<"/[tenant]">) {
@@ -35,5 +36,10 @@ export default async function TenantPage(props: PageProps<"/[tenant]">) {
     notFound();
   }
 
-  return <OrderMenuClient tenantId={resolvedTenantId} />;
+  const tenantSlug =
+    typeof tenantRecord?.slug === "string" && tenantRecord.slug.trim().length > 0
+      ? tenantRecord.slug.trim()
+      : tenant;
+
+  return <OrderMenuClient tenantId={resolvedTenantId} tenantSlug={tenantSlug} />;
 }

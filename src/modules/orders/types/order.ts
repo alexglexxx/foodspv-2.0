@@ -20,13 +20,25 @@ export interface CustomerInfo {
   nombre:string;
   telefono:string;
   address?:string;
+  customerCode?:string;
+}
+
+export interface OrderCustomer {
+  customerId:string;
+  customerCode:string;
+  nombre:string;
+  telefono:string;
 }
 
 export interface Order {
 
   tenantId:string;
 
+  tenantSlug?:string;
+
   cliente:CustomerInfo;
+
+  customer?:OrderCustomer;
 
   productos:OrderItem[];
 

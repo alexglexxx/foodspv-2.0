@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { adminDb } from "@/lib/firebase-admin";
+import { upsertCustomerProfile } from "@/modules/customers/server/upsertCustomerProfile";
 import { customerConfirmationAgent } from "@/modules/orders/agents/customerConfirmationAgent";
 import { firestoreWriterAgent } from "@/modules/orders/agents/firestoreWriterAgent";
 import { orderValidatorAgent } from "@/modules/orders/agents/orderValidatorAgent";
@@ -17,12 +18,18 @@ interface OrderConfirmationPolicyRecord {
 
 interface TenantOrderConfirmationPolicyRecord {
   orderConfirmationPolicy?: unknown;
+  slug?: unknown;
 }
 
 interface OrderConfirmationPolicy {
   enabled: boolean;
   amountThreshold: number;
   action: "allow" | "require_manual_confirmation";
+}
+
+interface TenantOrderContext {
+  confirmationPolicy: OrderConfirmationPolicy;
+  tenantSlug: string;
 }
 
 const DEFAULT_ORDER_CONFIRMATION_POLICY: OrderConfirmationPolicy = {
@@ -54,13 +61,22 @@ function normalizeOrderConfirmationPolicy(
   };
 }
 
-async function getOrderConfirmationPolicy(
+async function getTenantOrderContext(
   tenantId: string
-): Promise<OrderConfirmationPolicy> {
+): Promise<TenantOrderContext> {
   const tenantSnapshot = await adminDb.collection("tenants").doc(tenantId).get();
   const tenantRecord = (tenantSnapshot.data() ?? {}) as TenantOrderConfirmationPolicyRecord;
+  const tenantSlug =
+    typeof tenantRecord.slug === "string" && tenantRecord.slug.trim().length > 0
+      ? tenantRecord.slug.trim()
+      : tenantId;
 
-  return normalizeOrderConfirmationPolicy(tenantRecord.orderConfirmationPolicy);
+  return {
+    confirmationPolicy: normalizeOrderConfirmationPolicy(
+      tenantRecord.orderConfirmationPolicy
+    ),
+    tenantSlug,
+  };
 }
 
 function applyOrderConfirmationPolicy(
@@ -98,12 +114,39 @@ export async function POST(request: Request) {
       );
     }
 
-    const orderConfirmationPolicy = await getOrderConfirmationPolicy(
+    const tenantContext = await getTenantOrderContext(
       validation.data.tenantId
     );
+    const customerProfileResult = await upsertCustomerProfile({
+      tenantId: validation.data.tenantId,
+      tenantSlug: validation.data.tenantSlug ?? tenantContext.tenantSlug,
+      displayName: validation.data.cliente.nombre,
+      phone: validation.data.cliente.telefono,
+      customerCode: validation.data.cliente.customerCode,
+      address:
+        validation.data.deliveryType === "delivery" &&
+        validation.data.deliveryAddress
+          ? {
+              street: validation.data.deliveryAddress,
+            }
+          : undefined,
+    });
+    const orderWithCustomer: Order = {
+      ...validation.data,
+      cliente: {
+        ...validation.data.cliente,
+        customerCode: customerProfileResult.customerProfile.customerCode,
+      },
+      customer: {
+        customerId: customerProfileResult.customerProfile.id,
+        customerCode: customerProfileResult.customerProfile.customerCode,
+        nombre: validation.data.cliente.nombre,
+        telefono: validation.data.cliente.telefono,
+      },
+    };
     const orderConfirmation = applyOrderConfirmationPolicy(
-      validation.data,
-      orderConfirmationPolicy
+      orderWithCustomer,
+      tenantContext.confirmationPolicy
     );
 
     const persistedOrder = await firestoreWriterAgent(orderConfirmation.order);
@@ -160,6 +203,8 @@ export async function POST(request: Request) {
         success: true,
         message,
         orderId: persistedOrder.orderId,
+        customerCode: customerProfileResult.customerProfile.customerCode,
+        customerProfileWarning: customerProfileResult.warning,
         order: orderConfirmation.order,
         requiresConfirmation: orderConfirmation.requiresConfirmation,
         tenantOrderFlow,

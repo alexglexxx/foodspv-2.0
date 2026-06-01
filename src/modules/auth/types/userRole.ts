@@ -1,8 +1,7 @@
 export type UserRole =
   | "superadmin"
   | "tenant_admin"
-  | "employee"
-  | "customer";
+  | "employee";
 
 export interface UserRoleProfile {
   uid: string;

@@ -26,5 +26,5 @@ export default async function Home(props: PageProps<"/">) {
     );
   }
 
-  return <OrderMenuClient tenantId={tenantId} />;
+  return <OrderMenuClient tenantId={tenantId} tenantSlug={tenantId} />;
 }

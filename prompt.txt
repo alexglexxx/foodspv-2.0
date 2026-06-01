@@ -1,125 +1,192 @@
-TAREA: Crear arquitectura inicial de tenant themes y agente diseñador para branding visual dinámico
+Implementa customerProfiles con código automático de cliente para FoodSPV 2.0.
 
-OBJETIVO:
-Preparar FoodSPV para que cada tenant tenga identidad visual propia sin hardcodear estilos manuales.
+Objetivo:
+Separar clientes del sistema interno de usuarios.
+No crear rol customer.
+Los clientes no hacen login.
+El cliente queda registrado automáticamente en su primer pedido mediante un código de cliente.
 
-NO construir IA compleja todavía.
-Primero construir arquitectura escalable.
+Stack:
+- Next.js App Router
+- Firestore
+- TypeScript
+- Arquitectura modular en src/modules
 
+Reglas:
+- No tocar roles internos salvo si existe customer, eliminarlo.
+- No crear login para clientes.
+- No usar any.
+- No romper checkout actual.
+- No tocar webhook ni WhatsApp salvo el texto de comanda si ya incluye cliente.
+- Mantener compatibilidad con pedidos existentes.
 
-Inspeccionar:
-tree src -L 4
-cat src/app/[tenant]/page.tsx
-cat src/modules/orders/components/OrderMenuClient.tsx
-cat src/types/tenant.types.ts
+Implementar:
 
-OBJETIVO TÉCNICO:
-Agregar sistema de theme tokens por tenant.
+1. Crear tipos:
 
-MODELO:
+src/modules/customers/types/customerProfile.ts
 
-Agregar a tenant:
+Debe incluir:
 
-tenantTheme: {
-  primaryColor: string;
-  secondaryColor: string;
-  accentColor: string;
-  backgroundColor: string;
-  surfaceColor: string;
-  textColor: string;
-  typography: "modern" | "bold" | "soft";
-  visualStyle:
-    | "street-food"
-    | "dessert"
-    | "minimal"
-    | "coffee"
-    | "restaurant";
+export interface CustomerAddress {
+  id: string;
+  label?: string;
+  street: string;
+  neighborhood?: string;
+  references?: string;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
-DEFAULTS:
-Si tenant no tiene theme:
-usar fallback visual actual.
+export interface CustomerProfile {
+  id: string;
+  tenantId: string;
+  customerCode: string;
+  displayName: string;
+  phone: string;
+  phoneLast4: string;
+  totalOrders: number;
+  firstOrderAt?: Date;
+  lastOrderAt?: Date;
+  addresses: CustomerAddress[];
+  notes?: string;
+  blocked: boolean;
+}
 
-SUPERADMIN:
-remover sección:
-"Diseño visual"
+2. Crear util:
 
-remover Campos:
-- Color primario
-- Color secundario
-- Accent
-- Background
-- Typography
-- Visual style
+src/modules/customers/utils/generateCustomerCode.ts
 
-Agregar presets rápidos:
-- Taquería
-- Crepas/Postres
-- Cafetería
-- Minimalista
-- Restaurante
+Debe:
+- recibir tenantSlug o tenantId
+- generar código tipo CHUY-48291
+- usar prefijo limpio:
+  - tomar letras/números del slug
+  - uppercase
+  - máximo 4 caracteres
+  - fallback FOOD
+- número random de 5 dígitos
+- exportar generateCustomerCode(tenantSlug: string): string
 
-Agregar preset rapidos:
-- producto
-- foto de producto
-- descripcion
-- precio 
+3. Crear servicio server:
 
-UI FRONTEND:
-OrderMenuClient debe leer tenantTheme y aplicar:
-- colores principales
-- botones
-- fondos
-- badges
-- tipografía base
+src/modules/customers/server/upsertCustomerProfile.ts
 
-IMPORTANTE:
-NO meter Tailwind dinámico imposible.
-Usar CSS variables o mapping controlado.
+Debe recibir:
+- tenantId
+- tenantSlug
+- displayName
+- phone
+- customerCode opcional
+- address opcional
 
-Ejemplo:
-style={{
- "--tenant-primary": tenantTheme.primaryColor
-}}
+Lógica:
+A) Si customerCode existe:
+   - buscar tenants/{tenantId}/customerCodes/{customerCode}
+   - si existe, obtener customerId
+   - actualizar customerProfile:
+     - displayName si cambió
+     - phone si cambió
+     - lastOrderAt
+     - totalOrders + 1
+     - agregar address si viene y no es duplicada simple
+   - devolver customerProfile
 
-y consumir en clases inline/controladas.
+B) Si customerCode no existe:
+   - generar customerCode único
+   - crear customerProfile en tenants/{tenantId}/customerProfiles/{customerId}
+   - crear índice tenants/{tenantId}/customerCodes/{customerCode}
+   - totalOrders = 1
+   - blocked = false
+   - devolver customerProfile
 
-NO TOCAR:
-- webhook
-- QR
-- Meta
-- modifiers
-- roles
-- pedidos
+C) Si customerCode existe pero no se encuentra:
+   - no bloquear pedido
+   - crear nuevo perfil o devolver error controlado según implementación actual
+   - recomendado: crear nuevo perfil y regresar warning: "Código no encontrado, se generó uno nuevo."
 
-ARQUITECTURA:
-Crear:
-src/modules/theme/
+4. Actualizar modelo de order:
 
-Sugerido:
-- services/themeService.ts
-- types/theme.ts
-- constants/themePresets.ts
+Cada pedido debe guardar:
 
-AGENTE DISEÑADOR:
-NO usar IA externa todavía.
-Crear función inicial:
+customer: {
+  customerId: string;
+  customerCode: string;
+  nombre: string;
+  telefono: string;
+}
 
-generateThemeFromCategory(category)
+Mantener compatibilidad con campos anteriores:
+cliente.nombre
+cliente.telefono
 
-Ejemplos:
-"tacos" → preset street-food
-"crepas" → preset dessert
-"café" → preset coffee
+5. Actualizar modal checkout:
 
-Dejar arquitectura lista para futuro:
-designerAgent.ts
+Agregar campo opcional:
 
-VERIFICACIÓN:
+Código de cliente
+
+Texto de ayuda:
+"Si ya tienes código, escríbelo aquí. Si es tu primer pedido, te generaremos uno."
+
+6. Después de crear pedido:
+
+Mostrar mensaje:
+
+"Tu código de cliente es: {customerCode}. Guárdalo para tus próximos pedidos."
+
+Si ya venía con código:
+"Pedido asociado a tu código de cliente: {customerCode}."
+
+7. Actualizar WhatsApp/comanda:
+
+Incluir:
+
+Cliente: Nombre
+Teléfono: teléfono
+Código cliente: 123 456  2 bloques de 3 digitos
+
+Agregar persistencia local de customerCode por tenant.
+
+Implementar:
+- guardar customerCode en localStorage después del primer pedido exitoso
+- leer customerCode al cargar el checkout
+- si existe, buscar customerProfile automáticamente
+- mostrar "Bienvenido {displayName}"
+- permitir cambiar/olvidar código
+- no guardar teléfono, dirección ni historial en localStorage
+- usar key por tenant:
+  foodspv_customer_code_{tenantId}
+
+8. Crear documentación:
+
+docs/architecture/customer-profiles-auto-registration.md
+
+Explicar:
+- por qué cliente NO es user
+- por qué cliente NO tiene rol
+- flujo primer pedido
+- flujo pedido recurrente
+- colección customerProfiles
+- colección customerCodes
+- seguridad y privacidad
+- posible futuro: historial, promociones, fidelización
+- con la intencion en un futuro: Cliente: 482-913
+✓ 23 pedidos realizados
+✓ Último pedido hace 4 días
+✓ Dirección guardada
+✓ Cliente frecuente
+✓ Descuento automático
+✓ Promociones VIP
+
+9. Verificar:
+
 npm run build
 npm run lint
 
-ENTREGAR:
-- archivos modificados
-- build
-- lint
+10. Commit:
+
+gs
+ga .
+gc "feat: add automatic customer profiles with customer codes"
+gp

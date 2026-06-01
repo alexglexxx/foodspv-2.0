@@ -4,6 +4,22 @@ function formatAmount(amount: number): string {
   return amount.toFixed(2);
 }
 
+function formatCustomerCode(customerCode: string | undefined): string {
+  if (!customerCode) {
+    return "No asignado";
+  }
+
+  const [prefix, digits] = customerCode.split("-");
+
+  if (!digits) {
+    return customerCode;
+  }
+
+  const digitBlocks = digits.match(/.{1,3}/g)?.join(" ") ?? digits;
+
+  return `${prefix} ${digitBlocks}`;
+}
+
 export function whatsappComandaAgent(order: Order): string {
   const productLines = order.productos.map((producto, index) => {
     return `${index + 1}. ${producto.cantidad} x ${producto.nombre}`;
@@ -24,8 +40,9 @@ export function whatsappComandaAgent(order: Order): string {
   return [
     header,
     "",
-    `Nombre: ${order.cliente.nombre}`,
-    `Telefono: ${order.cliente.telefono}`,
+    `Cliente: ${order.customer?.nombre ?? order.cliente.nombre}`,
+    `Teléfono: ${order.customer?.telefono ?? order.cliente.telefono}`,
+    `Código cliente: ${formatCustomerCode(order.customer?.customerCode)}`,
     ...deliveryLines,
     "",
     "PRODUCTOS",

@@ -16,9 +16,16 @@ interface CustomerInfoModalProps {
   isSubmitting: boolean;
   successMessage: string | null;
   successOrderId: string | null;
+  successCustomerCode: string | null;
+  successCustomerCodeWasProvided: boolean;
   errorMessage: string | null;
+  initialCustomerCode: string;
+  customerDisplayName: string | null;
+  isLoadingCustomerProfile: boolean;
   onDeliveryTypeChange: (deliveryType: "pickup" | "delivery") => void;
   onDeliveryAddressChange: (deliveryAddress: string) => void;
+  onCustomerCodeChange: (customerCode: string) => void;
+  onForgetCustomerCode: () => void;
   onClose: () => void;
   onSubmit: (customerInfo: CustomerInfo) => void | Promise<void>;
 }
@@ -79,15 +86,23 @@ export function CustomerInfoModal({
   isSubmitting,
   successMessage,
   successOrderId,
+  successCustomerCode,
+  successCustomerCodeWasProvided,
   errorMessage,
+  initialCustomerCode,
+  customerDisplayName,
+  isLoadingCustomerProfile,
   onDeliveryTypeChange,
   onDeliveryAddressChange,
+  onCustomerCodeChange,
+  onForgetCustomerCode,
   onClose,
   onSubmit,
 }: CustomerInfoModalProps) {
   const [customerInfo, setCustomerInfo] = useState<CustomerInfo>({
     nombre: "",
     telefono: "",
+    customerCode: initialCustomerCode,
   });
   const [errors, setErrors] = useState<CustomerInfoErrors>({});
   const [deliveryAddressError, setDeliveryAddressError] = useState<string | null>(
@@ -103,6 +118,10 @@ export function CustomerInfoModal({
       ...currentValue,
       [field]: value,
     }));
+
+    if (field === "customerCode") {
+      onCustomerCodeChange(value);
+    }
 
     setErrors((currentErrors) => {
       if (!currentErrors[field]) {
@@ -132,6 +151,14 @@ export function CustomerInfoModal({
     }
   }
 
+  function forgetCustomerCode(): void {
+    setCustomerInfo((currentValue) => ({
+      ...currentValue,
+      customerCode: "",
+    }));
+    onForgetCustomerCode();
+  }
+
   function handleSubmit(event: FormEvent<HTMLFormElement>): void {
     event.preventDefault();
 
@@ -142,6 +169,7 @@ export function CustomerInfoModal({
     const normalizedCustomerInfo: CustomerInfo = {
       nombre: customerInfo.nombre.trim(),
       telefono: customerInfo.telefono.trim().replace(/\D/g, ""),
+      customerCode: customerInfo.customerCode?.trim(),
     };
 
     const validationErrors = validateCustomerInfo(normalizedCustomerInfo);
@@ -239,6 +267,19 @@ export function CustomerInfoModal({
                 </p>
                 <p className="mt-1 break-all text-base font-black">
                   {successOrderId}
+                </p>
+              </div>
+            ) : null}
+
+            {successCustomerCode ? (
+              <div className="mt-4 rounded-2xl bg-[#2b2118] px-4 py-3 ring-1 ring-[#6b5138]">
+                <p className="text-xs font-extrabold uppercase tracking-[0.2em] opacity-70">
+                  Código cliente
+                </p>
+                <p className="mt-1 text-base font-black">
+                  {successCustomerCodeWasProvided
+                    ? `Pedido asociado a tu código de cliente: ${successCustomerCode}.`
+                    : `Tu código de cliente es: ${successCustomerCode}. Guárdalo para tus próximos pedidos.`}
                 </p>
               </div>
             ) : null}
@@ -359,6 +400,49 @@ export function CustomerInfoModal({
                 </span>
               ) : null}
             </label>
+
+            <section className="rounded-[1.5rem] border border-[#6b5138] bg-[#463426] p-4">
+              {customerDisplayName ? (
+                <div className="mb-4 flex items-center justify-between gap-3 rounded-2xl bg-[#2b2118] px-4 py-3 text-sm font-bold text-emerald-300 ring-1 ring-emerald-500/20">
+                  <span>Bienvenido {customerDisplayName}</span>
+                  <button
+                    type="button"
+                    onClick={forgetCustomerCode}
+                    className="shrink-0 text-xs font-extrabold text-[#e7d4b8] underline-offset-4 hover:underline"
+                  >
+                    Olvidar
+                  </button>
+                </div>
+              ) : null}
+
+              {isLoadingCustomerProfile ? (
+                <p className="mb-4 rounded-2xl bg-[#2b2118] px-4 py-3 text-sm font-semibold text-[#e7d4b8] ring-1 ring-[#6b5138]">
+                  Buscando tu código de cliente...
+                </p>
+              ) : null}
+
+              <label className="block">
+                <span className="text-sm font-extrabold text-[#fff7ed]">
+                  Código de cliente
+                </span>
+
+                <input
+                  type="text"
+                  name="customerCode"
+                  value={customerInfo.customerCode ?? ""}
+                  onChange={(event) =>
+                    updateField("customerCode", event.target.value)
+                  }
+                  className="mt-2 w-full rounded-2xl border border-[#6b5138] bg-[#2b2118] px-4 py-4 text-base font-semibold uppercase text-[#fff7ed] outline-none transition placeholder:normal-case placeholder:text-[#b99f80] focus:border-orange-500 focus:ring-4 focus:ring-orange-500/20"
+                  placeholder="Ej. CHUY-48291"
+                  autoComplete="off"
+                />
+
+                <span className="mt-2 block text-sm font-semibold leading-6 text-[#e7d4b8]">
+                  Si ya tienes código, escríbelo aquí. Si es tu primer pedido, te generaremos uno.
+                </span>
+              </label>
+            </section>
 
             {errorMessage ? (
               <div className="rounded-[1.5rem] border border-rose-500/30 bg-rose-500/15 p-4 text-sm font-semibold leading-6 text-rose-300">

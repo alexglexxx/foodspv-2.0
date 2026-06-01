@@ -16,7 +16,6 @@ const USER_ROLES = new Set<UserRole>([
   "superadmin",
   "tenant_admin",
   "employee",
-  "customer",
 ]);
 
 function isUserRole(value: unknown): value is UserRole {
