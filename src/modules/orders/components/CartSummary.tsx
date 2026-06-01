@@ -27,16 +27,16 @@ export function CartSummary({
   const hasItems = itemCount > 0;
 
   return (
-    <section className="fixed inset-x-0 bottom-0 z-50 border-t border-[var(--tenant-secondary)] bg-[color-mix(in_srgb,var(--tenant-surface)_95%,transparent)] px-4 py-3 shadow-[0_-12px_30px_rgba(0,0,0,0.28)] backdrop-blur">
+    <section className="fixed inset-x-0 bottom-0 z-50 border-t border-[#6b5138] bg-[#3a2b1f]/95 px-4 py-3 shadow-[0_-12px_30px_rgba(43,33,24,0.42)] backdrop-blur">
       <div className="mx-auto flex w-full max-w-3xl items-center gap-3">
         <button
           type="button"
           onClick={onOpenCart}
           disabled={!hasItems}
-          className="flex min-w-0 flex-1 items-center justify-between rounded-2xl bg-[var(--tenant-secondary)] px-4 py-3 text-left text-[var(--tenant-text)] ring-1 ring-[var(--tenant-secondary)] transition brightness-100 hover:brightness-110 disabled:cursor-not-allowed disabled:text-[color-mix(in_srgb,var(--tenant-text)_58%,transparent)]"
+          className="flex min-w-0 flex-1 items-center justify-between rounded-2xl bg-[#463426] px-4 py-3 text-left text-[#fff7ed] ring-1 ring-[#6b5138] transition hover:bg-[#5a422e] disabled:cursor-not-allowed disabled:text-[#b99f80]"
         >
           <span className="min-w-0">
-            <span className="block text-xs font-semibold uppercase tracking-[0.16em] text-[var(--tenant-accent)]">
+            <span className="block text-xs font-semibold uppercase tracking-[0.16em] text-orange-400">
               Carrito
             </span>
             <span className="block truncate text-sm font-semibold">
@@ -55,7 +55,7 @@ export function CartSummary({
           type="button"
           onClick={onGenerateOrder}
           disabled={!hasItems}
-          className="shrink-0 rounded-2xl bg-[var(--tenant-primary)] px-4 py-3 text-sm font-bold text-white transition brightness-100 hover:brightness-110 disabled:cursor-not-allowed disabled:bg-[var(--tenant-secondary)] disabled:text-[color-mix(in_srgb,var(--tenant-text)_58%,transparent)]"
+          className="shrink-0 rounded-2xl bg-orange-600 px-4 py-3 text-sm font-bold text-[#fff7ed] transition hover:bg-orange-500 disabled:cursor-not-allowed disabled:bg-[#463426] disabled:text-[#b99f80]"
         >
           Pedir
         </button>

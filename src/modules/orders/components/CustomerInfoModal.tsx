@@ -125,21 +125,21 @@ export function CustomerInfoModal({
         aria-label="Cerrar datos del cliente"
         onClick={onClose}
         disabled={isSubmitting}
-        className="absolute inset-0 bg-stone-950/60 backdrop-blur-[2px]"
+        className="absolute inset-0 bg-[#2b2118]/70 backdrop-blur-[2px]"
       />
 
-      <div className="relative z-10 max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-[2rem] bg-[var(--tenant-surface)] p-6 shadow-2xl ring-1 ring-[var(--tenant-ring)] sm:p-8">
+      <div className="relative z-10 max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-[2rem] bg-[#3a2b1f] p-6 shadow-2xl ring-1 ring-[#6b5138] sm:p-8">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="text-xs font-extrabold uppercase tracking-[0.28em] text-[var(--tenant-accent)]">
+            <p className="text-xs font-extrabold uppercase tracking-[0.28em] text-orange-400">
               Confirmar pedido
             </p>
 
-            <h2 className="mt-3 text-3xl font-black tracking-tight text-[var(--tenant-text)]">
+            <h2 className="mt-3 text-3xl font-black tracking-tight text-[#fff7ed]">
               Datos del cliente
             </h2>
 
-            <p className="mt-3 text-sm font-medium leading-6 text-[var(--tenant-muted)]">
+            <p className="mt-3 text-sm font-medium leading-6 text-[#e7d4b8]">
               Ingresa tu nombre y teléfono para que el negocio pueda confirmar tu orden.
             </p>
           </div>
@@ -148,18 +148,18 @@ export function CustomerInfoModal({
             type="button"
             onClick={onClose}
             disabled={isSubmitting}
-            className="shrink-0 rounded-full border border-[var(--tenant-ring)] bg-[var(--tenant-secondary)] px-4 py-2 text-sm font-extrabold text-[var(--tenant-text)] shadow-sm transition brightness-100 hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+            className="shrink-0 rounded-full border border-[#6b5138] bg-[#463426] px-4 py-2 text-sm font-extrabold text-[#fff7ed] shadow-sm transition hover:bg-[#5a422e] disabled:cursor-not-allowed disabled:opacity-60"
           >
             Cerrar
           </button>
         </div>
 
-        <div className="mt-6 rounded-[1.5rem] border border-[var(--tenant-ring)] bg-[var(--tenant-secondary)] p-5 shadow-sm">
-          <p className="text-xs font-extrabold uppercase tracking-[0.24em] text-[var(--tenant-accent)]">
+        <div className="mt-6 rounded-[1.5rem] border border-[#6b5138] bg-[#463426] p-5 shadow-sm">
+          <p className="text-xs font-extrabold uppercase tracking-[0.24em] text-orange-400">
             Total del pedido
           </p>
 
-          <p className="mt-2 text-4xl font-black tracking-tight text-[var(--tenant-text)]">
+          <p className="mt-2 text-4xl font-black tracking-tight text-[#fff7ed]">
             {formatCurrency(total)}
           </p>
         </div>
@@ -174,7 +174,7 @@ export function CustomerInfoModal({
             <p className="mt-2 font-medium leading-6">{customerStatus.body}</p>
 
             {successOrderId ? (
-              <div className="mt-4 rounded-2xl bg-[var(--tenant-background)] px-4 py-3 ring-1 ring-[var(--tenant-ring)]">
+              <div className="mt-4 rounded-2xl bg-[#2b2118] px-4 py-3 ring-1 ring-[#6b5138]">
                 <p className="text-xs font-extrabold uppercase tracking-[0.2em] opacity-70">
                   Folio
                 </p>
@@ -187,7 +187,7 @@ export function CustomerInfoModal({
             <button
               type="button"
               onClick={onClose}
-              className="mt-5 w-full rounded-full bg-[var(--tenant-primary)] px-5 py-3 text-sm font-extrabold text-white transition brightness-100 hover:brightness-110"
+              className="mt-5 w-full rounded-full bg-orange-600 px-5 py-3 text-sm font-extrabold text-[#fff7ed] transition hover:bg-orange-500"
             >
               Entendido
             </button>
@@ -195,7 +195,7 @@ export function CustomerInfoModal({
         ) : (
           <form className="mt-6 space-y-5" onSubmit={handleSubmit}>
             <label className="block">
-              <span className="text-sm font-extrabold text-[var(--tenant-text)]">
+              <span className="text-sm font-extrabold text-[#fff7ed]">
                 Nombre
               </span>
 
@@ -204,7 +204,7 @@ export function CustomerInfoModal({
                 name="nombre"
                 value={customerInfo.nombre}
                 onChange={(event) => updateField("nombre", event.target.value)}
-                className="mt-2 w-full rounded-2xl border border-[var(--tenant-ring)] bg-[var(--tenant-background)] px-4 py-4 text-base font-semibold text-[var(--tenant-text)] outline-none transition placeholder:text-[var(--tenant-muted)] focus:border-[var(--tenant-primary)] focus:ring-4 focus:ring-[color-mix(in_srgb,var(--tenant-primary)_15%,transparent)]"
+                className="mt-2 w-full rounded-2xl border border-[#6b5138] bg-[#2b2118] px-4 py-4 text-base font-semibold text-[#fff7ed] outline-none transition placeholder:text-[#b99f80] focus:border-orange-500 focus:ring-4 focus:ring-orange-500/20"
                 placeholder="Ej. Ana Pérez"
                 autoComplete="name"
               />
@@ -217,7 +217,7 @@ export function CustomerInfoModal({
             </label>
 
             <label className="block">
-              <span className="text-sm font-extrabold text-[var(--tenant-text)]">
+              <span className="text-sm font-extrabold text-[#fff7ed]">
                 Teléfono
               </span>
 
@@ -226,7 +226,7 @@ export function CustomerInfoModal({
                 name="telefono"
                 value={customerInfo.telefono}
                 onChange={(event) => updateField("telefono", event.target.value)}
-                className="mt-2 w-full rounded-2xl border border-[var(--tenant-ring)] bg-[var(--tenant-background)] px-4 py-4 text-base font-semibold text-[var(--tenant-text)] outline-none transition placeholder:text-[var(--tenant-muted)] focus:border-[var(--tenant-primary)] focus:ring-4 focus:ring-[color-mix(in_srgb,var(--tenant-primary)_15%,transparent)]"
+                className="mt-2 w-full rounded-2xl border border-[#6b5138] bg-[#2b2118] px-4 py-4 text-base font-semibold text-[#fff7ed] outline-none transition placeholder:text-[#b99f80] focus:border-orange-500 focus:ring-4 focus:ring-orange-500/20"
                 placeholder="Ej. 3221234567"
                 autoComplete="tel"
                 inputMode="tel"
@@ -248,7 +248,7 @@ export function CustomerInfoModal({
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full rounded-full bg-[var(--tenant-primary)] px-5 py-4 text-base font-black text-white shadow-lg shadow-black/20 transition brightness-100 hover:brightness-110 disabled:cursor-not-allowed disabled:bg-[var(--tenant-ring)] disabled:text-[var(--tenant-muted)]"
+              className="w-full rounded-full bg-orange-600 px-5 py-4 text-base font-black text-[#fff7ed] shadow-lg shadow-[#2b2118]/25 transition hover:bg-orange-500 disabled:cursor-not-allowed disabled:bg-[#6b5138] disabled:text-[#b99f80]"
             >
               {isSubmitting ? "Confirmando pedido..." : "Confirmar pedido"}
             </button>

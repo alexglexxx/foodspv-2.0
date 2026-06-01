@@ -10,10 +10,12 @@ interface TenantListProps {
   selectedTenantId: string | null;
   isLoading: boolean;
   deletingTenantId: string | null;
+  permanentlyDeletingTenantId: string | null;
   onRefresh: () => void;
   onSelect: (tenant: SuperAdminTenantSummary) => void;
   onEdit: (tenant: SuperAdminTenantSummary) => void;
   onDeactivate: (tenantId: string) => void;
+  onPermanentDelete: (tenantId: string) => void;
 }
 
 function getStatusClassName(status: SuperAdminTenantStatus): string {
@@ -27,10 +29,12 @@ export function TenantList({
   selectedTenantId,
   isLoading,
   deletingTenantId,
+  permanentlyDeletingTenantId,
   onRefresh,
   onSelect,
   onEdit,
   onDeactivate,
+  onPermanentDelete,
 }: TenantListProps) {
   return (
     <div>
@@ -110,12 +114,29 @@ export function TenantList({
                   <button
                     type="button"
                     onClick={() => onDeactivate(tenant.tenantId)}
-                    disabled={deletingTenantId === tenant.tenantId}
+                    disabled={
+                      deletingTenantId === tenant.tenantId ||
+                      permanentlyDeletingTenantId === tenant.tenantId
+                    }
                     className="rounded-full border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-extrabold text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {deletingTenantId === tenant.tenantId
                       ? "Desactivando..."
                       : "Desactivar"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onPermanentDelete(tenant.tenantId)}
+                    disabled={
+                      !tenant.tenantId ||
+                      deletingTenantId === tenant.tenantId ||
+                      permanentlyDeletingTenantId === tenant.tenantId
+                    }
+                    className="rounded-full border border-rose-300 bg-white px-4 py-2 text-sm font-extrabold text-rose-800 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {permanentlyDeletingTenantId === tenant.tenantId
+                      ? "Eliminando..."
+                      : "Eliminar"}
                   </button>
                 </div>
               </div>

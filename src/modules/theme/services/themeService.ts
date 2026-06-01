@@ -91,9 +91,10 @@ export function getTenantThemeCssVariables(
     "--tenant-background": theme.backgroundColor,
     "--tenant-surface": theme.surfaceColor,
     "--tenant-text": theme.textColor,
-    "--tenant-muted": "color-mix(in srgb, var(--tenant-text) 72%, transparent)",
-    "--tenant-subtle": "color-mix(in srgb, var(--tenant-surface) 82%, var(--tenant-background))",
-    "--tenant-ring": "color-mix(in srgb, var(--tenant-secondary) 72%, var(--tenant-text) 16%)",
+    "--tenant-text-soft": "#e7d4b8",
+    "--tenant-muted": "#b99f80",
+    "--tenant-subtle": "#463426",
+    "--tenant-ring": "#6b5138",
   };
 }
 

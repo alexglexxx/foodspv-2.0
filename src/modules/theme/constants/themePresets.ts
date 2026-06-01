@@ -1,11 +1,11 @@
 import type { TenantTheme, TenantThemePresetKey } from "../types/theme";
 
 export const DEFAULT_TENANT_THEME: TenantTheme = {
-  primaryColor: "#ea580c",
-  secondaryColor: "#35271b",
-  accentColor: "#fdba74",
-  backgroundColor: "#20170f",
-  surfaceColor: "#2a1f16",
+  primaryColor: "#f97316",
+  secondaryColor: "#463426",
+  accentColor: "#fb923c",
+  backgroundColor: "#2b2118",
+  surfaceColor: "#3a2b1f",
   textColor: "#fff7ed",
   typography: "bold",
   visualStyle: "restaurant",

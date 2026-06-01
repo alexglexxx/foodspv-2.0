@@ -65,6 +65,20 @@ export async function deleteSuperAdminTenant(
   return (await response.json()) as SuperAdminTenantMutationResponse;
 }
 
+export async function permanentlyDeleteTenant(
+  user: User,
+  tenantId: string
+): Promise<{ success: true } | { success: false; message: string }> {
+  const response = await fetch(`/api/tenants/${tenantId}`, {
+    method: "DELETE",
+    headers: await getAuthorizationHeaders(user),
+  });
+
+  return (await response.json()) as
+    | { success: true }
+    | { success: false; message: string };
+}
+
 export async function fetchSuperAdminTenantProducts(
   user: User,
   tenantId: string

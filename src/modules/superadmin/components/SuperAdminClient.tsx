@@ -15,6 +15,7 @@ import {
   createSuperAdminTenant,
   deleteSuperAdminTenant,
   fetchSuperAdminTenants,
+  permanentlyDeleteTenant,
   updateSuperAdminTenant,
 } from "../services/superAdminApiService";
 import type {
@@ -101,6 +102,8 @@ export function SuperAdminClient() {
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [isSigningIn, setIsSigningIn] = useState<boolean>(false);
   const [deletingTenantId, setDeletingTenantId] = useState<string | null>(null);
+  const [permanentlyDeletingTenantId, setPermanentlyDeletingTenantId] =
+    useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -310,6 +313,62 @@ export function SuperAdminClient() {
     }
   }
 
+  async function handlePermanentDeleteTenant(tenantId: string): Promise<void> {
+    if (!user) {
+      setErrorMessage("Sesión requerida.");
+      return;
+    }
+
+    if (!tenantId) {
+      setErrorMessage("tenantId requerido para eliminar.");
+      setMessage(null);
+      return;
+    }
+
+    const confirmed = window.confirm(
+      "¿Eliminar este negocio y sus datos de prueba?"
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setPermanentlyDeletingTenantId(tenantId);
+    setMessage(null);
+    setErrorMessage(null);
+
+    try {
+      const response = await permanentlyDeleteTenant(user, tenantId);
+
+      if (!response.success) {
+        setErrorMessage(response.message);
+        return;
+      }
+
+      setTenants((currentTenants) =>
+        currentTenants.filter((tenant) => tenant.tenantId !== tenantId)
+      );
+
+      if (selectedTenantId === tenantId) {
+        setSelectedTenantId(null);
+      }
+
+      if (editingTenantId === tenantId) {
+        resetForm();
+      }
+
+      setMessage("Negocio eliminado.");
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "No se pudo eliminar el negocio."
+      );
+    } finally {
+      setPermanentlyDeletingTenantId(null);
+    }
+  }
+
   async function copyTenantUrl(tenant: SuperAdminTenantSummary): Promise<void> {
     if (!tenant.publicUrl) {
       setErrorMessage("No configurada");
@@ -474,10 +533,14 @@ export function SuperAdminClient() {
               selectedTenantId={selectedTenantId}
               isLoading={isLoading}
               deletingTenantId={deletingTenantId}
+              permanentlyDeletingTenantId={permanentlyDeletingTenantId}
               onRefresh={() => void loadTenants(user)}
               onSelect={selectTenant}
               onEdit={editTenant}
               onDeactivate={(tenantId) => void handleDeleteTenant(tenantId)}
+              onPermanentDelete={(tenantId) =>
+                void handlePermanentDeleteTenant(tenantId)
+              }
             />
 
             {selectedTenant ? (
