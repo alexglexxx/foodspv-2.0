@@ -4,16 +4,12 @@ import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { onAuthStateChanged, signInWithEmailAndPassword, signOut, type User } from "firebase/auth";
 
 import { auth } from "@/lib/firebase/client";
+import { generateThemeFromCategory } from "@/modules/theme/agents/designerAgent";
 import {
   DEFAULT_TENANT_THEME,
   TENANT_THEME_PRESET_OPTIONS,
   TENANT_THEME_PRESETS,
 } from "@/modules/theme/constants/themePresets";
-import type {
-  TenantTheme,
-  TenantThemeTypography,
-  TenantThemeVisualStyle,
-} from "@/modules/theme/types/theme";
 
 import {
   createSuperAdminTenant,
@@ -93,10 +89,6 @@ function getStatusClassName(status: SuperAdminTenantStatus): string {
   return status === "active"
     ? "bg-emerald-50 text-emerald-700 ring-emerald-200"
     : "bg-stone-100 text-stone-600 ring-stone-200";
-}
-
-function getColorInputValue(value: string): string {
-  return /^#[0-9a-fA-F]{6}$/.test(value) ? value : "#000000";
 }
 
 export function SuperAdminClient() {
@@ -249,23 +241,17 @@ export function SuperAdminClient() {
     }));
   }
 
-  function updateTenantThemeField<Field extends keyof TenantTheme>(
-    field: Field,
-    value: TenantTheme[Field]
-  ): void {
-    setForm((currentForm) => ({
-      ...currentForm,
-      tenantTheme: {
-        ...currentForm.tenantTheme,
-        [field]: value,
-      },
-    }));
-  }
-
   function applyTenantThemePreset(presetKey: keyof typeof TENANT_THEME_PRESETS): void {
     setForm((currentForm) => ({
       ...currentForm,
       tenantTheme: TENANT_THEME_PRESETS[presetKey],
+    }));
+  }
+
+  function applyTenantThemeFromCategory(): void {
+    setForm((currentForm) => ({
+      ...currentForm,
+      tenantTheme: generateThemeFromCategory(currentForm.category),
     }));
   }
 
@@ -636,8 +622,15 @@ export function SuperAdminClient() {
                 />
               </div>
               <div className="rounded-[1.5rem] border border-stone-200 bg-stone-50 p-5">
-                <h3 className="text-lg font-black">Diseño visual</h3>
+                <h3 className="text-lg font-black">Presets rápidos</h3>
                 <div className="mt-4 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={applyTenantThemeFromCategory}
+                    className="rounded-full border border-orange-200 bg-orange-50 px-3 py-2 text-xs font-extrabold text-orange-700 transition hover:bg-orange-100"
+                  >
+                    Usar categoría
+                  </button>
                   {TENANT_THEME_PRESET_OPTIONS.map((preset) => (
                     <button
                       key={preset.key}
@@ -649,81 +642,25 @@ export function SuperAdminClient() {
                     </button>
                   ))}
                 </div>
-                <div className="mt-4 grid gap-4 sm:grid-cols-3">
-                  <ColorField
-                    label="Color primario"
-                    value={form.tenantTheme.primaryColor}
-                    onChange={(value) =>
-                      updateTenantThemeField("primaryColor", value)
-                    }
+                <div className="mt-4 flex items-center gap-3 rounded-2xl bg-white px-4 py-3 ring-1 ring-stone-200">
+                  <span
+                    className="h-8 w-8 rounded-full ring-1 ring-stone-200"
+                    style={{ backgroundColor: form.tenantTheme.primaryColor }}
+                    aria-hidden="true"
                   />
-                  <ColorField
-                    label="Color secundario"
-                    value={form.tenantTheme.secondaryColor}
-                    onChange={(value) =>
-                      updateTenantThemeField("secondaryColor", value)
-                    }
+                  <span
+                    className="h-8 w-8 rounded-full ring-1 ring-stone-200"
+                    style={{ backgroundColor: form.tenantTheme.secondaryColor }}
+                    aria-hidden="true"
                   />
-                  <ColorField
-                    label="Accent"
-                    value={form.tenantTheme.accentColor}
-                    onChange={(value) =>
-                      updateTenantThemeField("accentColor", value)
-                    }
+                  <span
+                    className="h-8 w-8 rounded-full ring-1 ring-stone-200"
+                    style={{ backgroundColor: form.tenantTheme.accentColor }}
+                    aria-hidden="true"
                   />
-                  <ColorField
-                    label="Background"
-                    value={form.tenantTheme.backgroundColor}
-                    onChange={(value) =>
-                      updateTenantThemeField("backgroundColor", value)
-                    }
-                  />
-                  <ColorField
-                    label="Surface"
-                    value={form.tenantTheme.surfaceColor}
-                    onChange={(value) =>
-                      updateTenantThemeField("surfaceColor", value)
-                    }
-                  />
-                  <ColorField
-                    label="Texto"
-                    value={form.tenantTheme.textColor}
-                    onChange={(value) => updateTenantThemeField("textColor", value)}
-                  />
-                </div>
-                <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                  <SelectField
-                    label="Typography"
-                    value={form.tenantTheme.typography}
-                    onChange={(value) =>
-                      updateTenantThemeField(
-                        "typography",
-                        value as TenantThemeTypography
-                      )
-                    }
-                    options={[
-                      { value: "modern", label: "Modern" },
-                      { value: "bold", label: "Bold" },
-                      { value: "soft", label: "Soft" },
-                    ]}
-                  />
-                  <SelectField
-                    label="Visual style"
-                    value={form.tenantTheme.visualStyle}
-                    onChange={(value) =>
-                      updateTenantThemeField(
-                        "visualStyle",
-                        value as TenantThemeVisualStyle
-                      )
-                    }
-                    options={[
-                      { value: "street-food", label: "Street food" },
-                      { value: "dessert", label: "Dessert" },
-                      { value: "minimal", label: "Minimal" },
-                      { value: "coffee", label: "Coffee" },
-                      { value: "restaurant", label: "Restaurant" },
-                    ]}
-                  />
+                  <span className="text-sm font-bold text-stone-700">
+                    {form.tenantTheme.visualStyle} · {form.tenantTheme.typography}
+                  </span>
                 </div>
               </div>
               <div className="rounded-[1.5rem] border border-stone-200 bg-stone-50 p-5">
@@ -1014,38 +951,6 @@ function TextField({
   );
 }
 
-function ColorField({
-  label,
-  value,
-  onChange,
-}: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-}) {
-  return (
-    <label className="block">
-      <span className="text-sm font-extrabold text-stone-900">{label}</span>
-      <div className="mt-2 flex items-center gap-2 rounded-2xl border border-stone-300 bg-white px-3 py-2 focus-within:border-orange-500 focus-within:ring-4 focus-within:ring-orange-100">
-        <input
-          type="color"
-          value={getColorInputValue(value)}
-          onChange={(event) => onChange(event.target.value)}
-          className="h-9 w-10 cursor-pointer rounded-lg border border-stone-200 bg-transparent"
-        />
-        <input
-          type="text"
-          value={value}
-          onChange={(event) => onChange(event.target.value)}
-          className="min-w-0 flex-1 bg-transparent text-sm font-semibold text-stone-950 outline-none"
-          pattern="#[0-9a-fA-F]{6}"
-          required
-        />
-      </div>
-    </label>
-  );
-}
-
 function SelectField({
   label,
   value,
@@ -1055,9 +960,7 @@ function SelectField({
   label: string;
   value:
     | SuperAdminTenantStatus
-    | SuperAdminOrderFlowMode
-    | TenantThemeTypography
-    | TenantThemeVisualStyle;
+    | SuperAdminOrderFlowMode;
   onChange: (value: string) => void;
   options: Array<{ value: string; label: string }>;
 }) {

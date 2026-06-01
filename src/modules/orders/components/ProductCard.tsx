@@ -25,10 +25,11 @@ export function ProductCard({
 }: ProductCardProps) {
   return (
     <article
-      className={`flex w-[220px] gap-3 rounded-2xl bg-[#35271b] p-3 shadow-sm ring-1 ring-[#5a402b] ${className}`}
+      className={`flex w-[220px] gap-3 rounded-2xl bg-[var(--tenant-secondary)] p-3 shadow-sm ring-1 ring-[var(--tenant-ring)] ${className}`}
     >
-      <div className="h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-[#2a1f16] sm:h-24 sm:w-24">
+      <div className="h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-[var(--tenant-surface)] sm:h-24 sm:w-24">
         {product.imageUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
           <img
             src={product.imageUrl}
             alt={product.name}
@@ -40,7 +41,7 @@ export function ProductCard({
               🍽️
             </span>
             {product.category ? (
-              <span className="mt-1 line-clamp-1 text-[10px] font-bold text-[#d8c7ad]">
+              <span className="mt-1 line-clamp-1 text-[10px] font-bold text-[var(--tenant-muted)]">
                 {product.category}
               </span>
             ) : null}
@@ -50,20 +51,20 @@ export function ProductCard({
 
       <div className="flex min-w-0 flex-1 flex-col justify-between">
         <div className="min-w-0">
-          <h2 className="line-clamp-2 text-sm font-black leading-tight text-[#fff7ed]">
+          <h2 className="line-clamp-2 text-sm font-black leading-tight text-[var(--tenant-text)]">
             {product.name}
           </h2>
-          <span className="mt-1 inline-flex rounded-full bg-orange-500/15 px-2 py-1 text-[11px] font-bold text-orange-300">
+          <span className="mt-1 inline-flex rounded-full bg-[color-mix(in_srgb,var(--tenant-primary)_15%,transparent)] px-2 py-1 text-[11px] font-bold text-[var(--tenant-accent)]">
             {formatCurrency(product.price)}
           </span>
 
-          <p className="mt-1 line-clamp-2 text-xs leading-4 text-[#d8c7ad]">
+          <p className="mt-1 line-clamp-2 text-xs leading-4 text-[var(--tenant-muted)]">
             {product.description ?? "Producto disponible."}
           </p>
         </div>
 
         <div className="mt-2 flex items-center justify-between gap-2">
-          <div className="min-h-4 text-[11px] font-medium text-[#bda88c]">
+          <div className="min-h-4 text-[11px] font-medium text-[var(--tenant-muted)]">
             {quantityInCart > 0 ? `${quantityInCart} en carrito` : ""}
           </div>
 
@@ -71,7 +72,7 @@ export function ProductCard({
             type="button"
             onClick={() => onAddProduct(product)}
             disabled={!product.available}
-            className="shrink-0 rounded-full bg-orange-600 px-3 py-1.5 text-xs font-bold text-white transition hover:bg-orange-500 disabled:cursor-not-allowed disabled:bg-[#5a402b] disabled:text-[#bda88c]"
+            className="shrink-0 rounded-full bg-[var(--tenant-primary)] px-3 py-1.5 text-xs font-bold text-white transition brightness-100 hover:brightness-110 disabled:cursor-not-allowed disabled:bg-[var(--tenant-ring)] disabled:text-[var(--tenant-muted)]"
           >
             {product.available ? "Agregar" : "No disponible"}
           </button>

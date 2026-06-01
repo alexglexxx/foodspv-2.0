@@ -27,7 +27,7 @@ export function CartSummary({
   const hasItems = itemCount > 0;
 
   return (
-    <section className="fixed inset-x-0 bottom-0 z-50 border-t border-[var(--tenant-secondary)] bg-[var(--tenant-surface)]/95 px-4 py-3 shadow-[0_-12px_30px_rgba(0,0,0,0.28)] backdrop-blur">
+    <section className="fixed inset-x-0 bottom-0 z-50 border-t border-[var(--tenant-secondary)] bg-[color-mix(in_srgb,var(--tenant-surface)_95%,transparent)] px-4 py-3 shadow-[0_-12px_30px_rgba(0,0,0,0.28)] backdrop-blur">
       <div className="mx-auto flex w-full max-w-3xl items-center gap-3">
         <button
           type="button"

@@ -78,6 +78,25 @@ export function normalizeTenantTheme(value: unknown): TenantTheme {
   };
 }
 
+export function getTenantThemeCssVariables(
+  themeInput: unknown
+): Record<string, string> {
+  const theme = normalizeTenantTheme(themeInput);
+
+  return {
+    "--tenant-primary": theme.primaryColor,
+    "--tenant-primary-hover": theme.accentColor,
+    "--tenant-secondary": theme.secondaryColor,
+    "--tenant-accent": theme.accentColor,
+    "--tenant-background": theme.backgroundColor,
+    "--tenant-surface": theme.surfaceColor,
+    "--tenant-text": theme.textColor,
+    "--tenant-muted": "color-mix(in srgb, var(--tenant-text) 72%, transparent)",
+    "--tenant-subtle": "color-mix(in srgb, var(--tenant-surface) 82%, var(--tenant-background))",
+    "--tenant-ring": "color-mix(in srgb, var(--tenant-secondary) 72%, var(--tenant-text) 16%)",
+  };
+}
+
 export function isValidTenantTheme(value: unknown): value is TenantTheme {
   if (!isRecord(value)) {
     return false;

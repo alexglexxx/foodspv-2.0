@@ -16,6 +16,48 @@ interface ProductFormProps {
 
 type ProductTextField = "name" | "description" | "category" | "imageUrl";
 
+const PRODUCT_QUICK_PRESETS: Array<{
+  label: string;
+  product: Pick<
+    SuperAdminProductInput,
+    "name" | "description" | "price" | "category" | "imageUrl"
+  >;
+}> = [
+  {
+    label: "Taco",
+    product: {
+      name: "Taco especial",
+      description: "Tortilla caliente con proteína, salsa de la casa y guarnición.",
+      price: 35,
+      category: "Tacos",
+      imageUrl:
+        "https://images.unsplash.com/photo-1611250188496-e966043a0629?q=80&w=900&auto=format&fit=crop",
+    },
+  },
+  {
+    label: "Postre",
+    product: {
+      name: "Crepa dulce",
+      description: "Crepa preparada al momento con topping dulce y fruta.",
+      price: 85,
+      category: "Postres",
+      imageUrl:
+        "https://images.unsplash.com/photo-1519676867240-f03562e64548?q=80&w=900&auto=format&fit=crop",
+    },
+  },
+  {
+    label: "Café",
+    product: {
+      name: "Café latte",
+      description: "Espresso con leche texturizada y acabado cremoso.",
+      price: 55,
+      category: "Bebidas",
+      imageUrl:
+        "https://images.unsplash.com/photo-1461023058943-07fcbe16d735?q=80&w=900&auto=format&fit=crop",
+    },
+  },
+];
+
 export function ProductForm({
   form,
   isEditing,
@@ -28,6 +70,15 @@ export function ProductForm({
     onChange({
       ...form,
       [field]: value,
+    });
+  }
+
+  function applyProductPreset(
+    productPreset: (typeof PRODUCT_QUICK_PRESETS)[number]["product"]
+  ): void {
+    onChange({
+      ...form,
+      ...productPreset,
     });
   }
 
@@ -46,6 +97,24 @@ export function ProductForm({
       </div>
 
       <div className="mt-5 grid gap-4">
+        <div className="rounded-2xl border border-stone-200 bg-stone-50 p-4">
+          <p className="text-sm font-extrabold text-stone-900">
+            Presets rápidos
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {PRODUCT_QUICK_PRESETS.map((preset) => (
+              <button
+                key={preset.label}
+                type="button"
+                onClick={() => applyProductPreset(preset.product)}
+                className="rounded-full border border-stone-300 bg-white px-3 py-2 text-xs font-extrabold text-stone-800 transition hover:bg-stone-100"
+              >
+                {preset.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
         <div className="grid gap-4 sm:grid-cols-2">
           <TextField
             label="Nombre"

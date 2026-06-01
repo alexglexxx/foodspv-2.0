@@ -1,0 +1,125 @@
+TAREA: Crear arquitectura inicial de tenant themes y agente diseñador para branding visual dinámico
+
+OBJETIVO:
+Preparar FoodSPV para que cada tenant tenga identidad visual propia sin hardcodear estilos manuales.
+
+NO construir IA compleja todavía.
+Primero construir arquitectura escalable.
+
+
+Inspeccionar:
+tree src -L 4
+cat src/app/[tenant]/page.tsx
+cat src/modules/orders/components/OrderMenuClient.tsx
+cat src/types/tenant.types.ts
+
+OBJETIVO TÉCNICO:
+Agregar sistema de theme tokens por tenant.
+
+MODELO:
+
+Agregar a tenant:
+
+tenantTheme: {
+  primaryColor: string;
+  secondaryColor: string;
+  accentColor: string;
+  backgroundColor: string;
+  surfaceColor: string;
+  textColor: string;
+  typography: "modern" | "bold" | "soft";
+  visualStyle:
+    | "street-food"
+    | "dessert"
+    | "minimal"
+    | "coffee"
+    | "restaurant";
+}
+
+DEFAULTS:
+Si tenant no tiene theme:
+usar fallback visual actual.
+
+SUPERADMIN:
+remover sección:
+"Diseño visual"
+
+remover Campos:
+- Color primario
+- Color secundario
+- Accent
+- Background
+- Typography
+- Visual style
+
+Agregar presets rápidos:
+- Taquería
+- Crepas/Postres
+- Cafetería
+- Minimalista
+- Restaurante
+
+Agregar preset rapidos:
+- producto
+- foto de producto
+- descripcion
+- precio 
+
+UI FRONTEND:
+OrderMenuClient debe leer tenantTheme y aplicar:
+- colores principales
+- botones
+- fondos
+- badges
+- tipografía base
+
+IMPORTANTE:
+NO meter Tailwind dinámico imposible.
+Usar CSS variables o mapping controlado.
+
+Ejemplo:
+style={{
+ "--tenant-primary": tenantTheme.primaryColor
+}}
+
+y consumir en clases inline/controladas.
+
+NO TOCAR:
+- webhook
+- QR
+- Meta
+- modifiers
+- roles
+- pedidos
+
+ARQUITECTURA:
+Crear:
+src/modules/theme/
+
+Sugerido:
+- services/themeService.ts
+- types/theme.ts
+- constants/themePresets.ts
+
+AGENTE DISEÑADOR:
+NO usar IA externa todavía.
+Crear función inicial:
+
+generateThemeFromCategory(category)
+
+Ejemplos:
+"tacos" → preset street-food
+"crepas" → preset dessert
+"café" → preset coffee
+
+Dejar arquitectura lista para futuro:
+designerAgent.ts
+
+VERIFICACIÓN:
+npm run build
+npm run lint
+
+ENTREGAR:
+- archivos modificados
+- build
+- lint

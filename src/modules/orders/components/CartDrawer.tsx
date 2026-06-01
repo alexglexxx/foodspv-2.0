@@ -38,7 +38,7 @@ export function CartDrawer({
           type="button"
           aria-label="Cerrar carrito"
           onClick={onClose}
-          className="fixed inset-0 z-30 bg-[var(--tenant-background)]/70"
+          className="fixed inset-0 z-30 bg-[color-mix(in_srgb,var(--tenant-background)_70%,transparent)]"
         />
       ) : null}
 

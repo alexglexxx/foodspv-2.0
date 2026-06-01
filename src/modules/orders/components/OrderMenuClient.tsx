@@ -4,7 +4,10 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
 import { collection, doc, getDoc, getDocs, query } from "firebase/firestore";
 
 import { db } from "@/lib/firebase/client";
-import { normalizeTenantTheme } from "@/modules/theme/services/themeService";
+import {
+  getTenantThemeCssVariables,
+  normalizeTenantTheme,
+} from "@/modules/theme/services/themeService";
 import type { TenantTheme } from "@/modules/theme/types/theme";
 import type { CartItem } from "@/types/cart.types";
 import type { Product } from "@/types/product.types";
@@ -177,18 +180,7 @@ function getTypographyClassName(typography: TenantTheme["typography"]): string {
 }
 
 function getTenantThemeStyle(theme: TenantTheme): CSSProperties {
-  void theme;
-
-  return {
-    "--tenant-primary": "#ea580c",
-    "--tenant-primary-hover": "#f97316",
-    "--tenant-secondary": "#35271b",
-    "--tenant-background": "#20170f",
-    "--tenant-surface": "#2a1f16",
-    "--tenant-text": "#fff7ed",
-    "--tenant-muted": "#d8c7ad",
-    "--tenant-ring": "#5a402b",
-  } as CSSProperties;
+  return getTenantThemeCssVariables(theme) as CSSProperties;
 }
 
 function mapTenantProfile(record: FirestoreTenantRecord | undefined): RestaurantProfile {
@@ -503,42 +495,45 @@ export function OrderMenuClient({ tenantId }: OrderMenuClientProps) {
 
   return (
     <div
-      className={`min-h-screen bg-[#20170f] text-[#fff7ed] ${typographyClassName}`}
+      className={`min-h-screen bg-[var(--tenant-background)] text-[var(--tenant-text)] ${typographyClassName}`}
       style={tenantThemeStyle}
     >
       <main className="mx-auto flex w-full max-w-5xl flex-col pb-32">
-        <section className="relative overflow-hidden border-b border-[#5a402b] bg-[#2a1f16] px-5 pb-5 pt-4 sm:px-8 sm:pb-6 sm:pt-5">
+        <section className="relative overflow-hidden border-b border-[var(--tenant-ring)] bg-[var(--tenant-surface)] px-5 pb-5 pt-4 sm:px-8 sm:pb-6 sm:pt-5">
           <div
             className="absolute inset-0 bg-cover bg-center opacity-50"
             style={{
-              backgroundImage: `linear-gradient(90deg, rgba(42,31,22,0.98) 0%, rgba(42,31,22,0.94) 45%, rgba(42,31,22,0.78) 100%), url(${restaurantProfile.heroImageUrl})`,
+              backgroundImage: `linear-gradient(90deg, color-mix(in srgb, var(--tenant-surface) 98%, transparent) 0%, color-mix(in srgb, var(--tenant-surface) 94%, transparent) 45%, color-mix(in srgb, var(--tenant-surface) 78%, transparent) 100%), url(${restaurantProfile.heroImageUrl})`,
             }}
             aria-hidden="true"
           />
-          <div className="absolute inset-0 bg-[#20170f]/55" aria-hidden="true" />
+          <div
+            className="absolute inset-0 bg-[color-mix(in_srgb,var(--tenant-background)_55%,transparent)]"
+            aria-hidden="true"
+          />
 
-          <div className="relative z-10 drop-shadow-[0_2px_8px_rgba(32,23,15,0.9)]">
+          <div className="relative z-10 drop-shadow-[0_2px_8px_rgba(0,0,0,0.72)]">
             <div className="mb-5 flex items-center justify-end sm:mb-6">
-              <div className="inline-flex max-w-[75%] items-center gap-2 rounded-full bg-[#35271b]/90 px-3 py-2 text-xs font-bold text-[#fff7ed] shadow-sm ring-1 ring-[#5a402b] backdrop-blur sm:text-sm">
+              <div className="inline-flex max-w-[75%] items-center gap-2 rounded-full bg-[color-mix(in_srgb,var(--tenant-secondary)_90%,transparent)] px-3 py-2 text-xs font-bold text-[var(--tenant-text)] shadow-sm ring-1 ring-[var(--tenant-ring)] backdrop-blur sm:text-sm">
                 <span aria-hidden="true">🏪</span>
                 <span className="truncate">{restaurantProfile.name}</span>
                 <span aria-hidden="true">⌄</span>
               </div>
             </div>
 
-            <p className="text-sm font-extrabold text-orange-300">
+            <p className="text-sm font-extrabold text-[var(--tenant-accent)]">
               {restaurantProfile.greeting}
             </p>
 
-            <h1 className="mt-2 max-w-[14rem] text-3xl font-black leading-[1.05] tracking-tight text-[#fff7ed] sm:max-w-md sm:text-4xl">
+            <h1 className="mt-2 max-w-[14rem] text-3xl font-black leading-[1.05] tracking-tight text-[var(--tenant-text)] sm:max-w-md sm:text-4xl">
               {restaurantProfile.name}
             </h1>
 
-            <p className="mt-3 line-clamp-2 max-w-[17rem] text-sm font-medium leading-6 text-[#d8c7ad] sm:max-w-md">
+            <p className="mt-3 line-clamp-2 max-w-[17rem] text-sm font-medium leading-6 text-[var(--tenant-muted)] sm:max-w-md">
               {restaurantProfile.description}
             </p>
 
-            <div className="mt-4 flex flex-wrap items-center gap-2 text-xs font-bold text-[#fff7ed] sm:text-sm">
+            <div className="mt-4 flex flex-wrap items-center gap-2 text-xs font-bold text-[var(--tenant-text)] sm:text-sm">
               <span className="inline-flex items-center gap-2">
                 <span aria-hidden="true">⭐</span>
                 {restaurantProfile.rating} ({restaurantProfile.reviews})
@@ -549,7 +544,7 @@ export function OrderMenuClient({ tenantId }: OrderMenuClientProps) {
                 {restaurantProfile.estimatedTime}
               </span>
 
-              <span className="inline-flex items-center gap-2 rounded-full bg-[#35271b]/90 px-3 py-1.5 shadow-sm ring-1 ring-[#5a402b] backdrop-blur">
+              <span className="inline-flex items-center gap-2 rounded-full bg-[color-mix(in_srgb,var(--tenant-secondary)_90%,transparent)] px-3 py-1.5 shadow-sm ring-1 ring-[var(--tenant-ring)] backdrop-blur">
                 <span aria-hidden="true">📍</span>
                 {restaurantProfile.location}
               </span>
@@ -560,11 +555,11 @@ export function OrderMenuClient({ tenantId }: OrderMenuClientProps) {
         <section className="px-5 py-5 sm:px-8">
           <div className="mb-4 flex flex-col gap-4">
             <div className="flex items-center justify-between gap-4">
-              <h2 className="text-3xl font-black tracking-tight text-[#fff7ed]">
+              <h2 className="text-3xl font-black tracking-tight text-[var(--tenant-text)]">
                 Menú
               </h2>
 
-              <div className="hidden rounded-full bg-[#35271b] px-4 py-3 text-sm font-medium text-[#d8c7ad] shadow-sm ring-1 ring-[#5a402b] sm:block">
+              <div className="hidden rounded-full bg-[var(--tenant-secondary)] px-4 py-3 text-sm font-medium text-[var(--tenant-muted)] shadow-sm ring-1 ring-[var(--tenant-ring)] sm:block">
                 🔎 Buscar productos...
               </div>
             </div>
@@ -577,8 +572,8 @@ export function OrderMenuClient({ tenantId }: OrderMenuClientProps) {
                   onClick={() => scrollToCategory(categoryKey)}
                   className={
                     index === 0
-                      ? "shrink-0 rounded-full bg-orange-600 px-5 py-3 text-sm font-extrabold text-white shadow-sm transition hover:bg-orange-500"
-                      : "shrink-0 rounded-full bg-[#35271b] px-5 py-3 text-sm font-extrabold text-[#fff7ed] shadow-sm ring-1 ring-[#5a402b] transition hover:bg-[#3d2d1f]"
+                      ? "shrink-0 rounded-full bg-[var(--tenant-primary)] px-5 py-3 text-sm font-extrabold text-white shadow-sm transition brightness-100 hover:brightness-110"
+                      : "shrink-0 rounded-full bg-[var(--tenant-secondary)] px-5 py-3 text-sm font-extrabold text-[var(--tenant-text)] shadow-sm ring-1 ring-[var(--tenant-ring)] transition brightness-100 hover:brightness-110"
                   }
                 >
                   <span className="mr-2" aria-hidden="true">
@@ -591,7 +586,7 @@ export function OrderMenuClient({ tenantId }: OrderMenuClientProps) {
           </div>
 
           {isLoading ? (
-            <div className="rounded-[2rem] border border-[#5a402b] bg-[#2a1f16] p-6 text-sm font-medium text-[#d8c7ad] shadow-sm">
+            <div className="rounded-[2rem] border border-[var(--tenant-ring)] bg-[var(--tenant-surface)] p-6 text-sm font-medium text-[var(--tenant-muted)] shadow-sm">
               Preparando el menú...
             </div>
           ) : null}
@@ -603,7 +598,7 @@ export function OrderMenuClient({ tenantId }: OrderMenuClientProps) {
           ) : null}
 
           {!isLoading && !errorMessage && products.length === 0 ? (
-            <div className="rounded-[2rem] border border-dashed border-[#5a402b] bg-[#2a1f16] p-6 text-sm font-medium text-[#d8c7ad] shadow-sm">
+            <div className="rounded-[2rem] border border-dashed border-[var(--tenant-ring)] bg-[var(--tenant-surface)] p-6 text-sm font-medium text-[var(--tenant-muted)] shadow-sm">
               Por ahora no hay productos disponibles.
             </div>
           ) : null}
@@ -615,19 +610,19 @@ export function OrderMenuClient({ tenantId }: OrderMenuClientProps) {
                 ref={(element) => {
                   categoryRefs.current[categoryKey] = element;
                 }}
-                className="rounded-[1.75rem] bg-[#2a1f16] p-5 shadow-sm ring-1 ring-[#5a402b]"
+                className="rounded-[1.75rem] bg-[var(--tenant-surface)] p-5 shadow-sm ring-1 ring-[var(--tenant-ring)]"
               >
                 <div className="mb-4 flex flex-wrap items-center gap-3">
                   <span className="text-2xl" aria-hidden="true">
                     {getCategoryIcon(categoryKey)}
                   </span>
 
-                  <h3 className="text-2xl font-black text-[#fff7ed]">
+                  <h3 className="text-2xl font-black text-[var(--tenant-text)]">
                     {getCategoryLabel(categoryKey)}
                   </h3>
 
                   {index === 0 ? (
-                    <span className="rounded-full bg-orange-500/15 px-3 py-1 text-xs font-extrabold text-orange-300">
+                    <span className="rounded-full bg-[color-mix(in_srgb,var(--tenant-primary)_15%,transparent)] px-3 py-1 text-xs font-extrabold text-[var(--tenant-accent)]">
                       Los favoritos de la casa
                     </span>
                   ) : null}
