@@ -193,7 +193,7 @@ export function ProductForm({
         <button
           type="submit"
           disabled={isSaving}
-          className="rounded-full bg-stone-950 px-5 py-3 text-sm font-extrabold text-white transition hover:bg-stone-800 disabled:cursor-not-allowed disabled:opacity-60"
+          className="rounded-full bg-orange-700 px-5 py-3 text-sm font-extrabold text-white transition hover:bg-orange-800 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {isSaving ? "Guardando..." : "Guardar producto"}
         </button>

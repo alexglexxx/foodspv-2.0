@@ -759,6 +759,52 @@ PASSED
 
 ---
 
+TASK-021
+
+Description:
+
+Reorganizar UX/UI del dashboard SuperAdmin para hacerlo mas claro y escalable con muchos tenants.
+
+Dependencies:
+
+- TASK-016
+- TASK-017
+- TASK-019
+- TASK-020
+
+Files:
+
+- src/modules/superadmin/components/SuperAdminClient.tsx
+- src/modules/superadmin/components/CollapsibleSection.tsx
+- src/modules/superadmin/components/TenantList.tsx
+- src/modules/superadmin/components/TenantAccessCard.tsx
+- src/modules/superadmin/components/TenantFormSection.tsx
+- src/modules/superadmin/components/ProductManager.tsx
+- src/modules/superadmin/components/ProductModal.tsx
+- src/modules/superadmin/components/ProductForm.tsx
+- docs/project-status.md
+- CODEX.md
+
+Expected result:
+
+- SuperAdmin con paleta clara calida y acentos naranja/terracota.
+- Header oscuro eliminado.
+- Contadores globales removidos de la UI.
+- Gestion organizada en secciones plegables.
+- Lista compacta de negocios y detalles movidos al negocio seleccionado.
+- Productos administrados con modal para formulario y modifiers.
+- Sin cambios en webhook, QR backend, roles, orders API, App Hosting ni logica de negocio.
+
+Status:
+
+COMPLETE
+
+Review output:
+
+PASSED
+
+---
+
 TASK-002
 
 Description:

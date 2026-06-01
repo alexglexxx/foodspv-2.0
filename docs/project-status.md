@@ -1,3 +1,18 @@
+## TASK-021
+
+Estado: COMPLETE
+
+Resultado:
+
+- SuperAdmin reorganizado con UI clara, cálida y menos pesada visualmente.
+- Se reemplazó el header oscuro por un encabezado compacto "FoodSPV SuperAdmin".
+- Se removieron de la UI los contadores globales de productos, pedidos, pendientes, ventas, tenants y activos.
+- Secciones plegables agregadas para crear/editar negocio, negocios registrados, productos, theme y configuraciones operativas.
+- Lista de negocios compacta con nombre, tenantId, estado, categoría y acciones principales.
+- URL pública y QR se muestran solo para el negocio seleccionado.
+- Productos del negocio seleccionado se administran con modal para crear/editar producto y modifiers.
+- Sin cambios en webhook, QR backend, roles, orders API, App Hosting ni lógica de negocio.
+
 ## TASK-020
 
 Estado: COMPLETE

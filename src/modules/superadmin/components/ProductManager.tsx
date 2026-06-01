@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
 import type { User } from "firebase/auth";
 
 import {
@@ -13,7 +13,7 @@ import type {
   SuperAdminProductInput,
   SuperAdminProductSummary,
 } from "../types/superAdmin";
-import { ProductForm } from "./ProductForm";
+import { ProductModal } from "./ProductModal";
 
 interface ProductManagerProps {
   user: User;
@@ -66,15 +66,14 @@ export function ProductManager({
   const [form, setForm] =
     useState<SuperAdminProductInput>(EMPTY_PRODUCT_FORM);
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
-  const [isLoaded, setIsLoaded] = useState<boolean>(false);
+  const [isProductModalOpen, setIsProductModalOpen] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [deletingProductId, setDeletingProductId] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const showForm = editingProductId !== null || form !== EMPTY_PRODUCT_FORM;
 
-  async function loadProducts(): Promise<void> {
+  const loadProducts = useCallback(async (): Promise<void> => {
     setIsLoading(true);
     setMessage(null);
     setErrorMessage(null);
@@ -88,7 +87,6 @@ export function ProductManager({
       }
 
       setProducts(response.products);
-      setIsLoaded(true);
     } catch (error) {
       setErrorMessage(
         error instanceof Error
@@ -98,11 +96,20 @@ export function ProductManager({
     } finally {
       setIsLoading(false);
     }
-  }
+  }, [tenantId, user]);
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      void loadProducts();
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [loadProducts]);
 
   function startNewProduct(): void {
     setForm({ ...EMPTY_PRODUCT_FORM, modifiers: [] });
     setEditingProductId(null);
+    setIsProductModalOpen(true);
     setMessage(null);
     setErrorMessage(null);
   }
@@ -110,11 +117,13 @@ export function ProductManager({
   function cancelForm(): void {
     setForm(EMPTY_PRODUCT_FORM);
     setEditingProductId(null);
+    setIsProductModalOpen(false);
   }
 
   function editProduct(product: SuperAdminProductSummary): void {
     setForm(getProductFormFromSummary(product));
     setEditingProductId(product.productId);
+    setIsProductModalOpen(true);
     setMessage(null);
     setErrorMessage(null);
   }
@@ -182,14 +191,11 @@ export function ProductManager({
   }
 
   return (
-    <section className="mt-6 rounded-[2rem] bg-white p-6 shadow-sm ring-1 ring-stone-200">
+    <div>
       <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
         <div>
-          <p className="text-xs font-extrabold uppercase tracking-[0.24em] text-orange-600">
-            Productos del negocio
-          </p>
-          <h2 className="mt-2 text-2xl font-black">{tenantName}</h2>
-          <p className="mt-2 text-sm font-semibold text-stone-500">
+          <h2 className="text-xl font-black text-stone-950">{tenantName}</h2>
+          <p className="mt-1 text-sm font-semibold text-stone-500">
             Tenant: {tenantId}
           </p>
         </div>
@@ -201,14 +207,14 @@ export function ProductManager({
             disabled={isLoading}
             className="rounded-full border border-stone-300 bg-white px-5 py-3 text-sm font-extrabold text-stone-800 transition hover:bg-stone-100 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {isLoading ? "Cargando..." : "Cargar productos"}
+            {isLoading ? "Cargando..." : "Actualizar productos"}
           </button>
           <button
             type="button"
             onClick={startNewProduct}
-            className="rounded-full bg-stone-950 px-5 py-3 text-sm font-extrabold text-white transition hover:bg-stone-800"
+            className="rounded-full bg-orange-700 px-5 py-3 text-sm font-extrabold text-white transition hover:bg-orange-800"
           >
-            Nuevo producto
+            Agregar producto
           </button>
         </div>
       </div>
@@ -225,26 +231,7 @@ export function ProductManager({
         </p>
       ) : null}
 
-      {showForm ? (
-        <div className="mt-5">
-          <ProductForm
-            form={form}
-            isEditing={editingProductId !== null}
-            isSaving={isSaving}
-            onChange={setForm}
-            onCancel={cancelForm}
-            onSubmit={(event) => void handleSaveProduct(event)}
-          />
-        </div>
-      ) : null}
-
-      {!isLoaded && !isLoading ? (
-        <p className="mt-6 rounded-2xl border border-dashed border-stone-300 p-4 text-sm font-semibold text-stone-500">
-          Carga los productos para administrar el menú de este negocio.
-        </p>
-      ) : null}
-
-      {isLoaded && products.length === 0 ? (
+      {!isLoading && products.length === 0 ? (
         <p className="mt-6 rounded-2xl border border-dashed border-stone-300 p-4 text-sm font-semibold text-stone-500">
           No hay productos registrados.
         </p>
@@ -322,6 +309,17 @@ export function ProductManager({
           );
         })}
       </div>
-    </section>
+
+      {isProductModalOpen ? (
+        <ProductModal
+          form={form}
+          isEditing={editingProductId !== null}
+          isSaving={isSaving}
+          onChange={setForm}
+          onCancel={cancelForm}
+          onSubmit={(event) => void handleSaveProduct(event)}
+        />
+      ) : null}
+    </div>
   );
 }
