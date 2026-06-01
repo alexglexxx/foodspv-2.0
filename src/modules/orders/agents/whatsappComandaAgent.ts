@@ -8,6 +8,14 @@ export function whatsappComandaAgent(order: Order): string {
   const productLines = order.productos.map((producto, index) => {
     return `${index + 1}. ${producto.cantidad} x ${producto.nombre}`;
   });
+  const isDelivery = order.deliveryType === "delivery";
+  const deliveryLines = isDelivery
+    ? [
+        "Entrega: A domicilio",
+        `Direccion: ${order.deliveryAddress ?? ""}`,
+        `Costo envio: ${formatAmount(order.deliveryFee ?? 0)}`,
+      ]
+    : ["Entrega: Recoger pedido"];
   const header =
     order.estado === "requires_confirmation"
       ? "PEDIDO GRANDE - REQUIERE CONFIRMACIÓN"
@@ -18,6 +26,7 @@ export function whatsappComandaAgent(order: Order): string {
     "",
     `Nombre: ${order.cliente.nombre}`,
     `Telefono: ${order.cliente.telefono}`,
+    ...deliveryLines,
     "",
     "PRODUCTOS",
     ...productLines,

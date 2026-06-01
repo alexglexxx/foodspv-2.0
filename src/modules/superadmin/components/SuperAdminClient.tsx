@@ -51,6 +51,8 @@ const EMPTY_TENANT_FORM: SuperAdminTenantInput = {
     amountThreshold: 1,
     action: "allow",
   },
+  deliveryEnabled: false,
+  deliveryFee: 0,
   tenantTheme: DEFAULT_TENANT_THEME,
 };
 
@@ -77,6 +79,8 @@ function getTenantFormFromSummary(
     orderFlowMode: tenant.orderFlowMode,
     estimatedPreparationMinutes: tenant.estimatedPreparationMinutes,
     orderConfirmationPolicy: tenant.orderConfirmationPolicy,
+    deliveryEnabled: tenant.deliveryEnabled,
+    deliveryFee: tenant.deliveryFee,
     tenantTheme: tenant.tenantTheme,
   };
 }
@@ -248,6 +252,15 @@ export function SuperAdminClient() {
       return;
     }
 
+    if (
+      form.deliveryEnabled &&
+      (!Number.isFinite(form.deliveryFee) || form.deliveryFee < 0)
+    ) {
+      setMessage(null);
+      setErrorMessage("Costo de envío debe ser un número mayor o igual a 0.");
+      return;
+    }
+
     isSavingTenantRef.current = true;
     setIsSaving(true);
     setMessage(null);
@@ -257,6 +270,7 @@ export function SuperAdminClient() {
       const response = editingTenantId
         ? await updateSuperAdminTenant(user, editingTenantId, {
             ...form,
+            deliveryFee: form.deliveryEnabled ? form.deliveryFee : 0,
             orderConfirmationPolicy: {
               ...form.orderConfirmationPolicy,
               action: form.orderConfirmationPolicy.enabled
@@ -266,6 +280,7 @@ export function SuperAdminClient() {
           })
         : await createSuperAdminTenant(user, {
             ...form,
+            deliveryFee: form.deliveryEnabled ? form.deliveryFee : 0,
             orderConfirmationPolicy: {
               ...form.orderConfirmationPolicy,
               action: form.orderConfirmationPolicy.enabled

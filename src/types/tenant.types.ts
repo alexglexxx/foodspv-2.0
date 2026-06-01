@@ -51,6 +51,8 @@ export interface Tenant {
   orderFlowMode?: OrderFlowMode;
   estimatedPreparationMinutes?: number;
   orderConfirmationPolicy?: TenantOrderConfirmationPolicy;
+  deliveryEnabled?: boolean;
+  deliveryFee?: number;
   tenantTheme?: TenantTheme;
 
   createdAt?: Date;

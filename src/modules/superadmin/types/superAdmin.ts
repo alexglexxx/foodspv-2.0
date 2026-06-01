@@ -45,6 +45,8 @@ export interface SuperAdminTenantSummary {
   orderFlowMode: SuperAdminOrderFlowMode;
   estimatedPreparationMinutes: number;
   orderConfirmationPolicy: SuperAdminOrderConfirmationPolicy;
+  deliveryEnabled: boolean;
+  deliveryFee: number;
   tenantTheme: TenantTheme;
   publicUrl: string;
   qrCode: string;
@@ -69,6 +71,8 @@ export interface SuperAdminTenantInput {
   orderFlowMode: SuperAdminOrderFlowMode;
   estimatedPreparationMinutes: number;
   orderConfirmationPolicy: SuperAdminOrderConfirmationPolicy;
+  deliveryEnabled: boolean;
+  deliveryFee: number;
   tenantTheme: TenantTheme;
 }
 

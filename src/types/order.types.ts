@@ -14,6 +14,12 @@ items:CartItem[];
 
 total:number;
 
+deliveryType?:"pickup" | "delivery";
+
+deliveryAddress?:string;
+
+deliveryFee?:number;
+
 status:
 | "pending"
 | "preparing"

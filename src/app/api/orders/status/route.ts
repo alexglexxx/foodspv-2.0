@@ -25,6 +25,9 @@ interface OrderStateRecord {
   };
   productos?: unknown;
   total?: unknown;
+  deliveryType?: unknown;
+  deliveryAddress?: unknown;
+  deliveryFee?: unknown;
   estado?: unknown;
 }
 
@@ -151,6 +154,14 @@ function mapOrderRecord(
     cliente,
     productos,
     total: record.total,
+    deliveryType:
+      record.deliveryType === "delivery" || record.deliveryType === "pickup"
+        ? record.deliveryType
+        : undefined,
+    deliveryAddress: isNonEmptyString(record.deliveryAddress)
+      ? record.deliveryAddress.trim()
+      : undefined,
+    deliveryFee: isValidNumber(record.deliveryFee) ? record.deliveryFee : undefined,
     estado,
     createdAt: 0,
   };

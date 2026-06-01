@@ -1,4 +1,4 @@
-import { ORDER_STATES, Order } from "../types/order";
+import { ORDER_STATES, type Order } from "../types/order";
 
 export type ValidationResult =
   | {
@@ -73,6 +73,38 @@ export function orderValidatorAgent(input: unknown): ValidationResult {
 
   if (typeof order.total !== "number" || order.total <= 0) {
     errors.push("Total inválido.");
+  }
+
+  if (
+    order.deliveryType !== undefined &&
+    order.deliveryType !== "pickup" &&
+    order.deliveryType !== "delivery"
+  ) {
+    errors.push("Tipo de entrega inválido.");
+  }
+
+  if (order.deliveryType === "delivery") {
+    if (
+      !order.deliveryAddress ||
+      typeof order.deliveryAddress !== "string" ||
+      order.deliveryAddress.trim().length === 0
+    ) {
+      errors.push("Agrega la dirección para poder enviar tu pedido a domicilio.");
+    } else {
+      order.deliveryAddress = order.deliveryAddress.trim();
+    }
+
+    if (
+      order.deliveryFee !== undefined &&
+      (typeof order.deliveryFee !== "number" ||
+        !Number.isFinite(order.deliveryFee) ||
+        order.deliveryFee < 0)
+    ) {
+      errors.push("Costo de envío inválido.");
+    }
+  } else {
+    delete order.deliveryAddress;
+    delete order.deliveryFee;
   }
 
   if (!order.estado) {

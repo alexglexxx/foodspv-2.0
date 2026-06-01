@@ -37,6 +37,8 @@ interface TenantRecord {
   orderFlowMode?: unknown;
   estimatedPreparationMinutes?: unknown;
   orderConfirmationPolicy?: unknown;
+  deliveryEnabled?: unknown;
+  deliveryFee?: unknown;
   tenantTheme?: unknown;
   publicUrl?: unknown;
   qrCode?: unknown;
@@ -84,6 +86,8 @@ const DEFAULT_TENANT_INPUT: SuperAdminTenantInput = {
     amountThreshold: 1,
     action: "allow",
   },
+  deliveryEnabled: false,
+  deliveryFee: 0,
   tenantTheme: DEFAULT_TENANT_THEME,
 };
 
@@ -113,6 +117,14 @@ function toPreparationMinutes(value: unknown): number {
   }
 
   return Math.min(180, Math.max(1, Math.round(value)));
+}
+
+function toDeliveryFee(value: unknown): number {
+  if (typeof value !== "number" || !Number.isFinite(value) || value < 0) {
+    return DEFAULT_TENANT_INPUT.deliveryFee;
+  }
+
+  return Math.round(value * 100) / 100;
 }
 
 function isOrderConfirmationAction(
@@ -224,6 +236,8 @@ function mapTenantRecord(
     orderConfirmationPolicy: getOrderConfirmationPolicy(
       record.orderConfirmationPolicy
     ),
+    deliveryEnabled: record.deliveryEnabled === true,
+    deliveryFee: toDeliveryFee(record.deliveryFee),
     tenantTheme: normalizeTenantTheme(record.tenantTheme),
     publicUrl: toStringValue(record.publicUrl, ""),
     qrCode: toStringValue(record.qrCode, ""),
@@ -307,6 +321,8 @@ export function validateSuperAdminTenantInput(
   const orderConfirmationPolicy = normalizeOrderConfirmationPolicy(
     record.orderConfirmationPolicy
   );
+  const deliveryEnabled = record.deliveryEnabled === true;
+  const deliveryFee = toDeliveryFee(record.deliveryFee);
   const tenantTheme =
     record.tenantTheme && typeof record.tenantTheme === "object"
       ? normalizeTenantTheme(record.tenantTheme)
@@ -371,6 +387,8 @@ export function validateSuperAdminTenantInput(
       orderFlowMode,
       estimatedPreparationMinutes,
       orderConfirmationPolicy,
+      deliveryEnabled,
+      deliveryFee: deliveryEnabled ? deliveryFee : 0,
       tenantTheme,
     },
   };
@@ -476,6 +494,8 @@ export async function updateSuperAdminTenant(
     orderFlowMode: input.orderFlowMode,
     estimatedPreparationMinutes: input.estimatedPreparationMinutes,
     orderConfirmationPolicy: input.orderConfirmationPolicy,
+    deliveryEnabled: input.deliveryEnabled,
+    deliveryFee: input.deliveryEnabled ? input.deliveryFee : 0,
     tenantTheme: input.tenantTheme,
     updatedAt: FieldValue.serverTimestamp(),
   });

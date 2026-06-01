@@ -19,6 +19,7 @@ export interface OrderItem {
 export interface CustomerInfo {
   nombre:string;
   telefono:string;
+  address?:string;
 }
 
 export interface Order {
@@ -30,6 +31,12 @@ export interface Order {
   productos:OrderItem[];
 
   total:number;
+
+  deliveryType?:"pickup" | "delivery";
+
+  deliveryAddress?:string;
+
+  deliveryFee?:number;
 
   estado:OrderState;
 

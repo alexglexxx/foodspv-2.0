@@ -37,6 +37,8 @@ const tenants = [
     heroImageUrl:
       "https://images.unsplash.com/photo-1488477181946-6428a0291777?q=80&w=1400&auto=format&fit=crop",
     whatsappPhone: "+523221110001",
+    deliveryEnabled: false,
+    deliveryFee: 0,
     products: [
       ["brownie-chocolate", "Brownie de chocolate", "Brownie húmedo con nuez.", 45, "Postres"],
       ["cheesecake-fresa", "Cheesecake de fresa", "Rebanada cremosa con fresa.", 70, "Postres"],
@@ -62,6 +64,8 @@ const tenants = [
     heroImageUrl:
       "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?q=80&w=1400&auto=format&fit=crop",
     whatsappPhone: "+523221110002",
+    deliveryEnabled: true,
+    deliveryFee: 35,
     products: [
       ["clasica", "Hamburguesa clásica", "Carne, queso, lechuga y tomate.", 95, "Hamburguesas"],
       ["doble-queso", "Doble queso", "Doble carne y doble queso.", 135, "Hamburguesas"],
@@ -87,6 +91,8 @@ const tenants = [
     heroImageUrl:
       "https://images.unsplash.com/photo-1613514785940-daed07799d9b?q=80&w=1400&auto=format&fit=crop",
     whatsappPhone: "+523221110003",
+    deliveryEnabled: true,
+    deliveryFee: 25,
     products: [
       ["taco-asada", "Taco de asada", "Con cebolla, cilantro y salsa.", 28, "Tacos"],
       ["taco-pastor", "Taco al pastor", "Pastor con piña.", 24, "Tacos"],
@@ -112,6 +118,8 @@ const tenants = [
     heroImageUrl:
       "https://images.unsplash.com/photo-1563805042-7684c019e1cb?q=80&w=1400&auto=format&fit=crop",
     whatsappPhone: "+523221110004",
+    deliveryEnabled: true,
+    deliveryFee: 20,
     products: [
       ["nieve-limon", "Nieve de limón", "Vaso chico.", 25, "Nieves"],
       ["nieve-mango", "Nieve de mango", "Vaso chico.", 25, "Nieves"],
@@ -137,6 +145,8 @@ const tenants = [
     heroImageUrl:
       "https://images.unsplash.com/photo-1551754655-cd27e38d2076?q=80&w=1400&auto=format&fit=crop",
     whatsappPhone: "+523221110005",
+    deliveryEnabled: false,
+    deliveryFee: 0,
     products: [
       ["elote-vaso", "Elote en vaso", "Con mantequilla.", 45, "Elotes"],
       ["elote-crema", "Elote con crema", "Con crema y queso.", 55, "Elotes"],

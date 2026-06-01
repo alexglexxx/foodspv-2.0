@@ -83,6 +83,21 @@ export function TenantFormSection({
     });
   }
 
+  function updateDeliveryEnabled(enabled: boolean): void {
+    onChange({
+      ...form,
+      deliveryEnabled: enabled,
+      deliveryFee: enabled ? form.deliveryFee : 0,
+    });
+  }
+
+  function updateDeliveryFee(value: string): void {
+    onChange({
+      ...form,
+      deliveryFee: Number.parseFloat(value) || 0,
+    });
+  }
+
   function applyTenantThemePreset(
     presetKey: keyof typeof TENANT_THEME_PRESETS
   ): void {
@@ -300,6 +315,43 @@ export function TenantFormSection({
               className="mt-2 w-full rounded-2xl border border-stone-300 bg-white px-4 py-3 text-sm font-semibold text-stone-950 outline-none transition focus:border-orange-500 focus:ring-4 focus:ring-orange-100"
             />
           </label>
+        </div>
+        <div className="rounded-2xl border border-stone-200 bg-stone-50 p-5">
+          <h3 className="text-lg font-black text-stone-950">
+            Entrega a domicilio
+          </h3>
+          <label className="mt-4 flex items-start gap-3">
+            <input
+              type="checkbox"
+              checked={form.deliveryEnabled}
+              onChange={(event) => updateDeliveryEnabled(event.target.checked)}
+              className="mt-1 h-5 w-5 rounded border-stone-300 text-orange-600 focus:ring-orange-500"
+            />
+            <span>
+              <span className="block text-sm font-extrabold text-stone-900">
+                Entrega a domicilio
+              </span>
+              <span className="mt-1 block text-sm leading-6 text-stone-500">
+                Muestra la opción de envío en el checkout del cliente.
+              </span>
+            </span>
+          </label>
+          {form.deliveryEnabled ? (
+            <label className="mt-4 block">
+              <span className="text-sm font-extrabold text-stone-900">
+                Costo de envío
+              </span>
+              <input
+                type="number"
+                min={0}
+                step="0.01"
+                value={String(form.deliveryFee)}
+                onChange={(event) => updateDeliveryFee(event.target.value)}
+                required
+                className="mt-2 w-full rounded-2xl border border-stone-300 bg-white px-4 py-3 text-sm font-semibold text-stone-950 outline-none transition focus:border-orange-500 focus:ring-4 focus:ring-orange-100"
+              />
+            </label>
+          ) : null}
         </div>
       </div>
 

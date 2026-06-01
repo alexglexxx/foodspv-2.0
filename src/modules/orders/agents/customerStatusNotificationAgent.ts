@@ -1,19 +1,22 @@
 import type { Order, OrderState } from "../types/order";
 
 interface CustomerStatusNotificationInput {
-  order: Pick<Order, "cliente">;
+  order: Pick<Order, "cliente" | "deliveryType">;
   nextState: OrderState;
 }
 
 const CUSTOMER_STATUS_MESSAGES: Partial<
-  Record<OrderState, (customerName: string) => string>
+  Record<OrderState, (customerName: string, deliveryType?: Order["deliveryType"]) => string>
 > = {
   preparando: (customerName) =>
     [`Hola ${customerName} 👋`, "Tu pedido ya está en preparación."].join("\n"),
-  listo: (customerName) =>
-    [`Hola ${customerName} 👋`, "Tu pedido ya está listo para recoger."].join(
-      "\n"
-    ),
+  listo: (customerName, deliveryType) =>
+    [
+      `Hola ${customerName} 👋`,
+      deliveryType === "delivery"
+        ? "Tu pedido ya está listo y será enviado a domicilio."
+        : "Tu pedido ya está listo para recoger.",
+    ].join("\n"),
   entregado: (customerName) => `Gracias por tu compra ${customerName} 👋`,
   cancelado: (customerName) =>
     `Hola ${customerName}. Tu pedido fue cancelado. Si tienes dudas contacta al negocio.`,
@@ -29,5 +32,5 @@ export function customerStatusNotificationAgent({
     return null;
   }
 
-  return createMessage(order.cliente.nombre);
+  return createMessage(order.cliente.nombre, order.deliveryType);
 }

@@ -11,12 +11,17 @@ export function customerConfirmationAgent({
   tenantName,
   estimatedPreparationMinutes,
 }: CustomerConfirmationInput): string {
+  const deliveryMessage =
+    order.deliveryType === "delivery"
+      ? "Tu pedido será enviado a la dirección indicada."
+      : `Estará listo aproximadamente en ${estimatedPreparationMinutes} minutos para que pases a recoger.`;
+
   return [
     `Hola ${order.cliente.nombre} 👋`,
     "",
     `Tu pedido fue recibido por ${tenantName}.`,
     "",
-    `Estará listo aproximadamente en ${estimatedPreparationMinutes} minutos para que pases a recoger.`,
+    deliveryMessage,
     "",
     "Gracias por tu pedido.",
   ].join("\n");

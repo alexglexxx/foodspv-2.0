@@ -39,6 +39,9 @@ interface FirestoreOrderRecord {
     cantidad?: unknown;
   }>;
   total?: unknown;
+  deliveryType?: unknown;
+  deliveryAddress?: unknown;
+  deliveryFee?: unknown;
   estado?: unknown;
   createdAt?: Timestamp | { toDate?: () => Date } | null;
 }
@@ -138,6 +141,14 @@ function mapOrderDocument(
     },
     productos,
     total: record.total,
+    deliveryType:
+      record.deliveryType === "delivery" || record.deliveryType === "pickup"
+        ? record.deliveryType
+        : undefined,
+    deliveryAddress: isNonEmptyString(record.deliveryAddress)
+      ? record.deliveryAddress.trim()
+      : undefined,
+    deliveryFee: isValidNumber(record.deliveryFee) ? record.deliveryFee : undefined,
     estado: record.estado,
     createdAt: createdAtDate ? createdAtDate.getTime() : 0,
     createdAtLabel: createdAtDate
@@ -398,6 +409,17 @@ export function OrdersDashboardClient({
                     <p className="mt-2 text-sm text-stone-600">
                       {order.cliente.nombre} · {order.cliente.telefono}
                     </p>
+                    <p className="mt-1 text-sm font-semibold text-stone-700">
+                      {order.deliveryType === "delivery"
+                        ? "Entrega a domicilio"
+                        : "Recoger pedido"}
+                    </p>
+                    {order.deliveryType === "delivery" &&
+                    order.deliveryAddress ? (
+                      <p className="mt-1 max-w-xl text-sm text-stone-600">
+                        Dirección: {order.deliveryAddress}
+                      </p>
+                    ) : null}
                     {order.createdAtLabel ? (
                       <p className="mt-1 text-sm text-stone-500">
                         Creado: {order.createdAtLabel}

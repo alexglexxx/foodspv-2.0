@@ -9,10 +9,16 @@ import type { CustomerInfo } from "../types/order";
 interface CustomerInfoModalProps {
   isOpen: boolean;
   total: number;
+  deliveryEnabled: boolean;
+  deliveryType: "pickup" | "delivery";
+  deliveryFee: number;
+  deliveryAddress: string;
   isSubmitting: boolean;
   successMessage: string | null;
   successOrderId: string | null;
   errorMessage: string | null;
+  onDeliveryTypeChange: (deliveryType: "pickup" | "delivery") => void;
+  onDeliveryAddressChange: (deliveryAddress: string) => void;
   onClose: () => void;
   onSubmit: (customerInfo: CustomerInfo) => void | Promise<void>;
 }
@@ -48,14 +54,17 @@ function validateCustomerInfo(customerInfo: CustomerInfo): CustomerInfoErrors {
   return errors;
 }
 
-function getCustomerFriendlyStatus(): {
+function getCustomerFriendlyStatus(deliveryType: "pickup" | "delivery"): {
   title: string;
   body: string;
   tone: "success";
 } {
   return {
     title: "Pedido realizado con éxito",
-    body: "Puedes pasar por tu pedido en 15 a 20 minutos.",
+    body:
+      deliveryType === "delivery"
+        ? "Tu pedido será enviado a la dirección indicada."
+        : "Puedes pasar por tu pedido en 15 a 20 minutos.",
     tone: "success",
   };
 }
@@ -63,10 +72,16 @@ function getCustomerFriendlyStatus(): {
 export function CustomerInfoModal({
   isOpen,
   total,
+  deliveryEnabled,
+  deliveryType,
+  deliveryFee,
+  deliveryAddress,
   isSubmitting,
   successMessage,
   successOrderId,
   errorMessage,
+  onDeliveryTypeChange,
+  onDeliveryAddressChange,
   onClose,
   onSubmit,
 }: CustomerInfoModalProps) {
@@ -75,9 +90,12 @@ export function CustomerInfoModal({
     telefono: "",
   });
   const [errors, setErrors] = useState<CustomerInfoErrors>({});
+  const [deliveryAddressError, setDeliveryAddressError] = useState<string | null>(
+    null
+  );
 
   const customerStatus = successMessage
-    ? getCustomerFriendlyStatus()
+    ? getCustomerFriendlyStatus(deliveryType)
     : null;
 
   function updateField(field: keyof CustomerInfo, value: string): void {
@@ -98,6 +116,22 @@ export function CustomerInfoModal({
     });
   }
 
+  function updateDeliveryType(nextDeliveryType: "pickup" | "delivery"): void {
+    onDeliveryTypeChange(nextDeliveryType);
+
+    if (nextDeliveryType === "pickup") {
+      setDeliveryAddressError(null);
+    }
+  }
+
+  function updateDeliveryAddress(value: string): void {
+    onDeliveryAddressChange(value);
+
+    if (deliveryAddressError) {
+      setDeliveryAddressError(null);
+    }
+  }
+
   function handleSubmit(event: FormEvent<HTMLFormElement>): void {
     event.preventDefault();
 
@@ -111,10 +145,22 @@ export function CustomerInfoModal({
     };
 
     const validationErrors = validateCustomerInfo(normalizedCustomerInfo);
+    const normalizedDeliveryAddress = deliveryAddress.trim();
 
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
       return;
+    }
+
+    if (deliveryType === "delivery" && normalizedDeliveryAddress.length === 0) {
+      setDeliveryAddressError(
+        "Agrega la dirección para poder enviar tu pedido a domicilio."
+      );
+      return;
+    }
+
+    if (deliveryType === "delivery") {
+      onDeliveryAddressChange(normalizedDeliveryAddress);
     }
 
     void onSubmit(normalizedCustomerInfo);
@@ -169,6 +215,12 @@ export function CustomerInfoModal({
           <p className="mt-2 text-4xl font-black tracking-tight text-[#fff7ed]">
             {formatCurrency(total)}
           </p>
+
+          {deliveryType === "delivery" ? (
+            <p className="mt-2 text-sm font-semibold text-[#e7d4b8]">
+              Incluye envío: {formatCurrency(deliveryFee)}
+            </p>
+          ) : null}
         </div>
 
         {customerStatus ? (
@@ -200,6 +252,69 @@ export function CustomerInfoModal({
           </div>
         ) : (
           <form className="mt-6 space-y-5" onSubmit={handleSubmit}>
+            {deliveryEnabled ? (
+              <section className="rounded-[1.5rem] border border-[#6b5138] bg-[#463426] p-4">
+                <p className="text-sm font-extrabold text-[#fff7ed]">
+                  Tipo de entrega
+                </p>
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => updateDeliveryType("pickup")}
+                    className={`min-h-12 rounded-2xl border px-3 py-3 text-sm font-extrabold transition ${
+                      deliveryType === "pickup"
+                        ? "border-orange-500 bg-orange-600 text-[#fff7ed]"
+                        : "border-[#6b5138] bg-[#2b2118] text-[#e7d4b8] hover:bg-[#3a2b1f]"
+                    }`}
+                  >
+                    Recoger pedido
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => updateDeliveryType("delivery")}
+                    className={`min-h-12 rounded-2xl border px-3 py-3 text-sm font-extrabold transition ${
+                      deliveryType === "delivery"
+                        ? "border-orange-500 bg-orange-600 text-[#fff7ed]"
+                        : "border-[#6b5138] bg-[#2b2118] text-[#e7d4b8] hover:bg-[#3a2b1f]"
+                    }`}
+                  >
+                    Entrega a domicilio
+                  </button>
+                </div>
+
+                {deliveryType === "delivery" ? (
+                  <label className="mt-4 block">
+                    <span className="text-sm font-extrabold text-[#fff7ed]">
+                      Dirección de entrega
+                    </span>
+                    <textarea
+                      name="deliveryAddress"
+                      value={deliveryAddress}
+                      onChange={(event) =>
+                        updateDeliveryAddress(event.target.value)
+                      }
+                      className="mt-2 min-h-24 w-full resize-none rounded-2xl border border-[#6b5138] bg-[#2b2118] px-4 py-4 text-base font-semibold text-[#fff7ed] outline-none transition placeholder:text-[#b99f80] focus:border-orange-500 focus:ring-4 focus:ring-orange-500/20"
+                      placeholder="Calle, número, colonia y referencias"
+                      autoComplete="street-address"
+                    />
+                    {deliveryAddressError ? (
+                      <span className="mt-2 block text-sm font-semibold text-rose-300">
+                        {deliveryAddressError}
+                      </span>
+                    ) : null}
+                  </label>
+                ) : (
+                  <p className="mt-4 rounded-2xl bg-[#2b2118] px-4 py-3 text-sm font-semibold text-[#e7d4b8] ring-1 ring-[#6b5138]">
+                    Puedes pasar por tu pedido cuando esté listo.
+                  </p>
+                )}
+              </section>
+            ) : (
+              <p className="rounded-[1.5rem] border border-[#6b5138] bg-[#463426] p-4 text-sm font-semibold text-[#e7d4b8]">
+                Puedes pasar por tu pedido cuando esté listo.
+              </p>
+            )}
+
             <label className="block">
               <span className="text-sm font-extrabold text-[#fff7ed]">
                 Nombre

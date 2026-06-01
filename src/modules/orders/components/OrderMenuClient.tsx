@@ -34,6 +34,8 @@ interface RestaurantProfile {
   location: string;
   heroImageUrl: string;
   featuredCategory: string;
+  deliveryEnabled: boolean;
+  deliveryFee: number;
   tenantTheme: TenantTheme;
 }
 
@@ -48,6 +50,8 @@ interface FirestoreTenantRecord {
   heroImageUrl?: unknown;
   featuredCategory?: unknown;
   category?: unknown;
+  deliveryEnabled?: unknown;
+  deliveryFee?: unknown;
   tenantTheme?: unknown;
 }
 
@@ -71,6 +75,8 @@ const DEFAULT_PROFILE: RestaurantProfile = {
   estimatedTime: "15–20 min",
   location: "Puerto Vallarta",
   featuredCategory: "Favoritos",
+  deliveryEnabled: false,
+  deliveryFee: 0,
   heroImageUrl:
     "https://images.unsplash.com/photo-1504674900247-0877df9cc836?q=80&w=1400&auto=format&fit=crop",
   tenantTheme: normalizeTenantTheme(null),
@@ -141,6 +147,12 @@ function toOptionalString(value: unknown): string | undefined {
   return isNonEmptyString(value) ? value.trim() : undefined;
 }
 
+function toDeliveryFee(value: unknown): number {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0
+    ? value
+    : 0;
+}
+
 function normalizeCategory(category?: string): string {
   if (!category) return "otros";
 
@@ -202,6 +214,8 @@ function mapTenantProfile(record: FirestoreTenantRecord | undefined): Restaurant
     heroImageUrl:
       toOptionalString(record?.heroImageUrl) ?? DEFAULT_PROFILE.heroImageUrl,
     featuredCategory,
+    deliveryEnabled: record?.deliveryEnabled === true,
+    deliveryFee: toDeliveryFee(record?.deliveryFee),
     tenantTheme: normalizeTenantTheme(record?.tenantTheme),
   };
 }
@@ -248,13 +262,29 @@ function buildOrder(
   tenantId: string,
   customerInfo: CustomerInfo,
   items: CartItem[],
-  total: number
+  total: number,
+  deliveryType: "pickup" | "delivery",
+  deliveryAddress: string,
+  deliveryFee: number
 ): Order {
+  const normalizedDeliveryAddress = deliveryAddress.trim();
+  const deliveryFields =
+    deliveryType === "delivery"
+      ? {
+          deliveryType,
+          deliveryAddress: normalizedDeliveryAddress,
+          deliveryFee,
+        }
+      : {
+          deliveryType,
+        };
+
   return {
     tenantId,
     cliente: customerInfo,
     productos: mapCartItemsToOrderItems(items),
     total,
+    ...deliveryFields,
     estado: "pendiente",
     createdAt: Date.now(),
   };
@@ -275,6 +305,10 @@ export function OrderMenuClient({ tenantId }: OrderMenuClientProps) {
   const [successOrderId, setSuccessOrderId] = useState<string | null>(null);
   const [submittedTotal, setSubmittedTotal] = useState<number | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [deliveryType, setDeliveryType] = useState<"pickup" | "delivery">(
+    "pickup"
+  );
+  const [deliveryAddress, setDeliveryAddress] = useState<string>("");
   const categoryRefs = useRef<Record<string, HTMLElement | null>>({});
   const isSubmittingRef = useRef<boolean>(false);
 
@@ -283,6 +317,8 @@ export function OrderMenuClient({ tenantId }: OrderMenuClientProps) {
   const typographyClassName = getTypographyClassName(
     restaurantProfile.tenantTheme.typography
   );
+  const deliveryEnabled = restaurantProfile.deliveryEnabled;
+  const deliveryFee = restaurantProfile.deliveryFee;
 
   useEffect(() => {
     let isMounted = true;
@@ -318,6 +354,10 @@ export function OrderMenuClient({ tenantId }: OrderMenuClientProps) {
         const currentFeaturedCategoryKey = normalizeCategory(profile.featuredCategory);
 
         setRestaurantProfile(profile);
+        if (!profile.deliveryEnabled) {
+          setDeliveryType("pickup");
+          setDeliveryAddress("");
+        }
 
         setProducts(
           loadedProducts.sort((left, right) => {
@@ -376,10 +416,17 @@ export function OrderMenuClient({ tenantId }: OrderMenuClientProps) {
     });
   }, [products, featuredCategoryKey]);
 
-  const total = cartItems.reduce(
+  const subtotal = cartItems.reduce(
     (sum, item) => sum + item.quantity * item.unitPrice,
     0
   );
+  const effectiveDeliveryType =
+    deliveryEnabled && deliveryType === "delivery" ? "delivery" : "pickup";
+  const effectiveDeliveryAddress =
+    effectiveDeliveryType === "delivery" ? deliveryAddress : "";
+  const deliveryFeeApplied =
+    effectiveDeliveryType === "delivery" ? deliveryFee : 0;
+  const total = subtotal + deliveryFeeApplied;
 
   function addProduct(product: Product): void {
     if (!product.available) {
@@ -477,7 +524,23 @@ export function OrderMenuClient({ tenantId }: OrderMenuClientProps) {
     setSubmitError(null);
 
     try {
-      const order = buildOrder(tenantId, customerInfo, cartItems, total);
+      if (
+        effectiveDeliveryType === "delivery" &&
+        effectiveDeliveryAddress.trim().length === 0
+      ) {
+        setSubmitError("Agrega la dirección para poder enviar tu pedido a domicilio.");
+        return;
+      }
+
+      const order = buildOrder(
+        tenantId,
+        customerInfo,
+        cartItems,
+        total,
+        effectiveDeliveryType,
+        effectiveDeliveryAddress,
+        deliveryFeeApplied
+      );
       const result = await createOrder(order);
 
       if (!result.success) {
@@ -485,7 +548,11 @@ export function OrderMenuClient({ tenantId }: OrderMenuClientProps) {
         return;
       }
 
-      setSuccessMessage("Pedido generado correctamente.");
+      setSuccessMessage(
+        effectiveDeliveryType === "delivery"
+          ? "Pedido realizado con éxito. Tu pedido será enviado a la dirección indicada."
+          : "Pedido realizado con éxito. Puedes pasar por tu pedido en 15 a 20 minutos."
+      );
       setSuccessOrderId(result.orderId);
       setSubmittedTotal(total);
       setCartItems([]);
@@ -694,10 +761,16 @@ export function OrderMenuClient({ tenantId }: OrderMenuClientProps) {
           key={customerModalSession}
           isOpen={isCustomerModalOpen}
           total={submittedTotal ?? total}
+          deliveryEnabled={deliveryEnabled}
+          deliveryType={effectiveDeliveryType}
+          deliveryFee={deliveryFeeApplied}
+          deliveryAddress={effectiveDeliveryAddress}
           isSubmitting={isSubmitting}
           successMessage={successMessage}
           successOrderId={successOrderId}
           errorMessage={submitError}
+          onDeliveryTypeChange={setDeliveryType}
+          onDeliveryAddressChange={setDeliveryAddress}
           onClose={closeCustomerModal}
           onSubmit={submitOrder}
         />
