@@ -39,8 +39,10 @@ const EMPTY_TENANT_FORM: SuperAdminTenantInput = {
   estimatedTime: "15–20 min",
   location: "Puerto Vallarta",
   heroImageUrl: "",
+  active: true,
   whatsappPhone: "",
   metaPhoneNumberId: "",
+  metaAccessToken: "",
   rating: "4.8",
   reviews: "0",
   status: "active",
@@ -71,8 +73,10 @@ function getTenantFormFromSummary(
     estimatedTime: tenant.estimatedTime,
     location: tenant.location,
     heroImageUrl: tenant.heroImageUrl,
+    active: tenant.active,
     whatsappPhone: tenant.whatsappPhone,
     metaPhoneNumberId: tenant.metaPhoneNumberId,
+    metaAccessToken: tenant.metaAccessToken,
     rating: tenant.rating,
     reviews: tenant.reviews,
     status: tenant.status,
@@ -82,6 +86,42 @@ function getTenantFormFromSummary(
     deliveryEnabled: tenant.deliveryEnabled,
     deliveryFee: tenant.deliveryFee,
     tenantTheme: tenant.tenantTheme,
+  };
+}
+
+function getWhatsappValidationError(form: SuperAdminTenantInput): string | null {
+  const whatsappPhoneDigits = form.whatsappPhone.replace(/\D/g, "");
+
+  if (whatsappPhoneDigits.length < 12) {
+    return "WhatsApp Business Phone debe tener al menos 12 dígitos.";
+  }
+
+  if (form.metaPhoneNumberId.trim().length < 10) {
+    return "Meta Phone Number ID debe tener al menos 10 caracteres.";
+  }
+
+  if (form.metaAccessToken.trim().length < 20) {
+    return "Meta Access Token debe tener al menos 20 caracteres.";
+  }
+
+  return null;
+}
+
+function normalizeTenantFormForSave(
+  form: SuperAdminTenantInput
+): SuperAdminTenantInput {
+  return {
+    ...form,
+    whatsappPhone: form.whatsappPhone.replace(/\D/g, ""),
+    metaPhoneNumberId: form.metaPhoneNumberId.trim(),
+    metaAccessToken: form.metaAccessToken.trim(),
+    deliveryFee: form.deliveryEnabled ? form.deliveryFee : 0,
+    orderConfirmationPolicy: {
+      ...form.orderConfirmationPolicy,
+      action: form.orderConfirmationPolicy.enabled
+        ? "require_manual_confirmation"
+        : "allow",
+    },
   };
 }
 
@@ -241,6 +281,14 @@ export function SuperAdminClient() {
       return;
     }
 
+    const whatsappValidationError = getWhatsappValidationError(form);
+
+    if (whatsappValidationError) {
+      setMessage(null);
+      setErrorMessage(whatsappValidationError);
+      return;
+    }
+
     if (
       !Number.isFinite(form.orderConfirmationPolicy.amountThreshold) ||
       form.orderConfirmationPolicy.amountThreshold < 1
@@ -267,27 +315,10 @@ export function SuperAdminClient() {
     setErrorMessage(null);
 
     try {
+      const tenantInput = normalizeTenantFormForSave(form);
       const response = editingTenantId
-        ? await updateSuperAdminTenant(user, editingTenantId, {
-            ...form,
-            deliveryFee: form.deliveryEnabled ? form.deliveryFee : 0,
-            orderConfirmationPolicy: {
-              ...form.orderConfirmationPolicy,
-              action: form.orderConfirmationPolicy.enabled
-                ? "require_manual_confirmation"
-                : "allow",
-            },
-          })
-        : await createSuperAdminTenant(user, {
-            ...form,
-            deliveryFee: form.deliveryEnabled ? form.deliveryFee : 0,
-            orderConfirmationPolicy: {
-              ...form.orderConfirmationPolicy,
-              action: form.orderConfirmationPolicy.enabled
-                ? "require_manual_confirmation"
-                : "allow",
-            },
-          });
+        ? await updateSuperAdminTenant(user, editingTenantId, tenantInput)
+        : await createSuperAdminTenant(user, tenantInput);
 
       if (!response.success) {
         setErrorMessage(response.message);
@@ -716,6 +747,14 @@ function OperationsPreview({
         <InfoItem
           label="Meta Phone Number ID"
           value={tenant.metaPhoneNumberId || "No configurado"}
+        />
+        <InfoItem
+          label="WhatsApp activo"
+          value={tenant.active ? "Activo" : "Inactivo"}
+        />
+        <InfoItem
+          label="Meta Access Token"
+          value={tenant.metaAccessToken ? "Configurado" : "No configurado"}
         />
         <InfoItem
           label="Pedidos grandes"

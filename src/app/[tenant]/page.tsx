@@ -6,7 +6,7 @@ import { OrderMenuClient } from "@/modules/orders/components/OrderMenuClient";
 export const dynamic = "force-dynamic";
 
 interface TenantRecord {
-  active?: unknown;
+  deletedAt?: unknown;
   slug?: unknown;
 }
 
@@ -32,7 +32,7 @@ export default async function TenantPage(props: PageProps<"/[tenant]">) {
     tenantRecord = slugTenantSnapshot.data() as TenantRecord | undefined;
   }
 
-  if (tenantRecord?.active === false) {
+  if (tenantRecord?.deletedAt !== null && tenantRecord?.deletedAt !== undefined) {
     notFound();
   }
 

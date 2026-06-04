@@ -31,6 +31,7 @@ interface TenantRecord {
   heroImageUrl?: unknown;
   whatsappPhone?: unknown;
   metaPhoneNumberId?: unknown;
+  metaAccessToken?: unknown;
   rating?: unknown;
   reviews?: unknown;
   status?: unknown;
@@ -74,8 +75,10 @@ const DEFAULT_TENANT_INPUT: SuperAdminTenantInput = {
   estimatedTime: "15–20 min",
   location: "Puerto Vallarta",
   heroImageUrl: "",
+  active: true,
   whatsappPhone: "",
   metaPhoneNumberId: "",
+  metaAccessToken: "",
   rating: "4.8",
   reviews: "0",
   status: "active",
@@ -107,8 +110,16 @@ function toOrderFlowMode(value: unknown): SuperAdminOrderFlowMode {
   return value === "dashboard_managed" ? "dashboard_managed" : "simple_whatsapp";
 }
 
-function isWhatsappActive(orderFlowMode: SuperAdminOrderFlowMode): boolean {
-  return orderFlowMode === "simple_whatsapp";
+function toActive(value: unknown): boolean {
+  return typeof value === "boolean" ? value : DEFAULT_TENANT_INPUT.active;
+}
+
+function hasDeletedAt(value: unknown): boolean {
+  return value !== null && value !== undefined;
+}
+
+function toDigits(value: string): string {
+  return value.replace(/\D/g, "");
 }
 
 function toPreparationMinutes(value: unknown): number {
@@ -224,8 +235,10 @@ function mapTenantRecord(
     ),
     location: toStringValue(record.location, DEFAULT_TENANT_INPUT.location),
     heroImageUrl: toStringValue(record.heroImageUrl, ""),
+    active: toActive(record.active),
     whatsappPhone: toStringValue(record.whatsappPhone, ""),
     metaPhoneNumberId: toStringValue(record.metaPhoneNumberId, ""),
+    metaAccessToken: toStringValue(record.metaAccessToken, ""),
     rating: toStringValue(record.rating, DEFAULT_TENANT_INPUT.rating),
     reviews: toStringValue(record.reviews, DEFAULT_TENANT_INPUT.reviews),
     status: toTenantStatus(record.status),
@@ -317,7 +330,10 @@ export function validateSuperAdminTenantInput(
     record.estimatedPreparationMinutes
   );
   const orderFlowMode = toOrderFlowMode(record.orderFlowMode);
+  const active = toActive(record.active);
+  const whatsappPhone = toDigits(toStringValue(record.whatsappPhone, ""));
   const metaPhoneNumberId = toStringValue(record.metaPhoneNumberId, "");
+  const metaAccessToken = toStringValue(record.metaAccessToken, "");
   const orderConfirmationPolicy = normalizeOrderConfirmationPolicy(
     record.orderConfirmationPolicy
   );
@@ -350,17 +366,24 @@ export function validateSuperAdminTenantInput(
     };
   }
 
-  if (isWhatsappActive(orderFlowMode) && metaPhoneNumberId.length === 0) {
+  if (whatsappPhone.length < 12) {
     return {
       valid: false,
-      message: "Meta Phone Number ID es requerido cuando WhatsApp está activo.",
+      message: "WhatsApp Business Phone debe tener al menos 12 dígitos.",
     };
   }
 
-  if (metaPhoneNumberId.length > 0 && metaPhoneNumberId.length < 5) {
+  if (metaPhoneNumberId.length < 10) {
     return {
       valid: false,
-      message: "Meta Phone Number ID debe tener al menos 5 caracteres.",
+      message: "Meta Phone Number ID debe tener al menos 10 caracteres.",
+    };
+  }
+
+  if (metaAccessToken.length < 20) {
+    return {
+      valid: false,
+      message: "Meta Access Token debe tener al menos 20 caracteres.",
     };
   }
 
@@ -379,8 +402,10 @@ export function validateSuperAdminTenantInput(
       ),
       location: toStringValue(record.location, DEFAULT_TENANT_INPUT.location),
       heroImageUrl: toStringValue(record.heroImageUrl, ""),
-      whatsappPhone: toStringValue(record.whatsappPhone, ""),
+      active,
+      whatsappPhone,
       metaPhoneNumberId,
+      metaAccessToken,
       rating: toStringValue(record.rating, DEFAULT_TENANT_INPUT.rating),
       reviews: toStringValue(record.reviews, DEFAULT_TENANT_INPUT.reviews),
       status: toTenantStatus(record.status),
@@ -403,7 +428,7 @@ export async function listSuperAdminTenants(): Promise<
       .filter((document) => {
         const record = document.data() as TenantRecord;
 
-        return record.active !== false;
+        return !hasDeletedAt(record.deletedAt);
       })
       .map(async (document) => {
         const stats = await getTenantStats(document.id);
@@ -486,8 +511,10 @@ export async function updateSuperAdminTenant(
     estimatedTime: input.estimatedTime,
     location: input.location,
     heroImageUrl: input.heroImageUrl,
+    active: input.active,
     whatsappPhone: input.whatsappPhone,
     metaPhoneNumberId: input.metaPhoneNumberId,
+    metaAccessToken: input.metaAccessToken,
     rating: input.rating,
     reviews: input.reviews,
     status: input.status,

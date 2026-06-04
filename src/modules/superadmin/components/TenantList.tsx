@@ -25,6 +25,17 @@ function getStatusClassName(status: SuperAdminTenantStatus): string {
     : "bg-stone-100 text-stone-600 ring-stone-200";
 }
 
+function hasCompleteWhatsAppConfiguration(
+  tenant: SuperAdminTenantSummary
+): boolean {
+  return (
+    tenant.active &&
+    tenant.whatsappPhone.trim().length > 0 &&
+    tenant.metaPhoneNumberId.trim().length > 0 &&
+    tenant.metaAccessToken.trim().length > 0
+  );
+}
+
 export function TenantList({
   tenants,
   selectedTenantId,
@@ -68,6 +79,8 @@ export function TenantList({
       <div className="mt-5 divide-y divide-stone-100 overflow-hidden rounded-2xl border border-stone-200">
         {tenants.map((tenant) => {
           const isSelected = tenant.tenantId === selectedTenantId;
+          const hasWhatsAppConfiguration =
+            hasCompleteWhatsAppConfiguration(tenant);
 
           return (
             <article
@@ -90,6 +103,17 @@ export function TenantList({
                       )}`}
                     >
                       {tenant.status === "active" ? "Activo" : "Inactivo"}
+                    </span>
+                    <span
+                      className={
+                        hasWhatsAppConfiguration
+                          ? "rounded-full bg-emerald-50 px-3 py-1 text-xs font-extrabold text-emerald-700 ring-1 ring-emerald-200"
+                          : "rounded-full bg-rose-50 px-3 py-1 text-xs font-extrabold text-rose-700 ring-1 ring-rose-200"
+                      }
+                    >
+                      {hasWhatsAppConfiguration
+                        ? "🟢 WhatsApp Configurado"
+                        : "🔴 Configuración Incompleta"}
                     </span>
                   </div>
                   <p className="mt-2 truncate text-sm font-semibold text-stone-500">

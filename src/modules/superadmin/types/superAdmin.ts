@@ -37,8 +37,10 @@ export interface SuperAdminTenantSummary {
   estimatedTime: string;
   location: string;
   heroImageUrl: string;
+  active: boolean;
   whatsappPhone: string;
   metaPhoneNumberId: string;
+  metaAccessToken: string;
   rating: string;
   reviews: string;
   status: SuperAdminTenantStatus;
@@ -63,8 +65,10 @@ export interface SuperAdminTenantInput {
   estimatedTime: string;
   location: string;
   heroImageUrl: string;
+  active: boolean;
   whatsappPhone: string;
   metaPhoneNumberId: string;
+  metaAccessToken: string;
   rating: string;
   reviews: string;
   status: SuperAdminTenantStatus;

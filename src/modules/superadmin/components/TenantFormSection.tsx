@@ -1,6 +1,6 @@
 "use client";
 
-import { type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 
 import { AppButton } from "@/components/ui/AppButton";
 import { generateThemeFromCategory } from "@/modules/theme/agents/designerAgent";
@@ -34,6 +34,9 @@ export function TenantFormSection({
   onSubmit,
   onReset,
 }: TenantFormSectionProps) {
+  const [showMetaAccessToken, setShowMetaAccessToken] =
+    useState<boolean>(false);
+
   function updateFormField(field: TenantFormField, value: string): void {
     onChange({
       ...form,
@@ -41,6 +44,13 @@ export function TenantFormSection({
         field === "estimatedPreparationMinutes"
           ? Number.parseInt(value, 10) || 1
           : value,
+    });
+  }
+
+  function updateWhatsappActive(active: boolean): void {
+    onChange({
+      ...form,
+      active,
     });
   }
 
@@ -168,25 +178,58 @@ export function TenantFormSection({
           value={form.heroImageUrl}
           onChange={(value) => updateFormField("heroImageUrl", value)}
         />
-        <div className="grid gap-4 sm:grid-cols-2">
-          <TextField
-            label="WhatsApp"
-            value={form.whatsappPhone}
-            onChange={(value) => updateFormField("whatsappPhone", value)}
-          />
-          <TextField
-            label="Ubicación"
-            value={form.location}
-            onChange={(value) => updateFormField("location", value)}
+        <TextField
+          label="Ubicación"
+          value={form.location}
+          onChange={(value) => updateFormField("location", value)}
+        />
+        <div className="rounded-2xl border border-emerald-100 bg-emerald-50/50 p-5">
+          <h3 className="text-lg font-black text-stone-950">
+            Configuración WhatsApp
+          </h3>
+          <label className="mt-4 flex items-start gap-3">
+            <input
+              type="checkbox"
+              checked={form.active}
+              onChange={(event) => updateWhatsappActive(event.target.checked)}
+              className="mt-1 h-5 w-5 rounded border-stone-300 text-emerald-600 focus:ring-emerald-500"
+            />
+            <span>
+              <span className="block text-sm font-extrabold text-stone-900">
+                WhatsApp Activo
+              </span>
+              <span className="mt-1 block text-sm leading-6 text-stone-500">
+                Habilita el envío y recepción de mensajes para este negocio.
+              </span>
+            </span>
+          </label>
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            <TextField
+              label="WhatsApp Business Phone"
+              value={form.whatsappPhone}
+              onChange={(value) => updateFormField("whatsappPhone", value)}
+              placeholder="523221070973"
+              required
+            />
+            <TextField
+              label="Meta Phone Number ID"
+              value={form.metaPhoneNumberId}
+              onChange={(value) => updateFormField("metaPhoneNumberId", value)}
+              helpText="ID del número de WhatsApp Business usado por Meta para enrutar mensajes al negocio."
+              required
+            />
+          </div>
+          <PasswordField
+            label="Meta Access Token"
+            value={form.metaAccessToken}
+            onChange={(value) => updateFormField("metaAccessToken", value)}
+            showValue={showMetaAccessToken}
+            onToggleShow={() =>
+              setShowMetaAccessToken((currentValue) => !currentValue)
+            }
+            required
           />
         </div>
-        <TextField
-          label="Meta Phone Number ID"
-          value={form.metaPhoneNumberId}
-          onChange={(value) => updateFormField("metaPhoneNumberId", value)}
-          helpText="ID del número de WhatsApp Business usado por Meta para enrutar mensajes al negocio."
-          required={form.orderFlowMode === "simple_whatsapp"}
-        />
         <div className="grid gap-4 sm:grid-cols-3">
           <TextField
             label="Rating"
@@ -383,6 +426,7 @@ function TextField({
   disabled = false,
   required = false,
   helpText,
+  placeholder,
 }: {
   label: string;
   value: string;
@@ -391,6 +435,7 @@ function TextField({
   disabled?: boolean;
   required?: boolean;
   helpText?: string;
+  placeholder?: string;
 }) {
   return (
     <label className="block">
@@ -406,8 +451,47 @@ function TextField({
         onChange={(event) => onChange(event.target.value)}
         disabled={disabled}
         required={required}
+        placeholder={placeholder}
         className="mt-2 w-full rounded-2xl border border-stone-300 bg-white px-4 py-3 text-sm font-semibold text-stone-950 outline-none transition placeholder:text-stone-400 focus:border-orange-500 focus:ring-4 focus:ring-orange-100 disabled:cursor-not-allowed disabled:bg-stone-100 disabled:text-stone-500"
       />
+    </label>
+  );
+}
+
+function PasswordField({
+  label,
+  value,
+  onChange,
+  showValue,
+  onToggleShow,
+  required = false,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  showValue: boolean;
+  onToggleShow: () => void;
+  required?: boolean;
+}) {
+  return (
+    <label className="mt-4 block">
+      <span className="text-sm font-extrabold text-stone-900">{label}</span>
+      <span className="mt-2 flex rounded-2xl border border-stone-300 bg-white focus-within:border-orange-500 focus-within:ring-4 focus-within:ring-orange-100">
+        <input
+          type={showValue ? "text" : "password"}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          required={required}
+          className="min-w-0 flex-1 rounded-l-2xl bg-transparent px-4 py-3 text-sm font-semibold text-stone-950 outline-none"
+        />
+        <button
+          type="button"
+          onClick={onToggleShow}
+          className="shrink-0 rounded-r-2xl border-l border-stone-200 px-4 py-3 text-sm font-extrabold text-stone-700 transition hover:bg-stone-50"
+        >
+          {showValue ? "Ocultar" : "Mostrar"}
+        </button>
+      </span>
     </label>
   );
 }
