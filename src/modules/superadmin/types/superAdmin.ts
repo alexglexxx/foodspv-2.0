@@ -1,4 +1,7 @@
-import type { TenantCategory } from "@/modules/design/tenantDesignPresets";
+import type {
+  TenantCategory,
+  TenantDesignPreset,
+} from "@/modules/design/tenantDesignPresets";
 
 export type SuperAdminTenantStatus = "active" | "inactive";
 
@@ -17,6 +20,13 @@ export interface SuperAdminOrderConfirmationPolicy {
   enabled: boolean;
   amountThreshold: number;
   action: SuperAdminOrderConfirmationAction;
+}
+
+export interface SuperAdminDeliveryConfig {
+  enabled: boolean;
+  fee?: number;
+  minimumOrder?: number;
+  notes?: string;
 }
 
 export interface SuperAdminTenantStats {
@@ -48,6 +58,7 @@ export interface SuperAdminTenantSummary {
   orderFlowMode: SuperAdminOrderFlowMode;
   estimatedPreparationMinutes: number;
   orderConfirmationPolicy: SuperAdminOrderConfirmationPolicy;
+  deliveryConfig: SuperAdminDeliveryConfig;
   deliveryEnabled: boolean;
   deliveryFee: number;
   publicUrl: string;
@@ -76,6 +87,7 @@ export interface SuperAdminTenantInput {
   orderFlowMode: SuperAdminOrderFlowMode;
   estimatedPreparationMinutes: number;
   orderConfirmationPolicy: SuperAdminOrderConfirmationPolicy;
+  deliveryConfig: SuperAdminDeliveryConfig;
   deliveryEnabled: boolean;
   deliveryFee: number;
 }
@@ -127,6 +139,18 @@ export type SuperAdminTenantMutationResponse =
   | {
       success: true;
       tenant: SuperAdminTenantSummary | null;
+      availableDesignPresets?: TenantDesignPreset[];
+    }
+  | {
+      success: false;
+      message: string;
+    };
+
+export type SuperAdminTenantResponse =
+  | {
+      success: true;
+      tenant: SuperAdminTenantSummary;
+      availableDesignPresets: TenantDesignPreset[];
     }
   | {
       success: false;

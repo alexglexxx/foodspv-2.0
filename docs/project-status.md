@@ -1,3 +1,16 @@
+## TASK-022
+
+Estado: COMPLETE
+
+Resultado:
+
+- Tenants existentes se pueden editar desde SuperAdmin despues de creados.
+- Nuevo contrato `designPresetId` por categoria en `src/modules/design/tenantDesignPresets.ts`.
+- La API individual de superadmin expone `GET` normalizado y `PATCH` parcial validado.
+- Entrega a domicilio usa `deliveryConfig` con fallback a `deliveryEnabled/deliveryFee`.
+- La webapp publica aplica el preset seleccionado con CSS variables.
+- Documentacion agregada en `docs/architecture/tenant-design-presets.md` y `docs/troubleshooting/tenant-edit-after-creation.md`.
+
 ## TASK-021
 
 Estado: COMPLETE

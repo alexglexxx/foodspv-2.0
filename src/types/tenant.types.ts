@@ -23,6 +23,13 @@ export interface TenantOrderConfirmationPolicy {
   action: OrderConfirmationAction;
 }
 
+export interface TenantDeliveryConfig {
+  enabled: boolean;
+  fee?: number;
+  minimumOrder?: number;
+  notes?: string;
+}
+
 export interface Tenant {
   id: string;
   tenantId?: string;
@@ -53,6 +60,7 @@ export interface Tenant {
   orderFlowMode?: OrderFlowMode;
   estimatedPreparationMinutes?: number;
   orderConfirmationPolicy?: TenantOrderConfirmationPolicy;
+  deliveryConfig?: TenantDeliveryConfig;
   deliveryEnabled?: boolean;
   deliveryFee?: number;
 

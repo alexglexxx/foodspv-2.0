@@ -36,6 +36,8 @@ interface RestaurantProfile {
   featuredCategory: string;
   deliveryEnabled: boolean;
   deliveryFee: number;
+  deliveryMinimumOrder: number;
+  deliveryNotes: string;
   designPreset: TenantDesignPreset;
 }
 
@@ -51,6 +53,7 @@ interface FirestoreTenantRecord {
   featuredCategory?: unknown;
   category?: unknown;
   designPresetId?: unknown;
+  deliveryConfig?: unknown;
   deliveryEnabled?: unknown;
   deliveryFee?: unknown;
 }
@@ -93,6 +96,8 @@ const DEFAULT_PROFILE: RestaurantProfile = {
   featuredCategory: "Favoritos",
   deliveryEnabled: false,
   deliveryFee: 0,
+  deliveryMinimumOrder: 0,
+  deliveryNotes: "",
   heroImageUrl:
     "https://images.unsplash.com/photo-1504674900247-0877df9cc836?q=80&w=1400&auto=format&fit=crop",
   designPreset: getPresetForTenant("generico", null),
@@ -169,6 +174,44 @@ function toDeliveryFee(value: unknown): number {
     : 0;
 }
 
+function formatCurrency(value: number): string {
+  return new Intl.NumberFormat("es-MX", {
+    style: "currency",
+    currency: "MXN",
+    maximumFractionDigits: 2,
+  }).format(value);
+}
+
+function mapDeliveryConfig(record: FirestoreTenantRecord | undefined): {
+  enabled: boolean;
+  fee: number;
+  minimumOrder: number;
+  notes: string;
+} {
+  const deliveryConfig =
+    record?.deliveryConfig &&
+    typeof record.deliveryConfig === "object" &&
+    !Array.isArray(record.deliveryConfig)
+      ? (record.deliveryConfig as {
+          enabled?: unknown;
+          fee?: unknown;
+          minimumOrder?: unknown;
+          notes?: unknown;
+        })
+      : null;
+  const enabled =
+    typeof deliveryConfig?.enabled === "boolean"
+      ? deliveryConfig.enabled
+      : record?.deliveryEnabled === true;
+
+  return {
+    enabled,
+    fee: enabled ? toDeliveryFee(deliveryConfig?.fee ?? record?.deliveryFee) : 0,
+    minimumOrder: toDeliveryFee(deliveryConfig?.minimumOrder),
+    notes: toOptionalString(deliveryConfig?.notes) ?? "",
+  };
+}
+
 function normalizeCategory(category?: string): string {
   if (!category) return "otros";
 
@@ -197,15 +240,31 @@ function getCategoryPriority(categoryKey: string, featuredCategoryKey: string): 
 }
 
 function getTypographyClassName(fontMood: TenantDesignPreset["fontMood"]): string {
-  if (fontMood === "soft") {
-    return "font-medium";
-  }
-
   if (fontMood === "modern") {
     return "font-sans";
   }
 
+  if (fontMood === "premium") {
+    return "font-semibold";
+  }
+
+  if (fontMood === "warm") {
+    return "font-medium";
+  }
+
   return "font-black";
+}
+
+function getRadiusValue(radius: TenantDesignPreset["borderRadius"]): string {
+  if (radius === "large") {
+    return "1.5rem";
+  }
+
+  if (radius === "medium") {
+    return "1rem";
+  }
+
+  return "0.75rem";
 }
 
 function getTenantDesignStyle(preset: TenantDesignPreset): CSSProperties {
@@ -214,14 +273,16 @@ function getTenantDesignStyle(preset: TenantDesignPreset): CSSProperties {
     "--tenant-primary-hover": preset.accentColor,
     "--tenant-secondary": preset.secondaryColor,
     "--tenant-accent": preset.accentColor,
+    "--tenant-bg": preset.backgroundColor,
     "--tenant-background": preset.backgroundColor,
-    "--tenant-surface": preset.cardColor,
+    "--tenant-surface": preset.surfaceColor,
+    "--tenant-card": preset.cardColor,
     "--tenant-text": preset.textColor,
     "--tenant-button-text": preset.buttonTextColor,
-    "--tenant-radius": preset.borderRadius,
+    "--tenant-radius": getRadiusValue(preset.borderRadius),
     "--tenant-hero-overlay": preset.heroOverlay,
     "--tenant-text-soft": preset.textColor,
-    "--tenant-muted": preset.secondaryColor,
+    "--tenant-muted": preset.mutedTextColor,
     "--tenant-subtle": preset.cardColor,
     "--tenant-ring": preset.secondaryColor,
   } as CSSProperties;
@@ -304,6 +365,7 @@ function mapTenantProfile(record: FirestoreTenantRecord | undefined): Restaurant
   const category = toOptionalString(record?.category) ?? "generico";
   const designPresetId = toOptionalString(record?.designPresetId);
   const designPreset = getPresetForTenant(category, designPresetId);
+  const deliveryConfig = mapDeliveryConfig(record);
 
   return {
     name: toOptionalString(record?.name) ?? DEFAULT_PROFILE.name,
@@ -317,8 +379,10 @@ function mapTenantProfile(record: FirestoreTenantRecord | undefined): Restaurant
     heroImageUrl:
       toOptionalString(record?.heroImageUrl) ?? DEFAULT_PROFILE.heroImageUrl,
     featuredCategory,
-    deliveryEnabled: record?.deliveryEnabled === true,
-    deliveryFee: toDeliveryFee(record?.deliveryFee),
+    deliveryEnabled: deliveryConfig.enabled,
+    deliveryFee: deliveryConfig.fee,
+    deliveryMinimumOrder: deliveryConfig.minimumOrder,
+    deliveryNotes: deliveryConfig.notes,
     designPreset,
   };
 }
@@ -708,6 +772,17 @@ export function OrderMenuClient({ tenantId, tenantSlug }: OrderMenuClientProps) 
         return;
       }
 
+      if (
+        effectiveDeliveryType === "delivery" &&
+        restaurantProfile.deliveryMinimumOrder > 0 &&
+        subtotal < restaurantProfile.deliveryMinimumOrder
+      ) {
+        setSubmitError(
+          `El pedido mínimo para domicilio es ${formatCurrency(restaurantProfile.deliveryMinimumOrder)}.`
+        );
+        return;
+      }
+
       const order = buildOrder(
         tenantId,
         tenantSlug,
@@ -769,7 +844,7 @@ export function OrderMenuClient({ tenantId, tenantSlug }: OrderMenuClientProps) 
 
   return (
     <div
-      className={`min-h-screen bg-[var(--tenant-background)] text-[var(--tenant-text)] ${typographyClassName}`}
+      className={`min-h-screen bg-[var(--tenant-bg)] text-[var(--tenant-text)] ${typographyClassName}`}
       style={tenantDesignStyle}
     >
       <main className="mx-auto flex w-full max-w-5xl flex-col pb-32">
@@ -959,6 +1034,8 @@ export function OrderMenuClient({ tenantId, tenantSlug }: OrderMenuClientProps) 
           deliveryEnabled={deliveryEnabled}
           deliveryType={effectiveDeliveryType}
           deliveryFee={deliveryFeeApplied}
+          deliveryMinimumOrder={restaurantProfile.deliveryMinimumOrder}
+          deliveryNotes={restaurantProfile.deliveryNotes}
           deliveryAddress={effectiveDeliveryAddress}
           isSubmitting={isSubmitting}
           successMessage={successMessage}

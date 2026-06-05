@@ -34,7 +34,7 @@ const EMPTY_TENANT_FORM: SuperAdminTenantInput = {
   name: "",
   category: "generico",
   featuredCategory: "Generico",
-  designPresetId: "generico-bistro-calido",
+  designPresetId: "generico-limpio",
   description: "",
   greeting: "",
   estimatedTime: "15–20 min",
@@ -53,6 +53,12 @@ const EMPTY_TENANT_FORM: SuperAdminTenantInput = {
     enabled: false,
     amountThreshold: 1,
     action: "allow",
+  },
+  deliveryConfig: {
+    enabled: false,
+    fee: 0,
+    minimumOrder: 0,
+    notes: "",
   },
   deliveryEnabled: false,
   deliveryFee: 0,
@@ -84,13 +90,22 @@ function getTenantFormFromSummary(
     orderFlowMode: tenant.orderFlowMode,
     estimatedPreparationMinutes: tenant.estimatedPreparationMinutes,
     orderConfirmationPolicy: tenant.orderConfirmationPolicy,
-    deliveryEnabled: tenant.deliveryEnabled,
-    deliveryFee: tenant.deliveryFee,
+    deliveryConfig: tenant.deliveryConfig,
+    deliveryEnabled: tenant.deliveryConfig.enabled,
+    deliveryFee: tenant.deliveryConfig.enabled ? tenant.deliveryConfig.fee ?? 0 : 0,
   };
 }
 
 function getWhatsappValidationError(form: SuperAdminTenantInput): string | null {
   const whatsappPhoneDigits = form.whatsappPhone.replace(/\D/g, "");
+  const hasWhatsappConfiguration =
+    whatsappPhoneDigits.length > 0 ||
+    form.metaPhoneNumberId.trim().length > 0 ||
+    form.metaAccessToken.trim().length > 0;
+
+  if (!hasWhatsappConfiguration) {
+    return null;
+  }
 
   if (whatsappPhoneDigits.length < 12) {
     return "WhatsApp Business Phone debe tener al menos 12 dígitos.";
@@ -115,7 +130,15 @@ function normalizeTenantFormForSave(
     whatsappPhone: form.whatsappPhone.replace(/\D/g, ""),
     metaPhoneNumberId: form.metaPhoneNumberId.trim(),
     metaAccessToken: form.metaAccessToken.trim(),
-    deliveryFee: form.deliveryEnabled ? form.deliveryFee : 0,
+    deliveryConfig: {
+      ...form.deliveryConfig,
+      enabled: form.deliveryConfig.enabled,
+      fee: form.deliveryConfig.enabled ? form.deliveryConfig.fee ?? 0 : 0,
+      minimumOrder: form.deliveryConfig.minimumOrder ?? 0,
+      notes: form.deliveryConfig.notes?.trim() ?? "",
+    },
+    deliveryEnabled: form.deliveryConfig.enabled,
+    deliveryFee: form.deliveryConfig.enabled ? form.deliveryConfig.fee ?? 0 : 0,
     orderConfirmationPolicy: {
       ...form.orderConfirmationPolicy,
       action: form.orderConfirmationPolicy.enabled
@@ -281,7 +304,9 @@ export function SuperAdminClient() {
       return;
     }
 
-    const whatsappValidationError = getWhatsappValidationError(form);
+    const whatsappValidationError = editingTenantId
+      ? null
+      : getWhatsappValidationError(form);
 
     if (whatsappValidationError) {
       setMessage(null);
@@ -301,8 +326,9 @@ export function SuperAdminClient() {
     }
 
     if (
-      form.deliveryEnabled &&
-      (!Number.isFinite(form.deliveryFee) || form.deliveryFee < 0)
+      form.deliveryConfig.enabled &&
+      (!Number.isFinite(form.deliveryConfig.fee ?? 0) ||
+        (form.deliveryConfig.fee ?? 0) < 0)
     ) {
       setMessage(null);
       setErrorMessage("Costo de envío debe ser un número mayor o igual a 0.");
@@ -771,6 +797,14 @@ function OperationsPreview({
           }
         />
         <InfoItem label="WhatsApp" value={tenant.whatsappPhone || "No configurado"} />
+        <InfoItem
+          label="Entrega"
+          value={
+            tenant.deliveryConfig.enabled
+              ? `Activa, $${tenant.deliveryConfig.fee ?? 0}`
+              : "Inactiva"
+          }
+        />
       </div>
       <AppButton
         onClick={() => onEdit(tenant)}

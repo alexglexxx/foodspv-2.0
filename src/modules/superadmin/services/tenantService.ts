@@ -8,9 +8,12 @@ import {
   DESIGN_PRESETS_BY_CATEGORY,
   getDefaultPresetForCategory,
   getPresetForTenant,
+  isValidPresetForCategory,
   normalizeTenantCategory,
 } from "@/modules/design/tenantDesignPresets";
+import type { TenantUpdateInput } from "@/modules/tenants/tenantUpdateValidator";
 import type {
+  SuperAdminDeliveryConfig,
   SuperAdminOrderConfirmationAction,
   SuperAdminOrderConfirmationPolicy,
   SuperAdminOrderFlowMode,
@@ -42,8 +45,11 @@ interface TenantRecord {
   orderFlowMode?: unknown;
   estimatedPreparationMinutes?: unknown;
   orderConfirmationPolicy?: unknown;
+  deliveryConfig?: unknown;
   deliveryEnabled?: unknown;
   deliveryFee?: unknown;
+  deliveryMinimumOrder?: unknown;
+  deliveryNotes?: unknown;
   publicUrl?: unknown;
   qrCode?: unknown;
 }
@@ -93,6 +99,9 @@ const DEFAULT_TENANT_INPUT: SuperAdminTenantInput = {
     amountThreshold: 1,
     action: "allow",
   },
+  deliveryConfig: {
+    enabled: false,
+  },
   deliveryEnabled: false,
   deliveryFee: 0,
 };
@@ -139,6 +148,50 @@ function toDeliveryFee(value: unknown): number {
   }
 
   return Math.round(value * 100) / 100;
+}
+
+function toOptionalDeliveryAmount(value: unknown): number | undefined {
+  if (typeof value !== "number" || !Number.isFinite(value) || value < 0) {
+    return undefined;
+  }
+
+  return Math.round(value * 100) / 100;
+}
+
+function normalizeDeliveryConfig(
+  value: unknown,
+  fallback: {
+    enabled?: unknown;
+    fee?: unknown;
+    minimumOrder?: unknown;
+    notes?: unknown;
+  } = {}
+): SuperAdminDeliveryConfig {
+  const record =
+    value && typeof value === "object" && !Array.isArray(value)
+      ? (value as {
+          enabled?: unknown;
+          fee?: unknown;
+          minimumOrder?: unknown;
+          notes?: unknown;
+        })
+      : null;
+  const enabled =
+    typeof record?.enabled === "boolean"
+      ? record.enabled
+      : fallback.enabled === true;
+  const fee = toOptionalDeliveryAmount(record?.fee ?? fallback.fee);
+  const minimumOrder = toOptionalDeliveryAmount(
+    record?.minimumOrder ?? fallback.minimumOrder
+  );
+  const notes = toStringValue(record?.notes ?? fallback.notes, "");
+
+  return {
+    enabled,
+    ...(enabled ? { fee: fee ?? 0 } : { fee: 0 }),
+    ...(minimumOrder !== undefined ? { minimumOrder } : {}),
+    ...(notes.length > 0 ? { notes } : {}),
+  };
 }
 
 function isOrderConfirmationAction(
@@ -204,17 +257,6 @@ function toTenantId(value: unknown): string | null {
   return /^[a-z0-9][a-z0-9-]{2,60}$/.test(tenantId) ? tenantId : null;
 }
 
-function isValidDesignPresetIdForCategory(
-  category: string,
-  designPresetId: string
-): boolean {
-  const normalizedCategory = normalizeTenantCategory(category);
-
-  return DESIGN_PRESETS_BY_CATEGORY[normalizedCategory].some(
-    (preset) => preset.id === designPresetId
-  );
-}
-
 export function generateTenantUrl(tenantId: string): string {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
 
@@ -239,6 +281,12 @@ function mapTenantRecord(
     category,
     toStringValue(record.designPresetId, "")
   );
+  const deliveryConfig = normalizeDeliveryConfig(record.deliveryConfig, {
+    enabled: record.deliveryEnabled,
+    fee: record.deliveryFee,
+    minimumOrder: record.deliveryMinimumOrder,
+    notes: record.deliveryNotes,
+  });
 
   return {
     tenantId,
@@ -268,8 +316,9 @@ function mapTenantRecord(
     orderConfirmationPolicy: getOrderConfirmationPolicy(
       record.orderConfirmationPolicy
     ),
-    deliveryEnabled: record.deliveryEnabled === true,
-    deliveryFee: toDeliveryFee(record.deliveryFee),
+    deliveryConfig,
+    deliveryEnabled: deliveryConfig.enabled,
+    deliveryFee: deliveryConfig.enabled ? deliveryConfig.fee ?? 0 : 0,
     publicUrl: toStringValue(record.publicUrl, ""),
     qrCode: toStringValue(record.qrCode, ""),
     stats,
@@ -358,6 +407,12 @@ export function validateSuperAdminTenantInput(
   );
   const deliveryEnabled = record.deliveryEnabled === true;
   const deliveryFee = toDeliveryFee(record.deliveryFee);
+  const deliveryConfig = normalizeDeliveryConfig(record.deliveryConfig, {
+    enabled: deliveryEnabled,
+    fee: deliveryFee,
+    minimumOrder: record.deliveryMinimumOrder,
+    notes: record.deliveryNotes,
+  });
   const resolvedDesignPresetId =
     designPresetId.length > 0
       ? designPresetId
@@ -377,7 +432,7 @@ export function validateSuperAdminTenantInput(
     };
   }
 
-  if (!isValidDesignPresetIdForCategory(category, resolvedDesignPresetId)) {
+  if (!isValidPresetForCategory(category, resolvedDesignPresetId)) {
     return {
       valid: false,
       message: "El preset de diseño no existe para esa categoría.",
@@ -439,8 +494,9 @@ export function validateSuperAdminTenantInput(
       orderFlowMode,
       estimatedPreparationMinutes,
       orderConfirmationPolicy,
-      deliveryEnabled,
-      deliveryFee: deliveryEnabled ? deliveryFee : 0,
+      deliveryConfig,
+      deliveryEnabled: deliveryConfig.enabled,
+      deliveryFee: deliveryConfig.enabled ? deliveryConfig.fee ?? 0 : 0,
     },
   };
 }
@@ -547,12 +603,90 @@ export async function updateSuperAdminTenant(
     orderFlowMode: input.orderFlowMode,
     estimatedPreparationMinutes: input.estimatedPreparationMinutes,
     orderConfirmationPolicy: input.orderConfirmationPolicy,
-    deliveryEnabled: input.deliveryEnabled,
-    deliveryFee: input.deliveryEnabled ? input.deliveryFee : 0,
+    deliveryConfig: input.deliveryConfig,
+    deliveryEnabled: input.deliveryConfig.enabled,
+    deliveryFee: input.deliveryConfig.enabled ? input.deliveryConfig.fee ?? 0 : 0,
     designPresetId: input.designPresetId,
     tenantTheme: FieldValue.delete(),
     updatedAt: FieldValue.serverTimestamp(),
   });
+
+  const tenant = await getSuperAdminTenant(tenantId);
+
+  if (!tenant) {
+    throw new Error("TENANT_NOT_FOUND");
+  }
+
+  return tenant;
+}
+
+export async function updateSuperAdminTenantPartial(
+  tenantId: string,
+  input: TenantUpdateInput
+): Promise<SuperAdminTenantSummary> {
+  const tenantRef = adminDb.collection("tenants").doc(tenantId);
+  const tenantSnapshot = await tenantRef.get();
+
+  if (!tenantSnapshot.exists) {
+    throw new Error("TENANT_NOT_FOUND");
+  }
+
+  const updatePayload: Record<string, unknown> = {
+    updatedAt: FieldValue.serverTimestamp(),
+  };
+
+  if (input.name !== undefined) updatePayload.name = input.name;
+  if (input.category !== undefined) updatePayload.category = input.category;
+  if (input.featuredCategory !== undefined) {
+    updatePayload.featuredCategory = input.featuredCategory;
+  }
+  if (input.description !== undefined) updatePayload.description = input.description;
+  if (input.greeting !== undefined) updatePayload.greeting = input.greeting;
+  if (input.estimatedTime !== undefined) {
+    updatePayload.estimatedTime = input.estimatedTime;
+  }
+  if (input.location !== undefined) updatePayload.location = input.location;
+  if (input.heroImageUrl !== undefined) {
+    updatePayload.heroImageUrl = input.heroImageUrl;
+  }
+  if (input.whatsappPhone !== undefined) {
+    updatePayload.whatsappPhone = input.whatsappPhone;
+  }
+  if (input.metaPhoneNumberId !== undefined) {
+    updatePayload.metaPhoneNumberId = input.metaPhoneNumberId;
+  }
+  if (input.metaAccessToken !== undefined) {
+    updatePayload.metaAccessToken = input.metaAccessToken;
+  }
+  if (input.active !== undefined) updatePayload.active = input.active;
+  if (input.status !== undefined) updatePayload.status = input.status;
+  if (input.orderFlowMode !== undefined) {
+    updatePayload.orderFlowMode = input.orderFlowMode;
+  }
+  if (input.estimatedPreparationMinutes !== undefined) {
+    updatePayload.estimatedPreparationMinutes =
+      input.estimatedPreparationMinutes;
+  }
+  if (input.designPresetId !== undefined) {
+    updatePayload.designPresetId = input.designPresetId;
+    updatePayload.tenantTheme = FieldValue.delete();
+  }
+  if (input.deliveryConfig !== undefined) {
+    updatePayload.deliveryConfig = input.deliveryConfig;
+    updatePayload.deliveryEnabled = input.deliveryConfig.enabled;
+    updatePayload.deliveryFee = input.deliveryConfig.enabled
+      ? input.deliveryConfig.fee ?? 0
+      : 0;
+  } else {
+    if (input.deliveryEnabled !== undefined) {
+      updatePayload.deliveryEnabled = input.deliveryEnabled;
+    }
+    if (input.deliveryFee !== undefined) {
+      updatePayload.deliveryFee = input.deliveryFee;
+    }
+  }
+
+  await tenantRef.update(updatePayload);
 
   const tenant = await getSuperAdminTenant(tenantId);
 

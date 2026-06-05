@@ -12,6 +12,8 @@ interface CustomerInfoModalProps {
   deliveryEnabled: boolean;
   deliveryType: "pickup" | "delivery";
   deliveryFee: number;
+  deliveryMinimumOrder: number;
+  deliveryNotes: string;
   deliveryAddress: string;
   isSubmitting: boolean;
   successMessage: string | null;
@@ -82,6 +84,8 @@ export function CustomerInfoModal({
   deliveryEnabled,
   deliveryType,
   deliveryFee,
+  deliveryMinimumOrder,
+  deliveryNotes,
   deliveryAddress,
   isSubmitting,
   successMessage,
@@ -324,6 +328,17 @@ export function CustomerInfoModal({
                 </div>
 
                 {deliveryType === "delivery" ? (
+                  <>
+                    {deliveryMinimumOrder > 0 || deliveryNotes ? (
+                      <p className="mt-4 rounded-2xl bg-[var(--tenant-background)] px-4 py-3 text-sm font-semibold text-[var(--tenant-muted)] ring-1 ring-[var(--tenant-ring)]">
+                        {deliveryMinimumOrder > 0
+                          ? `Pedido mínimo para domicilio: ${formatCurrency(deliveryMinimumOrder)}.`
+                          : ""}
+                        {deliveryNotes
+                          ? `${deliveryMinimumOrder > 0 ? " " : ""}${deliveryNotes}`
+                          : ""}
+                      </p>
+                    ) : null}
                   <label className="mt-4 block">
                     <span className="text-sm font-extrabold text-[var(--tenant-text)]">
                       Dirección de entrega
@@ -344,6 +359,7 @@ export function CustomerInfoModal({
                       </span>
                     ) : null}
                   </label>
+                  </>
                 ) : (
                   <p className="mt-4 rounded-2xl bg-[var(--tenant-background)] px-4 py-3 text-sm font-semibold text-[var(--tenant-muted)] ring-1 ring-[var(--tenant-ring)]">
                     Puedes pasar por tu pedido cuando esté listo.

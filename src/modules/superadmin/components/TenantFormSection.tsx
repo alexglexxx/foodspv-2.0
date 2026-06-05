@@ -114,15 +114,46 @@ export function TenantFormSection({
   function updateDeliveryEnabled(enabled: boolean): void {
     onChange({
       ...form,
+      deliveryConfig: {
+        ...form.deliveryConfig,
+        enabled,
+        fee: enabled ? form.deliveryConfig.fee ?? 0 : 0,
+      },
       deliveryEnabled: enabled,
-      deliveryFee: enabled ? form.deliveryFee : 0,
+      deliveryFee: enabled ? form.deliveryConfig.fee ?? 0 : 0,
     });
   }
 
   function updateDeliveryFee(value: string): void {
+    const fee = Number.parseFloat(value) || 0;
+
     onChange({
       ...form,
-      deliveryFee: Number.parseFloat(value) || 0,
+      deliveryConfig: {
+        ...form.deliveryConfig,
+        fee,
+      },
+      deliveryFee: fee,
+    });
+  }
+
+  function updateDeliveryMinimumOrder(value: string): void {
+    onChange({
+      ...form,
+      deliveryConfig: {
+        ...form.deliveryConfig,
+        minimumOrder: Number.parseFloat(value) || 0,
+      },
+    });
+  }
+
+  function updateDeliveryNotes(value: string): void {
+    onChange({
+      ...form,
+      deliveryConfig: {
+        ...form.deliveryConfig,
+        notes: value,
+      },
     });
   }
 
@@ -153,6 +184,9 @@ export function TenantFormSection({
       </div>
 
       <div className="mt-6 grid gap-4">
+        <div className="rounded-2xl border border-stone-200 bg-white p-5">
+          <h3 className="text-lg font-black text-stone-950">General</h3>
+          <div className="mt-4 grid gap-4">
         <TextField
           label="tenantId"
           value={form.tenantId}
@@ -200,9 +234,11 @@ export function TenantFormSection({
           value={form.location}
           onChange={(value) => updateFormField("location", value)}
         />
+          </div>
+        </div>
         <div className="rounded-2xl border border-emerald-100 bg-emerald-50/50 p-5">
           <h3 className="text-lg font-black text-stone-950">
-            Configuración WhatsApp
+            WhatsApp
           </h3>
           <label className="mt-4 flex items-start gap-3">
             <input
@@ -226,14 +262,14 @@ export function TenantFormSection({
               value={form.whatsappPhone}
               onChange={(value) => updateFormField("whatsappPhone", value)}
               placeholder="523221070973"
-              required
+              required={editingTenantId === null}
             />
             <TextField
               label="Meta Phone Number ID"
               value={form.metaPhoneNumberId}
               onChange={(value) => updateFormField("metaPhoneNumberId", value)}
               helpText="ID del número de WhatsApp Business usado por Meta para enrutar mensajes al negocio."
-              required
+              required={editingTenantId === null}
             />
           </div>
           <PasswordField
@@ -244,7 +280,7 @@ export function TenantFormSection({
             onToggleShow={() =>
               setShowMetaAccessToken((currentValue) => !currentValue)
             }
-            required
+            required={editingTenantId === null}
           />
         </div>
         <div className="grid gap-4 sm:grid-cols-3">
@@ -265,6 +301,9 @@ export function TenantFormSection({
           />
         </div>
         <div className="grid gap-4 sm:grid-cols-3">
+          <div className="sm:col-span-3">
+            <h3 className="text-lg font-black text-stone-950">Pedidos</h3>
+          </div>
           <SelectField
             label="Estado"
             value={form.status}
@@ -364,7 +403,7 @@ export function TenantFormSection({
           <label className="mt-4 flex items-start gap-3">
             <input
               type="checkbox"
-              checked={form.deliveryEnabled}
+              checked={form.deliveryConfig.enabled}
               onChange={(event) => updateDeliveryEnabled(event.target.checked)}
               className="mt-1 h-5 w-5 rounded border-stone-300 text-orange-600 focus:ring-orange-500"
             />
@@ -377,8 +416,9 @@ export function TenantFormSection({
               </span>
             </span>
           </label>
-          {form.deliveryEnabled ? (
-            <label className="mt-4 block">
+          {form.deliveryConfig.enabled ? (
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            <label className="block">
               <span className="text-sm font-extrabold text-stone-900">
                 Costo de envío
               </span>
@@ -386,12 +426,38 @@ export function TenantFormSection({
                 type="number"
                 min={0}
                 step="0.01"
-                value={String(form.deliveryFee)}
+                value={String(form.deliveryConfig.fee ?? 0)}
                 onChange={(event) => updateDeliveryFee(event.target.value)}
                 required
                 className="mt-2 w-full rounded-2xl border border-stone-300 bg-white px-4 py-3 text-sm font-semibold text-stone-950 outline-none transition focus:border-orange-500 focus:ring-4 focus:ring-orange-100"
               />
             </label>
+            <label className="block">
+              <span className="text-sm font-extrabold text-stone-900">
+                Pedido mínimo
+              </span>
+              <input
+                type="number"
+                min={0}
+                step="0.01"
+                value={String(form.deliveryConfig.minimumOrder ?? 0)}
+                onChange={(event) =>
+                  updateDeliveryMinimumOrder(event.target.value)
+                }
+                className="mt-2 w-full rounded-2xl border border-stone-300 bg-white px-4 py-3 text-sm font-semibold text-stone-950 outline-none transition focus:border-orange-500 focus:ring-4 focus:ring-orange-100"
+              />
+            </label>
+            <label className="block sm:col-span-2">
+              <span className="text-sm font-extrabold text-stone-900">
+                Notas de entrega
+              </span>
+              <textarea
+                value={form.deliveryConfig.notes ?? ""}
+                onChange={(event) => updateDeliveryNotes(event.target.value)}
+                className="mt-2 min-h-24 w-full resize-none rounded-2xl border border-stone-300 bg-white px-4 py-3 text-sm font-semibold text-stone-950 outline-none transition focus:border-orange-500 focus:ring-4 focus:ring-orange-100"
+              />
+            </label>
+            </div>
           ) : null}
         </div>
       </div>
@@ -402,15 +468,25 @@ export function TenantFormSection({
           loading={isSaving}
           loadingText="Guardando..."
         >
-          Guardar negocio
+          Guardar cambios
         </AppButton>
         <AppButton
           onClick={onReset}
           variant="secondary"
           disabled={isSaving}
         >
-          Limpiar
+          {editingTenantId ? "Cancelar" : "Limpiar"}
         </AppButton>
+        {editingTenantId ? (
+          <a
+            href={`/${editingTenantId}`}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex min-h-[44px] items-center justify-center rounded-full border border-stone-300 bg-white px-4 text-sm font-extrabold text-stone-800 shadow-sm transition hover:bg-stone-50"
+          >
+            Ver webapp pública
+          </a>
+        ) : null}
       </div>
     </form>
   );
@@ -530,6 +606,18 @@ function getCategoryLabel(category: TenantCategory): string {
   );
 }
 
+function getPresetRadiusClass(radius: TenantDesignPreset["borderRadius"]): string {
+  if (radius === "large") {
+    return "1.5rem";
+  }
+
+  if (radius === "medium") {
+    return "1rem";
+  }
+
+  return "0.75rem";
+}
+
 function PresetCard({
   preset,
   selected,
@@ -557,7 +645,7 @@ function PresetCard({
         style={{
           backgroundColor: preset.backgroundColor,
           color: preset.textColor,
-          borderRadius: preset.borderRadius,
+          borderRadius: getPresetRadiusClass(preset.borderRadius),
         }}
       >
         <div
@@ -604,6 +692,9 @@ function PresetCard({
         )}
       </div>
       <p className="mt-3 text-sm font-black text-stone-950">{preset.name}</p>
+      {selected ? (
+        <p className="mt-1 text-xs font-black text-orange-700">Seleccionado</p>
+      ) : null}
       <p className="mt-1 line-clamp-2 text-xs font-semibold leading-5 text-stone-600">
         {preset.description}
       </p>

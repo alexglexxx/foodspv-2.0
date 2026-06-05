@@ -6,9 +6,7 @@ export type TenantCategory =
   | "cafeteria"
   | "generico";
 
-export type TenantFontMood = "bold" | "modern" | "soft";
-
-export interface TenantDesignPreset {
+export type TenantDesignPreset = {
   id: string;
   name: string;
   category: TenantCategory;
@@ -17,330 +15,368 @@ export interface TenantDesignPreset {
   secondaryColor: string;
   accentColor: string;
   backgroundColor: string;
-  textColor: string;
+  surfaceColor: string;
   cardColor: string;
+  textColor: string;
+  mutedTextColor: string;
   buttonTextColor: string;
   heroOverlay: string;
-  borderRadius: string;
-  fontMood: TenantFontMood;
-}
+  borderRadius: "soft" | "medium" | "large";
+  fontMood: "classic" | "modern" | "warm" | "premium";
+};
 
 export const DESIGN_PRESETS_BY_CATEGORY = {
   tacos: [
     {
-      id: "tacos-comal-rojo",
-      name: "Comal Rojo",
+      id: "tacos-clasico",
+      name: "Tacos Clasico",
       category: "tacos",
-      description: "Rojo taquero, verde salsa y fondo nocturno para menus con energia.",
-      primaryColor: "#dc2626",
-      secondaryColor: "#14532d",
-      accentColor: "#facc15",
-      backgroundColor: "#1a120b",
-      textColor: "#fff7ed",
-      cardColor: "#27180f",
-      buttonTextColor: "#fff7ed",
-      heroOverlay:
-        "linear-gradient(90deg, rgba(26,18,11,0.98) 0%, rgba(39,24,15,0.9) 48%, rgba(220,38,38,0.42) 100%)",
-      borderRadius: "1.45rem",
-      fontMood: "bold",
-    },
-    {
-      id: "tacos-salsa-verde",
-      name: "Salsa Verde",
-      category: "tacos",
-      description: "Verde fresco con amarillo maiz para taquerias casuales y luminosas.",
-      primaryColor: "#16a34a",
-      secondaryColor: "#713f12",
-      accentColor: "#f59e0b",
+      description: "Rojo taqueria, crema calida y verde cilantro para taquerias tradicionales.",
+      primaryColor: "#b91c1c",
+      secondaryColor: "#fff7ed",
+      accentColor: "#15803d",
       backgroundColor: "#fff7ed",
-      textColor: "#1f2937",
-      cardColor: "#ffffff",
+      surfaceColor: "#ffffff",
+      cardColor: "#ffedd5",
+      textColor: "#1c1917",
+      mutedTextColor: "#57534e",
       buttonTextColor: "#ffffff",
       heroOverlay:
-        "linear-gradient(90deg, rgba(20,83,45,0.92) 0%, rgba(22,101,52,0.76) 48%, rgba(250,204,21,0.28) 100%)",
-      borderRadius: "1.35rem",
-      fontMood: "bold",
+        "linear-gradient(90deg, rgba(28,25,23,0.92) 0%, rgba(185,28,28,0.72) 52%, rgba(21,128,61,0.3) 100%)",
+      borderRadius: "medium",
+      fontMood: "classic",
     },
     {
       id: "tacos-nocturno",
-      name: "Nocturno Taquero",
+      name: "Tacos Nocturno",
       category: "tacos",
-      description: "Fondo profundo, naranja brasa y contraste alto para servicio nocturno.",
+      description: "Carbon, naranja fuego y amarillo maiz para servicio nocturno con alto contraste.",
       primaryColor: "#f97316",
       secondaryColor: "#27272a",
       accentColor: "#fde047",
       backgroundColor: "#11100d",
+      surfaceColor: "#1f1b16",
+      cardColor: "#29231d",
       textColor: "#fafaf9",
-      cardColor: "#211d18",
+      mutedTextColor: "#d6d3d1",
       buttonTextColor: "#11100d",
       heroOverlay:
-        "linear-gradient(90deg, rgba(17,16,13,0.98) 0%, rgba(33,29,24,0.88) 50%, rgba(249,115,22,0.35) 100%)",
-      borderRadius: "1.75rem",
+        "linear-gradient(90deg, rgba(17,16,13,0.98) 0%, rgba(39,39,42,0.88) 50%, rgba(249,115,22,0.38) 100%)",
+      borderRadius: "large",
       fontMood: "modern",
+    },
+    {
+      id: "tacos-maiz",
+      name: "Tacos Maiz",
+      category: "tacos",
+      description: "Amarillo tortilla, verde salsa y blanco calido para un menu fresco y luminoso.",
+      primaryColor: "#ca8a04",
+      secondaryColor: "#fef3c7",
+      accentColor: "#16a34a",
+      backgroundColor: "#fffbeb",
+      surfaceColor: "#ffffff",
+      cardColor: "#fef3c7",
+      textColor: "#1f2937",
+      mutedTextColor: "#57534e",
+      buttonTextColor: "#ffffff",
+      heroOverlay:
+        "linear-gradient(90deg, rgba(31,41,55,0.9) 0%, rgba(202,138,4,0.66) 50%, rgba(22,163,74,0.26) 100%)",
+      borderRadius: "soft",
+      fontMood: "warm",
     },
   ],
   hamburguesas: [
     {
-      id: "hamburguesas-diner-clasico",
-      name: "Diner Clasico",
+      id: "burger-americana",
+      name: "Burger Americana",
       category: "hamburguesas",
-      description: "Rojo, crema y azul oscuro para burgers familiares con look americano.",
-      primaryColor: "#b91c1c",
-      secondaryColor: "#1e3a8a",
-      accentColor: "#fbbf24",
-      backgroundColor: "#fff7ed",
-      textColor: "#1f2937",
-      cardColor: "#ffffff",
+      description: "Rojo diner, amarillo mostaza y blanco limpio para hamburguesas familiares.",
+      primaryColor: "#dc2626",
+      secondaryColor: "#ffffff",
+      accentColor: "#facc15",
+      backgroundColor: "#f8fafc",
+      surfaceColor: "#ffffff",
+      cardColor: "#fee2e2",
+      textColor: "#111827",
+      mutedTextColor: "#4b5563",
       buttonTextColor: "#ffffff",
       heroOverlay:
-        "linear-gradient(90deg, rgba(30,58,138,0.94) 0%, rgba(185,28,28,0.74) 52%, rgba(251,191,36,0.28) 100%)",
-      borderRadius: "1.4rem",
-      fontMood: "bold",
+        "linear-gradient(90deg, rgba(17,24,39,0.9) 0%, rgba(220,38,38,0.68) 52%, rgba(250,204,21,0.28) 100%)",
+      borderRadius: "medium",
+      fontMood: "classic",
     },
     {
-      id: "hamburguesas-smash-negro",
-      name: "Smash Negro",
+      id: "burger-dark-grill",
+      name: "Burger Dark Grill",
       category: "hamburguesas",
-      description: "Negro premium, queso cheddar y blanco limpio para marcas urbanas.",
-      primaryColor: "#f59e0b",
+      description: "Negro carbon, naranja brasa y gris acero para burgers urbanas.",
+      primaryColor: "#f97316",
       secondaryColor: "#18181b",
-      accentColor: "#ef4444",
+      accentColor: "#fb923c",
       backgroundColor: "#09090b",
+      surfaceColor: "#18181b",
+      cardColor: "#27272a",
       textColor: "#fafafa",
-      cardColor: "#18181b",
+      mutedTextColor: "#d4d4d8",
       buttonTextColor: "#111827",
       heroOverlay:
-        "linear-gradient(90deg, rgba(9,9,11,0.98) 0%, rgba(24,24,27,0.9) 50%, rgba(245,158,11,0.34) 100%)",
-      borderRadius: "1.1rem",
+        "linear-gradient(90deg, rgba(9,9,11,0.98) 0%, rgba(24,24,27,0.9) 50%, rgba(249,115,22,0.36) 100%)",
+      borderRadius: "soft",
       fontMood: "modern",
     },
     {
-      id: "hamburguesas-barrio-bbq",
-      name: "Barrio BBQ",
+      id: "burger-mostaza",
+      name: "Burger Mostaza",
       category: "hamburguesas",
-      description: "Cafe ahumado, tomate y mostaza para hamburguesas artesanales.",
-      primaryColor: "#c2410c",
-      secondaryColor: "#422006",
-      accentColor: "#facc15",
-      backgroundColor: "#1c1917",
-      textColor: "#fff7ed",
-      cardColor: "#292524",
-      buttonTextColor: "#fff7ed",
+      description: "Mostaza, cafe pan y crema para hamburguesas artesanales con tono calido.",
+      primaryColor: "#ca8a04",
+      secondaryColor: "#78350f",
+      accentColor: "#ef4444",
+      backgroundColor: "#fef3c7",
+      surfaceColor: "#fff7ed",
+      cardColor: "#ffffff",
+      textColor: "#292524",
+      mutedTextColor: "#57534e",
+      buttonTextColor: "#ffffff",
       heroOverlay:
-        "linear-gradient(90deg, rgba(28,25,23,0.98) 0%, rgba(66,32,6,0.86) 48%, rgba(194,65,12,0.38) 100%)",
-      borderRadius: "1.6rem",
-      fontMood: "bold",
+        "linear-gradient(90deg, rgba(120,53,15,0.92) 0%, rgba(202,138,4,0.7) 52%, rgba(239,68,68,0.24) 100%)",
+      borderRadius: "large",
+      fontMood: "warm",
     },
   ],
   postres: [
     {
-      id: "postres-pastel-atelier",
-      name: "Pastel Atelier",
+      id: "postres-rosa-crema",
+      name: "Postres Rosa Crema",
       category: "postres",
-      description: "Rosa suave, vino y blanco para reposteria delicada y elegante.",
+      description: "Rosa suave, crema y chocolate ligero para reposteria delicada.",
       primaryColor: "#db2777",
-      secondaryColor: "#831843",
-      accentColor: "#f9a8d4",
+      secondaryColor: "#fff1f2",
+      accentColor: "#854d0e",
       backgroundColor: "#fff1f2",
+      surfaceColor: "#ffffff",
+      cardColor: "#ffe4e6",
       textColor: "#3b1725",
-      cardColor: "#ffffff",
+      mutedTextColor: "#7f1d1d",
       buttonTextColor: "#ffffff",
       heroOverlay:
-        "linear-gradient(90deg, rgba(131,24,67,0.9) 0%, rgba(219,39,119,0.62) 52%, rgba(249,168,212,0.35) 100%)",
-      borderRadius: "1.9rem",
-      fontMood: "soft",
+        "linear-gradient(90deg, rgba(131,24,67,0.9) 0%, rgba(219,39,119,0.62) 52%, rgba(255,241,242,0.34) 100%)",
+      borderRadius: "large",
+      fontMood: "warm",
     },
     {
-      id: "postres-cacao-rosa",
-      name: "Cacao Rosa",
+      id: "postres-chocolate",
+      name: "Postres Chocolate",
       category: "postres",
-      description: "Chocolate profundo con acentos berry para postres premium.",
-      primaryColor: "#be185d",
+      description: "Cafe cacao, dorado y crema para postres premium y vitrinas elegantes.",
+      primaryColor: "#92400e",
       secondaryColor: "#431407",
-      accentColor: "#f0abfc",
+      accentColor: "#fbbf24",
       backgroundColor: "#1c0f0a",
+      surfaceColor: "#2a1710",
+      cardColor: "#3b2218",
       textColor: "#fff7ed",
-      cardColor: "#2a1710",
+      mutedTextColor: "#fed7aa",
       buttonTextColor: "#fff7ed",
       heroOverlay:
-        "linear-gradient(90deg, rgba(28,15,10,0.98) 0%, rgba(67,20,7,0.88) 48%, rgba(190,24,93,0.34) 100%)",
-      borderRadius: "2rem",
-      fontMood: "soft",
+        "linear-gradient(90deg, rgba(28,15,10,0.98) 0%, rgba(67,20,7,0.88) 48%, rgba(251,191,36,0.22) 100%)",
+      borderRadius: "medium",
+      fontMood: "premium",
     },
     {
-      id: "postres-vainilla-premium",
-      name: "Vainilla Premium",
+      id: "postres-vainilla",
+      name: "Postres Vainilla",
       category: "postres",
-      description: "Crema, caramelo y grafito para una vitrina limpia y sofisticada.",
-      primaryColor: "#b45309",
-      secondaryColor: "#374151",
-      accentColor: "#fcd34d",
+      description: "Vainilla, lila suave y rosa claro para una marca dulce y luminosa.",
+      primaryColor: "#a855f7",
+      secondaryColor: "#fef3c7",
+      accentColor: "#fb7185",
       backgroundColor: "#fffbeb",
-      textColor: "#292524",
-      cardColor: "#ffffff",
+      surfaceColor: "#ffffff",
+      cardColor: "#f5f3ff",
+      textColor: "#312e81",
+      mutedTextColor: "#6b7280",
       buttonTextColor: "#ffffff",
       heroOverlay:
-        "linear-gradient(90deg, rgba(55,65,81,0.9) 0%, rgba(180,83,9,0.58) 50%, rgba(252,211,77,0.24) 100%)",
-      borderRadius: "1.7rem",
+        "linear-gradient(90deg, rgba(49,46,129,0.9) 0%, rgba(168,85,247,0.58) 50%, rgba(251,113,133,0.24) 100%)",
+      borderRadius: "large",
       fontMood: "modern",
     },
   ],
   mariscos: [
     {
-      id: "mariscos-costa-fresca",
-      name: "Costa Fresca",
+      id: "mariscos-playa",
+      name: "Mariscos Playa",
       category: "mariscos",
-      description: "Turquesa, azul profundo y arena para mariscos frescos de playa.",
-      primaryColor: "#0891b2",
-      secondaryColor: "#164e63",
-      accentColor: "#f59e0b",
+      description: "Azul mar, arena y coral para menus frescos de playa.",
+      primaryColor: "#0284c7",
+      secondaryColor: "#fef3c7",
+      accentColor: "#fb7185",
       backgroundColor: "#ecfeff",
+      surfaceColor: "#ffffff",
+      cardColor: "#cffafe",
       textColor: "#0f172a",
-      cardColor: "#ffffff",
+      mutedTextColor: "#475569",
       buttonTextColor: "#ffffff",
       heroOverlay:
-        "linear-gradient(90deg, rgba(22,78,99,0.94) 0%, rgba(8,145,178,0.68) 50%, rgba(245,158,11,0.24) 100%)",
-      borderRadius: "1.55rem",
+        "linear-gradient(90deg, rgba(14,116,144,0.92) 0%, rgba(2,132,199,0.66) 50%, rgba(251,113,133,0.24) 100%)",
+      borderRadius: "medium",
       fontMood: "modern",
     },
     {
       id: "mariscos-azul-profundo",
-      name: "Azul Profundo",
+      name: "Mariscos Azul Profundo",
       category: "mariscos",
-      description: "Azul nocturno y coral para restaurantes de mar con tono premium.",
+      description: "Azul profundo, blanco y turquesa para restaurantes de mar con tono premium.",
       primaryColor: "#0ea5e9",
       secondaryColor: "#0f172a",
-      accentColor: "#fb7185",
+      accentColor: "#2dd4bf",
       backgroundColor: "#07111f",
+      surfaceColor: "#0f1b2d",
+      cardColor: "#14243a",
       textColor: "#f8fafc",
-      cardColor: "#0f1b2d",
+      mutedTextColor: "#cbd5e1",
       buttonTextColor: "#07111f",
       heroOverlay:
         "linear-gradient(90deg, rgba(7,17,31,0.98) 0%, rgba(15,23,42,0.88) 48%, rgba(14,165,233,0.3) 100%)",
-      borderRadius: "1.85rem",
-      fontMood: "modern",
+      borderRadius: "large",
+      fontMood: "premium",
     },
     {
-      id: "mariscos-aguachile",
-      name: "Aguachile",
+      id: "mariscos-fresco",
+      name: "Mariscos Fresco",
       category: "mariscos",
-      description: "Lima, verde intenso y azul agua para menus frescos y picantes.",
-      primaryColor: "#65a30d",
-      secondaryColor: "#155e75",
-      accentColor: "#22d3ee",
-      backgroundColor: "#f7fee7",
-      textColor: "#1f2937",
-      cardColor: "#ffffff",
+      description: "Aqua, limon y blanco para ceviches, aguachiles y menus frescos.",
+      primaryColor: "#0891b2",
+      secondaryColor: "#ffffff",
+      accentColor: "#84cc16",
+      backgroundColor: "#f0fdfa",
+      surfaceColor: "#ffffff",
+      cardColor: "#ccfbf1",
+      textColor: "#134e4a",
+      mutedTextColor: "#475569",
       buttonTextColor: "#ffffff",
       heroOverlay:
-        "linear-gradient(90deg, rgba(21,94,117,0.92) 0%, rgba(101,163,13,0.7) 50%, rgba(34,211,238,0.24) 100%)",
-      borderRadius: "1.45rem",
-      fontMood: "bold",
+        "linear-gradient(90deg, rgba(19,78,74,0.92) 0%, rgba(8,145,178,0.64) 50%, rgba(132,204,22,0.22) 100%)",
+      borderRadius: "soft",
+      fontMood: "warm",
     },
   ],
   cafeteria: [
     {
-      id: "cafeteria-espresso",
-      name: "Espresso",
+      id: "cafe-clasico",
+      name: "Cafe Clasico",
       category: "cafeteria",
-      description: "Cafe oscuro, crema y dorado para cafeterias sobrias y calidas.",
+      description: "Espresso, crema y dorado para cafeterias sobrias y calidas.",
       primaryColor: "#92400e",
-      secondaryColor: "#292524",
-      accentColor: "#d6a85f",
-      backgroundColor: "#1c1917",
-      textColor: "#fef3c7",
-      cardColor: "#292524",
-      buttonTextColor: "#fef3c7",
-      heroOverlay:
-        "linear-gradient(90deg, rgba(28,25,23,0.98) 0%, rgba(41,37,36,0.88) 48%, rgba(146,64,14,0.34) 100%)",
-      borderRadius: "1.5rem",
-      fontMood: "modern",
-    },
-    {
-      id: "cafeteria-matcha",
-      name: "Matcha",
-      category: "cafeteria",
-      description: "Verde botanico, crema y madera clara para cafeterias de especialidad.",
-      primaryColor: "#4d7c0f",
-      secondaryColor: "#365314",
-      accentColor: "#a3e635",
-      backgroundColor: "#f7fee7",
-      textColor: "#1f2937",
+      secondaryColor: "#fef3c7",
+      accentColor: "#d97706",
+      backgroundColor: "#fef3c7",
+      surfaceColor: "#fff7ed",
       cardColor: "#ffffff",
+      textColor: "#292524",
+      mutedTextColor: "#57534e",
       buttonTextColor: "#ffffff",
       heroOverlay:
-        "linear-gradient(90deg, rgba(54,83,20,0.92) 0%, rgba(77,124,15,0.68) 48%, rgba(163,230,53,0.22) 100%)",
-      borderRadius: "1.8rem",
-      fontMood: "soft",
+        "linear-gradient(90deg, rgba(41,37,36,0.92) 0%, rgba(146,64,14,0.68) 50%, rgba(217,119,6,0.24) 100%)",
+      borderRadius: "medium",
+      fontMood: "classic",
     },
     {
-      id: "cafeteria-minimal-crema",
-      name: "Minimal Crema",
+      id: "cafe-moderno",
+      name: "Cafe Moderno",
       category: "cafeteria",
-      description: "Blanco crema, negro suave y terracota para menus limpios.",
-      primaryColor: "#c2410c",
-      secondaryColor: "#1f2937",
+      description: "Negro, blanco y caramelo para cafeterias de especialidad modernas.",
+      primaryColor: "#d97706",
+      secondaryColor: "#18181b",
       accentColor: "#f59e0b",
-      backgroundColor: "#faf7f2",
-      textColor: "#1f2937",
-      cardColor: "#ffffff",
+      backgroundColor: "#09090b",
+      surfaceColor: "#18181b",
+      cardColor: "#27272a",
+      textColor: "#fafafa",
+      mutedTextColor: "#d4d4d8",
+      buttonTextColor: "#111827",
+      heroOverlay:
+        "linear-gradient(90deg, rgba(9,9,11,0.98) 0%, rgba(24,24,27,0.9) 48%, rgba(217,119,6,0.3) 100%)",
+      borderRadius: "soft",
+      fontMood: "modern",
+    },
+    {
+      id: "cafe-calido",
+      name: "Cafe Calido",
+      category: "cafeteria",
+      description: "Terracota, crema y cafe para menus acogedores y artesanales.",
+      primaryColor: "#c2410c",
+      secondaryColor: "#ffedd5",
+      accentColor: "#78350f",
+      backgroundColor: "#fff7ed",
+      surfaceColor: "#ffffff",
+      cardColor: "#fed7aa",
+      textColor: "#292524",
+      mutedTextColor: "#57534e",
       buttonTextColor: "#ffffff",
       heroOverlay:
-        "linear-gradient(90deg, rgba(31,41,55,0.9) 0%, rgba(194,65,12,0.58) 52%, rgba(245,158,11,0.22) 100%)",
-      borderRadius: "1.25rem",
-      fontMood: "modern",
+        "linear-gradient(90deg, rgba(120,53,15,0.92) 0%, rgba(194,65,12,0.62) 52%, rgba(254,215,170,0.26) 100%)",
+      borderRadius: "large",
+      fontMood: "warm",
     },
   ],
   generico: [
     {
-      id: "generico-bistro-calido",
-      name: "Bistro Calido",
+      id: "generico-limpio",
+      name: "Generico Limpio",
       category: "generico",
-      description: "Naranja, grafito y crema para restaurantes generales y antojitos.",
-      primaryColor: "#ea580c",
-      secondaryColor: "#3f3f46",
-      accentColor: "#fbbf24",
-      backgroundColor: "#fff7ed",
-      textColor: "#27272a",
-      cardColor: "#ffffff",
-      buttonTextColor: "#ffffff",
-      heroOverlay:
-        "linear-gradient(90deg, rgba(63,63,70,0.92) 0%, rgba(234,88,12,0.62) 52%, rgba(251,191,36,0.24) 100%)",
-      borderRadius: "1.55rem",
-      fontMood: "bold",
-    },
-    {
-      id: "generico-urbano-claro",
-      name: "Urbano Claro",
-      category: "generico",
-      description: "Negro, blanco y azul para marcas modernas con menu facil de leer.",
+      description: "Azul, blanco y gris para negocios generales con lectura clara.",
       primaryColor: "#2563eb",
-      secondaryColor: "#111827",
+      secondaryColor: "#ffffff",
       accentColor: "#14b8a6",
       backgroundColor: "#f8fafc",
+      surfaceColor: "#ffffff",
+      cardColor: "#eef2ff",
       textColor: "#111827",
-      cardColor: "#ffffff",
+      mutedTextColor: "#4b5563",
       buttonTextColor: "#ffffff",
       heroOverlay:
         "linear-gradient(90deg, rgba(17,24,39,0.92) 0%, rgba(37,99,235,0.58) 52%, rgba(20,184,166,0.24) 100%)",
-      borderRadius: "1.25rem",
+      borderRadius: "medium",
       fontMood: "modern",
     },
     {
-      id: "generico-noche-elegante",
-      name: "Noche Elegante",
+      id: "generico-premium",
+      name: "Generico Premium",
       category: "generico",
-      description: "Fondo oscuro, oro y marfil para menus premium sin categoria especifica.",
+      description: "Negro, dorado y gris oscuro para una presencia sobria y premium.",
       primaryColor: "#d97706",
       secondaryColor: "#18181b",
       accentColor: "#fef3c7",
       backgroundColor: "#0f0f10",
+      surfaceColor: "#1f1f23",
+      cardColor: "#2b2b30",
       textColor: "#fafafa",
-      cardColor: "#1f1f23",
+      mutedTextColor: "#d4d4d8",
       buttonTextColor: "#111827",
       heroOverlay:
         "linear-gradient(90deg, rgba(15,15,16,0.98) 0%, rgba(31,31,35,0.9) 48%, rgba(217,119,6,0.34) 100%)",
-      borderRadius: "1.85rem",
+      borderRadius: "large",
+      fontMood: "premium",
+    },
+    {
+      id: "generico-nocturno",
+      name: "Generico Nocturno",
+      category: "generico",
+      description: "Zinc oscuro, azul electrico y blanco para menus nocturnos modernos.",
+      primaryColor: "#3b82f6",
+      secondaryColor: "#27272a",
+      accentColor: "#e0f2fe",
+      backgroundColor: "#09090b",
+      surfaceColor: "#18181b",
+      cardColor: "#27272a",
+      textColor: "#fafafa",
+      mutedTextColor: "#d4d4d8",
+      buttonTextColor: "#ffffff",
+      heroOverlay:
+        "linear-gradient(90deg, rgba(9,9,11,0.98) 0%, rgba(39,39,42,0.9) 48%, rgba(59,130,246,0.34) 100%)",
+      borderRadius: "soft",
       fontMood: "modern",
     },
   ],
@@ -358,60 +394,64 @@ export const TENANT_CATEGORY_OPTIONS: Array<{
   { value: "generico", label: "Generico" },
 ];
 
-export function normalizeTenantCategory(value: unknown): TenantCategory {
-  if (typeof value !== "string") {
+export function normalizeTenantCategory(category: unknown): TenantCategory {
+  if (typeof category !== "string") {
     return "generico";
   }
 
-  const normalizedValue = value
+  const normalizedCategory = category
     .trim()
     .toLowerCase()
     .normalize("NFD")
     .replace(/\p{Diacritic}/gu, "");
 
   if (
-    normalizedValue.includes("taco") ||
-    normalizedValue.includes("taquer") ||
-    normalizedValue.includes("antojito")
+    normalizedCategory === "tacos" ||
+    normalizedCategory.includes("taco") ||
+    normalizedCategory.includes("taquer") ||
+    normalizedCategory.includes("antojito")
   ) {
     return "tacos";
   }
 
   if (
-    normalizedValue.includes("burger") ||
-    normalizedValue.includes("hamburg")
+    normalizedCategory === "hamburguesas" ||
+    normalizedCategory.includes("burger") ||
+    normalizedCategory.includes("hamburg")
   ) {
     return "hamburguesas";
   }
 
   if (
-    normalizedValue.includes("postre") ||
-    normalizedValue.includes("helado") ||
-    normalizedValue.includes("nieve") ||
-    normalizedValue.includes("pastel") ||
-    normalizedValue.includes("reposter")
+    normalizedCategory === "postres" ||
+    normalizedCategory.includes("postre") ||
+    normalizedCategory.includes("helado") ||
+    normalizedCategory.includes("nieve") ||
+    normalizedCategory.includes("pastel") ||
+    normalizedCategory.includes("reposter")
   ) {
     return "postres";
   }
 
   if (
-    normalizedValue.includes("marisco") ||
-    normalizedValue.includes("ceviche") ||
-    normalizedValue.includes("aguachile") ||
-    normalizedValue.includes("pescado")
+    normalizedCategory === "mariscos" ||
+    normalizedCategory.includes("marisco") ||
+    normalizedCategory.includes("ceviche") ||
+    normalizedCategory.includes("aguachile") ||
+    normalizedCategory.includes("pescado")
   ) {
     return "mariscos";
   }
 
   if (
-    normalizedValue.includes("cafe") ||
-    normalizedValue.includes("coffee") ||
-    normalizedValue.includes("cafeteria")
+    normalizedCategory === "cafeteria" ||
+    normalizedCategory.includes("cafe") ||
+    normalizedCategory.includes("coffee")
   ) {
     return "cafeteria";
   }
 
-  return normalizedValue === "generico" ? "generico" : "generico";
+  return "generico";
 }
 
 export function getDefaultPresetForCategory(
@@ -424,13 +464,28 @@ export function getDefaultPresetForCategory(
 
 export function getPresetForTenant(
   category: TenantCategory | string | null | undefined,
-  presetId: string | null | undefined
+  designPresetId: string | null | undefined
 ): TenantDesignPreset {
   const normalizedCategory = normalizeTenantCategory(category);
   const presets = DESIGN_PRESETS_BY_CATEGORY[normalizedCategory];
 
   return (
-    presets.find((preset) => preset.id === presetId) ??
+    presets.find((preset) => preset.id === designPresetId) ??
     getDefaultPresetForCategory(normalizedCategory)
+  );
+}
+
+export function isValidPresetForCategory(
+  category: TenantCategory | string | null | undefined,
+  designPresetId: string | null | undefined
+): boolean {
+  if (typeof designPresetId !== "string" || designPresetId.trim().length === 0) {
+    return false;
+  }
+
+  const normalizedCategory = normalizeTenantCategory(category);
+
+  return DESIGN_PRESETS_BY_CATEGORY[normalizedCategory].some(
+    (preset) => preset.id === designPresetId
   );
 }

@@ -112,8 +112,8 @@ export function TenantList({
                       }
                     >
                       {hasWhatsAppConfiguration
-                        ? "🟢 WhatsApp Configurado"
-                        : "🔴 Configuración Incompleta"}
+                        ? "WhatsApp configurado"
+                        : "Configuración incompleta"}
                     </span>
                   </div>
                   <p className="mt-2 truncate text-sm font-semibold text-stone-500">
@@ -133,7 +133,7 @@ export function TenantList({
                     variant="secondary"
                     size="sm"
                   >
-                    Editar
+                    Editar negocio
                   </AppButton>
                   <AppButton
                     onClick={() => onDeactivate(tenant.tenantId)}

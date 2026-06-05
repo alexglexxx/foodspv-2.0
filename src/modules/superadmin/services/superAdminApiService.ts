@@ -6,6 +6,7 @@ import type {
   SuperAdminProductsResponse,
   SuperAdminTenantInput,
   SuperAdminTenantMutationResponse,
+  SuperAdminTenantResponse,
   SuperAdminTenantsResponse,
 } from "../types/superAdmin";
 
@@ -37,6 +38,17 @@ export async function createSuperAdminTenant(
   });
 
   return (await response.json()) as SuperAdminTenantMutationResponse;
+}
+
+export async function fetchSuperAdminTenant(
+  user: User,
+  tenantId: string
+): Promise<SuperAdminTenantResponse> {
+  const response = await fetch(`/api/superadmin/tenants/${tenantId}`, {
+    headers: await getAuthorizationHeaders(user),
+  });
+
+  return (await response.json()) as SuperAdminTenantResponse;
 }
 
 export async function updateSuperAdminTenant(
