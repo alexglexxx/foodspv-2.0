@@ -1,10 +1,11 @@
-import type { TenantTheme } from "@/modules/theme/types/theme";
+import type { TenantCategory } from "@/modules/design/tenantDesignPresets";
 
 export type {
   TenantTheme,
   TenantThemeTypography,
   TenantThemeVisualStyle,
 } from "@/modules/theme/types/theme";
+export type { TenantCategory } from "@/modules/design/tenantDesignPresets";
 
 export type OrderFlowMode = "simple_whatsapp" | "dashboard_managed";
 export type OrderConfirmationAction =
@@ -28,8 +29,9 @@ export interface Tenant {
 
   name: string;
   slug?: string;
-  category?: string;
+  category?: TenantCategory;
   featuredCategory?: string;
+  designPresetId?: string;
 
   description?: string;
   greeting?: string;
@@ -53,7 +55,6 @@ export interface Tenant {
   orderConfirmationPolicy?: TenantOrderConfirmationPolicy;
   deliveryEnabled?: boolean;
   deliveryFee?: number;
-  tenantTheme?: TenantTheme;
 
   createdAt?: Date;
   updatedAt?: Date;

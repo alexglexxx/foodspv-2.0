@@ -1,4 +1,4 @@
-import type { TenantTheme } from "@/modules/theme/types/theme";
+import type { TenantCategory } from "@/modules/design/tenantDesignPresets";
 
 export type SuperAdminTenantStatus = "active" | "inactive";
 
@@ -30,8 +30,9 @@ export interface SuperAdminTenantStats {
 export interface SuperAdminTenantSummary {
   tenantId: string;
   name: string;
-  category: string;
+  category: TenantCategory;
   featuredCategory: string;
+  designPresetId: string;
   description: string;
   greeting: string;
   estimatedTime: string;
@@ -49,7 +50,6 @@ export interface SuperAdminTenantSummary {
   orderConfirmationPolicy: SuperAdminOrderConfirmationPolicy;
   deliveryEnabled: boolean;
   deliveryFee: number;
-  tenantTheme: TenantTheme;
   publicUrl: string;
   qrCode: string;
   stats: SuperAdminTenantStats;
@@ -58,8 +58,9 @@ export interface SuperAdminTenantSummary {
 export interface SuperAdminTenantInput {
   tenantId: string;
   name: string;
-  category: string;
+  category: TenantCategory;
   featuredCategory: string;
+  designPresetId: string;
   description: string;
   greeting: string;
   estimatedTime: string;
@@ -77,7 +78,6 @@ export interface SuperAdminTenantInput {
   orderConfirmationPolicy: SuperAdminOrderConfirmationPolicy;
   deliveryEnabled: boolean;
   deliveryFee: number;
-  tenantTheme: TenantTheme;
 }
 
 export interface SuperAdminProductModifier {

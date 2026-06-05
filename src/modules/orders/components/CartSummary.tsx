@@ -28,16 +28,16 @@ export function CartSummary({
   const hasItems = itemCount > 0;
 
   return (
-    <section className="fixed inset-x-0 bottom-0 z-50 border-t border-[#6b5138] bg-[#3a2b1f]/95 px-4 py-3 shadow-[0_-12px_30px_rgba(43,33,24,0.42)] backdrop-blur">
+    <section className="fixed inset-x-0 bottom-0 z-50 border-t border-[var(--tenant-ring)] bg-[var(--tenant-surface)]/95 px-4 py-3 shadow-[0_-12px_30px_rgba(15,15,16,0.35)] backdrop-blur">
       <div className="mx-auto flex w-full max-w-3xl items-center gap-3">
         <AppButton
           onClick={onOpenCart}
           disabled={!hasItems}
           variant="secondary"
-          className="min-w-0 flex-1 justify-between rounded-2xl !border-[#6b5138] !bg-[#463426] px-4 py-3 text-left text-[#fff7ed] ring-1 ring-[#6b5138] hover:!bg-[#5a422e] active:!bg-[#3a2b1f] focus-visible:ring-offset-[#3a2b1f] disabled:text-[#b99f80]"
+          className="min-w-0 flex-1 justify-between rounded-[var(--tenant-radius)] !border-[var(--tenant-ring)] !bg-[var(--tenant-subtle)] px-4 py-3 text-left text-[var(--tenant-text)] ring-1 ring-[var(--tenant-ring)] hover:!bg-[var(--tenant-surface)] active:!bg-[var(--tenant-subtle)] focus-visible:ring-offset-[var(--tenant-surface)] disabled:text-[var(--tenant-muted)]"
         >
           <span className="min-w-0">
-            <span className="block text-xs font-semibold uppercase tracking-[0.16em] text-orange-400">
+            <span className="block text-xs font-semibold uppercase tracking-[0.16em] text-[var(--tenant-accent)]">
               Carrito
             </span>
             <span className="block truncate text-sm font-semibold">
@@ -55,7 +55,7 @@ export function CartSummary({
         <AppButton
           onClick={onGenerateOrder}
           disabled={!hasItems}
-          className="shrink-0 rounded-2xl !border-orange-600 !bg-orange-600 px-4 py-3 text-sm text-[#fff7ed] hover:!bg-orange-500 active:!bg-orange-700 focus-visible:ring-offset-[#3a2b1f] disabled:!bg-[#463426] disabled:text-[#b99f80]"
+          className="shrink-0 rounded-[var(--tenant-radius)] !border-[var(--tenant-primary)] !bg-[var(--tenant-primary)] px-4 py-3 text-sm text-[var(--tenant-button-text)] hover:!bg-[var(--tenant-primary-hover)] active:!bg-[var(--tenant-primary)] focus-visible:ring-offset-[var(--tenant-surface)] disabled:!bg-[var(--tenant-subtle)] disabled:text-[var(--tenant-muted)]"
         >
           Pedir
         </AppButton>

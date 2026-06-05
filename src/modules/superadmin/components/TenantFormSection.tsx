@@ -3,11 +3,14 @@
 import { useState, type FormEvent } from "react";
 
 import { AppButton } from "@/components/ui/AppButton";
-import { generateThemeFromCategory } from "@/modules/theme/agents/designerAgent";
 import {
-  TENANT_THEME_PRESET_OPTIONS,
-  TENANT_THEME_PRESETS,
-} from "@/modules/theme/constants/themePresets";
+  DESIGN_PRESETS_BY_CATEGORY,
+  TENANT_CATEGORY_OPTIONS,
+  getPresetForTenant,
+  normalizeTenantCategory,
+  type TenantCategory,
+  type TenantDesignPreset,
+} from "@/modules/design/tenantDesignPresets";
 
 import type {
   SuperAdminOrderFlowMode,
@@ -44,6 +47,21 @@ export function TenantFormSection({
         field === "estimatedPreparationMinutes"
           ? Number.parseInt(value, 10) || 1
           : value,
+    });
+  }
+
+  function updateCategory(value: string): void {
+    const category = normalizeTenantCategory(value);
+    const currentPreset = getPresetForTenant(category, form.designPresetId);
+
+    onChange({
+      ...form,
+      category,
+      featuredCategory:
+        form.featuredCategory.trim().length > 0
+          ? form.featuredCategory
+          : getCategoryLabel(category),
+      designPresetId: currentPreset.id,
     });
   }
 
@@ -108,21 +126,20 @@ export function TenantFormSection({
     });
   }
 
-  function applyTenantThemePreset(
-    presetKey: keyof typeof TENANT_THEME_PRESETS
-  ): void {
+  function selectDesignPreset(preset: TenantDesignPreset): void {
     onChange({
       ...form,
-      tenantTheme: TENANT_THEME_PRESETS[presetKey],
+      category: preset.category,
+      designPresetId: preset.id,
     });
   }
 
-  function applyTenantThemeFromCategory(): void {
-    onChange({
-      ...form,
-      tenantTheme: generateThemeFromCategory(form.category),
-    });
-  }
+  const selectedCategory = normalizeTenantCategory(form.category);
+  const categoryPresets = DESIGN_PRESETS_BY_CATEGORY[selectedCategory];
+  const selectedPreset = getPresetForTenant(
+    selectedCategory,
+    form.designPresetId
+  );
 
   return (
     <form onSubmit={onSubmit}>
@@ -150,11 +167,11 @@ export function TenantFormSection({
           required
         />
         <div className="grid gap-4 sm:grid-cols-2">
-          <TextField
+          <SelectField
             label="Categoría"
             value={form.category}
-            onChange={(value) => updateFormField("category", value)}
-            required
+            onChange={updateCategory}
+            options={TENANT_CATEGORY_OPTIONS}
           />
           <TextField
             label="Categoría bandera"
@@ -276,47 +293,28 @@ export function TenantFormSection({
           />
         </div>
         <div className="rounded-2xl border border-orange-100 bg-orange-50/60 p-5">
-          <h3 className="text-lg font-black text-stone-950">Diseño visual</h3>
-          <div className="mt-4 flex flex-wrap gap-2">
-            <AppButton
-              onClick={applyTenantThemeFromCategory}
-              variant="secondary"
-              size="sm"
-              className="min-h-10 border-orange-200 text-xs text-orange-800 hover:bg-orange-100"
-            >
-              Usar categoría
-            </AppButton>
-            {TENANT_THEME_PRESET_OPTIONS.map((preset) => (
-              <AppButton
-                key={preset.key}
-                onClick={() => applyTenantThemePreset(preset.key)}
-                variant="secondary"
-                size="sm"
-                className="min-h-10 text-xs"
-              >
-                {preset.label}
-              </AppButton>
-            ))}
-          </div>
-          <div className="mt-4 flex items-center gap-3 rounded-2xl bg-white px-4 py-3 ring-1 ring-orange-100">
-            <span
-              className="h-8 w-8 rounded-full ring-1 ring-stone-200"
-              style={{ backgroundColor: form.tenantTheme.primaryColor }}
-              aria-hidden="true"
-            />
-            <span
-              className="h-8 w-8 rounded-full ring-1 ring-stone-200"
-              style={{ backgroundColor: form.tenantTheme.secondaryColor }}
-              aria-hidden="true"
-            />
-            <span
-              className="h-8 w-8 rounded-full ring-1 ring-stone-200"
-              style={{ backgroundColor: form.tenantTheme.accentColor }}
-              aria-hidden="true"
-            />
-            <span className="text-sm font-bold text-stone-700">
-              {form.tenantTheme.visualStyle} · {form.tenantTheme.typography}
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h3 className="text-lg font-black text-stone-950">
+                Diseño visual
+              </h3>
+              <p className="mt-1 text-sm font-semibold leading-6 text-stone-600">
+                El tenant guarda solo el preset seleccionado para su categoría.
+              </p>
+            </div>
+            <span className="rounded-full bg-white px-3 py-1.5 text-xs font-black text-orange-800 ring-1 ring-orange-100">
+              {getCategoryLabel(selectedCategory)}
             </span>
+          </div>
+          <div className="mt-4 grid gap-3 md:grid-cols-3">
+            {categoryPresets.map((preset) => (
+              <PresetCard
+                key={preset.id}
+                preset={preset}
+                selected={preset.id === selectedPreset.id}
+                onSelect={() => selectDesignPreset(preset)}
+              />
+            ))}
           </div>
         </div>
         <div className="rounded-2xl border border-stone-200 bg-stone-50 p-5">
@@ -503,7 +501,7 @@ function SelectField({
   options,
 }: {
   label: string;
-  value: SuperAdminTenantStatus | SuperAdminOrderFlowMode;
+  value: SuperAdminTenantStatus | SuperAdminOrderFlowMode | TenantCategory;
   onChange: (value: string) => void;
   options: Array<{ value: string; label: string }>;
 }) {
@@ -522,5 +520,93 @@ function SelectField({
         ))}
       </select>
     </label>
+  );
+}
+
+function getCategoryLabel(category: TenantCategory): string {
+  return (
+    TENANT_CATEGORY_OPTIONS.find((option) => option.value === category)?.label ??
+    "Generico"
+  );
+}
+
+function PresetCard({
+  preset,
+  selected,
+  onSelect,
+}: {
+  preset: TenantDesignPreset;
+  selected: boolean;
+  onSelect: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      className={[
+        "rounded-2xl border bg-white p-3 text-left shadow-sm transition",
+        "hover:-translate-y-0.5 hover:border-orange-300 hover:shadow-md",
+        selected
+          ? "border-orange-500 ring-4 ring-orange-100"
+          : "border-stone-200",
+      ].join(" ")}
+      aria-pressed={selected}
+    >
+      <div
+        className="overflow-hidden rounded-xl p-3"
+        style={{
+          backgroundColor: preset.backgroundColor,
+          color: preset.textColor,
+          borderRadius: preset.borderRadius,
+        }}
+      >
+        <div
+          className="rounded-lg p-3"
+          style={{
+            backgroundColor: preset.cardColor,
+            border: `1px solid ${preset.secondaryColor}`,
+          }}
+        >
+          <div className="flex items-center gap-2">
+            <span
+              className="h-8 w-8 rounded-full"
+              style={{ backgroundColor: preset.primaryColor }}
+              aria-hidden="true"
+            />
+            <div className="min-w-0">
+              <p className="truncate text-sm font-black">{preset.name}</p>
+              <p className="text-[11px] font-bold opacity-70">
+                {preset.fontMood}
+              </p>
+            </div>
+          </div>
+          <div
+            className="mt-3 rounded-full px-3 py-2 text-center text-xs font-black"
+            style={{
+              backgroundColor: preset.primaryColor,
+              color: preset.buttonTextColor,
+            }}
+          >
+            Agregar
+          </div>
+        </div>
+      </div>
+      <div className="mt-3 flex gap-2">
+        {[preset.primaryColor, preset.secondaryColor, preset.accentColor].map(
+          (color) => (
+            <span
+              key={color}
+              className="h-5 w-5 rounded-full ring-1 ring-stone-200"
+              style={{ backgroundColor: color }}
+              aria-hidden="true"
+            />
+          )
+        )}
+      </div>
+      <p className="mt-3 text-sm font-black text-stone-950">{preset.name}</p>
+      <p className="mt-1 line-clamp-2 text-xs font-semibold leading-5 text-stone-600">
+        {preset.description}
+      </p>
+    </button>
   );
 }

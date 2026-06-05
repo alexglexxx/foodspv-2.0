@@ -205,21 +205,21 @@ export function CustomerInfoModal({
         aria-label="Cerrar datos del cliente"
         onClick={onClose}
         disabled={isSubmitting}
-        className="absolute inset-0 touch-manipulation bg-[#2b2118]/70 backdrop-blur-[2px] transition-all duration-150 active:bg-[#2b2118]/80"
+        className="absolute inset-0 touch-manipulation bg-black/60 backdrop-blur-[2px] transition-all duration-150 active:bg-black/70"
       />
 
-      <div className="relative z-10 max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-[2rem] bg-[#3a2b1f] p-6 shadow-2xl ring-1 ring-[#6b5138] sm:p-8">
+      <div className="relative z-10 max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-[var(--tenant-radius)] bg-[var(--tenant-surface)] p-6 text-[var(--tenant-text)] shadow-2xl ring-1 ring-[var(--tenant-ring)] sm:p-8">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="text-xs font-extrabold uppercase tracking-[0.28em] text-orange-400">
+            <p className="text-xs font-extrabold uppercase tracking-[0.28em] text-[var(--tenant-accent)]">
               Confirmar pedido
             </p>
 
-            <h2 className="mt-3 text-3xl font-black tracking-tight text-[#fff7ed]">
+            <h2 className="mt-3 text-3xl font-black tracking-tight text-[var(--tenant-text)]">
               Datos del cliente
             </h2>
 
-            <p className="mt-3 text-sm font-medium leading-6 text-[#e7d4b8]">
+            <p className="mt-3 text-sm font-medium leading-6 text-[var(--tenant-muted)]">
               Ingresa tu nombre y teléfono para que el negocio pueda confirmar tu orden.
             </p>
           </div>
@@ -229,23 +229,23 @@ export function CustomerInfoModal({
             disabled={isSubmitting}
             variant="secondary"
             size="sm"
-            className="shrink-0 !border-[#6b5138] !bg-[#463426] text-[#fff7ed] hover:!bg-[#5a422e] active:!bg-[#3a2b1f] focus-visible:ring-offset-[#3a2b1f]"
+            className="shrink-0 !border-[var(--tenant-ring)] !bg-[var(--tenant-subtle)] text-[var(--tenant-text)] hover:!bg-[var(--tenant-background)] active:!bg-[var(--tenant-subtle)] focus-visible:ring-offset-[var(--tenant-surface)]"
           >
             Cerrar
           </AppButton>
         </div>
 
-        <div className="mt-6 rounded-[1.5rem] border border-[#6b5138] bg-[#463426] p-5 shadow-sm">
-          <p className="text-xs font-extrabold uppercase tracking-[0.24em] text-orange-400">
+        <div className="mt-6 rounded-[var(--tenant-radius)] border border-[var(--tenant-ring)] bg-[var(--tenant-subtle)] p-5 shadow-sm">
+          <p className="text-xs font-extrabold uppercase tracking-[0.24em] text-[var(--tenant-accent)]">
             Total del pedido
           </p>
 
-          <p className="mt-2 text-4xl font-black tracking-tight text-[#fff7ed]">
+          <p className="mt-2 text-4xl font-black tracking-tight text-[var(--tenant-text)]">
             {formatCurrency(total)}
           </p>
 
           {deliveryType === "delivery" ? (
-            <p className="mt-2 text-sm font-semibold text-[#e7d4b8]">
+            <p className="mt-2 text-sm font-semibold text-[var(--tenant-muted)]">
               Incluye envío: {formatCurrency(deliveryFee)}
             </p>
           ) : null}
@@ -261,7 +261,7 @@ export function CustomerInfoModal({
             <p className="mt-2 font-medium leading-6">{customerStatus.body}</p>
 
             {successOrderId ? (
-              <div className="mt-4 rounded-2xl bg-[#2b2118] px-4 py-3 ring-1 ring-[#6b5138]">
+              <div className="mt-4 rounded-2xl bg-[var(--tenant-background)] px-4 py-3 ring-1 ring-[var(--tenant-ring)]">
                 <p className="text-xs font-extrabold uppercase tracking-[0.2em] opacity-70">
                   Folio
                 </p>
@@ -272,7 +272,7 @@ export function CustomerInfoModal({
             ) : null}
 
             {successCustomerCode ? (
-              <div className="mt-4 rounded-2xl bg-[#2b2118] px-4 py-3 ring-1 ring-[#6b5138]">
+              <div className="mt-4 rounded-2xl bg-[var(--tenant-background)] px-4 py-3 ring-1 ring-[var(--tenant-ring)]">
                 <p className="text-xs font-extrabold uppercase tracking-[0.2em] opacity-70">
                   Código cliente
                 </p>
@@ -286,7 +286,7 @@ export function CustomerInfoModal({
 
             <AppButton
               onClick={onClose}
-              className="mt-5 w-full !border-orange-600 !bg-orange-600 px-5 py-3 text-sm text-[#fff7ed] hover:!bg-orange-500 active:!bg-orange-700 focus-visible:ring-offset-[#3a2b1f]"
+              className="mt-5 w-full !border-[var(--tenant-primary)] !bg-[var(--tenant-primary)] px-5 py-3 text-sm text-[var(--tenant-button-text)] hover:!bg-[var(--tenant-primary-hover)] active:!bg-[var(--tenant-primary)] focus-visible:ring-offset-[var(--tenant-surface)]"
             >
               Entendido
             </AppButton>
@@ -294,8 +294,8 @@ export function CustomerInfoModal({
         ) : (
           <form className="mt-6 space-y-5" onSubmit={handleSubmit}>
             {deliveryEnabled ? (
-              <section className="rounded-[1.5rem] border border-[#6b5138] bg-[#463426] p-4">
-                <p className="text-sm font-extrabold text-[#fff7ed]">
+              <section className="rounded-[var(--tenant-radius)] border border-[var(--tenant-ring)] bg-[var(--tenant-subtle)] p-4">
+                <p className="text-sm font-extrabold text-[var(--tenant-text)]">
                   Tipo de entrega
                 </p>
                 <div className="mt-3 grid grid-cols-2 gap-2">
@@ -304,8 +304,8 @@ export function CustomerInfoModal({
                     onClick={() => updateDeliveryType("pickup")}
                     className={`min-h-12 rounded-2xl border px-3 py-3 text-sm font-extrabold transition ${
                       deliveryType === "pickup"
-                        ? "border-orange-500 bg-orange-600 text-[#fff7ed]"
-                        : "border-[#6b5138] bg-[#2b2118] text-[#e7d4b8] hover:bg-[#3a2b1f]"
+                        ? "border-[var(--tenant-primary)] bg-[var(--tenant-primary)] text-[var(--tenant-button-text)]"
+                        : "border-[var(--tenant-ring)] bg-[var(--tenant-background)] text-[var(--tenant-muted)] hover:bg-[var(--tenant-surface)]"
                     }`}
                   >
                     Recoger pedido
@@ -315,8 +315,8 @@ export function CustomerInfoModal({
                     onClick={() => updateDeliveryType("delivery")}
                     className={`min-h-12 rounded-2xl border px-3 py-3 text-sm font-extrabold transition ${
                       deliveryType === "delivery"
-                        ? "border-orange-500 bg-orange-600 text-[#fff7ed]"
-                        : "border-[#6b5138] bg-[#2b2118] text-[#e7d4b8] hover:bg-[#3a2b1f]"
+                        ? "border-[var(--tenant-primary)] bg-[var(--tenant-primary)] text-[var(--tenant-button-text)]"
+                        : "border-[var(--tenant-ring)] bg-[var(--tenant-background)] text-[var(--tenant-muted)] hover:bg-[var(--tenant-surface)]"
                     }`}
                   >
                     Entrega a domicilio
@@ -325,7 +325,7 @@ export function CustomerInfoModal({
 
                 {deliveryType === "delivery" ? (
                   <label className="mt-4 block">
-                    <span className="text-sm font-extrabold text-[#fff7ed]">
+                    <span className="text-sm font-extrabold text-[var(--tenant-text)]">
                       Dirección de entrega
                     </span>
                     <textarea
@@ -334,7 +334,7 @@ export function CustomerInfoModal({
                       onChange={(event) =>
                         updateDeliveryAddress(event.target.value)
                       }
-                      className="mt-2 min-h-24 w-full resize-none rounded-2xl border border-[#6b5138] bg-[#2b2118] px-4 py-4 text-base font-semibold text-[#fff7ed] outline-none transition placeholder:text-[#b99f80] focus:border-orange-500 focus:ring-4 focus:ring-orange-500/20"
+                      className="mt-2 min-h-24 w-full resize-none rounded-2xl border border-[var(--tenant-ring)] bg-[var(--tenant-background)] px-4 py-4 text-base font-semibold text-[var(--tenant-text)] outline-none transition placeholder:text-[var(--tenant-muted)] focus:border-[var(--tenant-primary)] focus:ring-4 focus:ring-[var(--tenant-primary)]/20"
                       placeholder="Calle, número, colonia y referencias"
                       autoComplete="street-address"
                     />
@@ -345,19 +345,19 @@ export function CustomerInfoModal({
                     ) : null}
                   </label>
                 ) : (
-                  <p className="mt-4 rounded-2xl bg-[#2b2118] px-4 py-3 text-sm font-semibold text-[#e7d4b8] ring-1 ring-[#6b5138]">
+                  <p className="mt-4 rounded-2xl bg-[var(--tenant-background)] px-4 py-3 text-sm font-semibold text-[var(--tenant-muted)] ring-1 ring-[var(--tenant-ring)]">
                     Puedes pasar por tu pedido cuando esté listo.
                   </p>
                 )}
               </section>
             ) : (
-              <p className="rounded-[1.5rem] border border-[#6b5138] bg-[#463426] p-4 text-sm font-semibold text-[#e7d4b8]">
+              <p className="rounded-[var(--tenant-radius)] border border-[var(--tenant-ring)] bg-[var(--tenant-subtle)] p-4 text-sm font-semibold text-[var(--tenant-muted)]">
                 Puedes pasar por tu pedido cuando esté listo.
               </p>
             )}
 
             <label className="block">
-              <span className="text-sm font-extrabold text-[#fff7ed]">
+              <span className="text-sm font-extrabold text-[var(--tenant-text)]">
                 Nombre
               </span>
 
@@ -366,7 +366,7 @@ export function CustomerInfoModal({
                 name="nombre"
                 value={customerInfo.nombre}
                 onChange={(event) => updateField("nombre", event.target.value)}
-                className="mt-2 w-full rounded-2xl border border-[#6b5138] bg-[#2b2118] px-4 py-4 text-base font-semibold text-[#fff7ed] outline-none transition placeholder:text-[#b99f80] focus:border-orange-500 focus:ring-4 focus:ring-orange-500/20"
+                className="mt-2 w-full rounded-2xl border border-[var(--tenant-ring)] bg-[var(--tenant-background)] px-4 py-4 text-base font-semibold text-[var(--tenant-text)] outline-none transition placeholder:text-[var(--tenant-muted)] focus:border-[var(--tenant-primary)] focus:ring-4 focus:ring-[var(--tenant-primary)]/20"
                 placeholder="Ej. Ana Pérez"
                 autoComplete="name"
               />
@@ -379,7 +379,7 @@ export function CustomerInfoModal({
             </label>
 
             <label className="block">
-              <span className="text-sm font-extrabold text-[#fff7ed]">
+              <span className="text-sm font-extrabold text-[var(--tenant-text)]">
                 Teléfono
               </span>
 
@@ -388,7 +388,7 @@ export function CustomerInfoModal({
                 name="telefono"
                 value={customerInfo.telefono}
                 onChange={(event) => updateField("telefono", event.target.value)}
-                className="mt-2 w-full rounded-2xl border border-[#6b5138] bg-[#2b2118] px-4 py-4 text-base font-semibold text-[#fff7ed] outline-none transition placeholder:text-[#b99f80] focus:border-orange-500 focus:ring-4 focus:ring-orange-500/20"
+                className="mt-2 w-full rounded-2xl border border-[var(--tenant-ring)] bg-[var(--tenant-background)] px-4 py-4 text-base font-semibold text-[var(--tenant-text)] outline-none transition placeholder:text-[var(--tenant-muted)] focus:border-[var(--tenant-primary)] focus:ring-4 focus:ring-[var(--tenant-primary)]/20"
                 placeholder="Ej. 3221234567"
                 autoComplete="tel"
                 inputMode="tel"
@@ -401,14 +401,14 @@ export function CustomerInfoModal({
               ) : null}
             </label>
 
-            <section className="rounded-[1.5rem] border border-[#6b5138] bg-[#463426] p-4">
+            <section className="rounded-[var(--tenant-radius)] border border-[var(--tenant-ring)] bg-[var(--tenant-subtle)] p-4">
               {customerDisplayName ? (
-                <div className="mb-4 flex items-center justify-between gap-3 rounded-2xl bg-[#2b2118] px-4 py-3 text-sm font-bold text-emerald-300 ring-1 ring-emerald-500/20">
+                <div className="mb-4 flex items-center justify-between gap-3 rounded-2xl bg-[var(--tenant-background)] px-4 py-3 text-sm font-bold text-emerald-300 ring-1 ring-emerald-500/20">
                   <span>Bienvenido {customerDisplayName}</span>
                   <button
                     type="button"
                     onClick={forgetCustomerCode}
-                    className="shrink-0 text-xs font-extrabold text-[#e7d4b8] underline-offset-4 hover:underline"
+                    className="shrink-0 text-xs font-extrabold text-[var(--tenant-muted)] underline-offset-4 hover:underline"
                   >
                     Olvidar
                   </button>
@@ -416,13 +416,13 @@ export function CustomerInfoModal({
               ) : null}
 
               {isLoadingCustomerProfile ? (
-                <p className="mb-4 rounded-2xl bg-[#2b2118] px-4 py-3 text-sm font-semibold text-[#e7d4b8] ring-1 ring-[#6b5138]">
+                <p className="mb-4 rounded-2xl bg-[var(--tenant-background)] px-4 py-3 text-sm font-semibold text-[var(--tenant-muted)] ring-1 ring-[var(--tenant-ring)]">
                   Buscando tu código de cliente...
                 </p>
               ) : null}
 
               <label className="block">
-                <span className="text-sm font-extrabold text-[#fff7ed]">
+                <span className="text-sm font-extrabold text-[var(--tenant-text)]">
                   Código de cliente
                 </span>
 
@@ -433,12 +433,12 @@ export function CustomerInfoModal({
                   onChange={(event) =>
                     updateField("customerCode", event.target.value)
                   }
-                  className="mt-2 w-full rounded-2xl border border-[#6b5138] bg-[#2b2118] px-4 py-4 text-base font-semibold uppercase text-[#fff7ed] outline-none transition placeholder:normal-case placeholder:text-[#b99f80] focus:border-orange-500 focus:ring-4 focus:ring-orange-500/20"
+                  className="mt-2 w-full rounded-2xl border border-[var(--tenant-ring)] bg-[var(--tenant-background)] px-4 py-4 text-base font-semibold uppercase text-[var(--tenant-text)] outline-none transition placeholder:normal-case placeholder:text-[var(--tenant-muted)] focus:border-[var(--tenant-primary)] focus:ring-4 focus:ring-[var(--tenant-primary)]/20"
                   placeholder="Ej. CHUY-48291"
                   autoComplete="off"
                 />
 
-                <span className="mt-2 block text-sm font-semibold leading-6 text-[#e7d4b8]">
+                <span className="mt-2 block text-sm font-semibold leading-6 text-[var(--tenant-muted)]">
                   Si ya tienes código, escríbelo aquí. Si es tu primer pedido, te generaremos uno.
                 </span>
               </label>
@@ -454,7 +454,7 @@ export function CustomerInfoModal({
               type="submit"
               loading={isSubmitting}
               loadingText="Enviando..."
-              className="w-full !border-orange-600 !bg-orange-600 px-5 py-4 text-base text-[#fff7ed] shadow-lg shadow-[#2b2118]/25 hover:!bg-orange-500 active:!bg-orange-700 focus-visible:ring-offset-[#3a2b1f] disabled:!bg-[#6b5138] disabled:text-[#b99f80]"
+              className="w-full !border-[var(--tenant-primary)] !bg-[var(--tenant-primary)] px-5 py-4 text-base text-[var(--tenant-button-text)] shadow-lg shadow-black/20 hover:!bg-[var(--tenant-primary-hover)] active:!bg-[var(--tenant-primary)] focus-visible:ring-offset-[var(--tenant-surface)] disabled:!bg-[var(--tenant-ring)] disabled:text-[var(--tenant-muted)]"
             >
               Confirmar pedido
             </AppButton>

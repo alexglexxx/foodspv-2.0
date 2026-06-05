@@ -10,7 +10,7 @@ import {
 
 import { AppButton } from "@/components/ui/AppButton";
 import { auth } from "@/lib/firebase/client";
-import { DEFAULT_TENANT_THEME } from "@/modules/theme/constants/themePresets";
+import { getPresetForTenant } from "@/modules/design/tenantDesignPresets";
 
 import {
   createSuperAdminTenant,
@@ -32,8 +32,9 @@ import { TenantList } from "./TenantList";
 const EMPTY_TENANT_FORM: SuperAdminTenantInput = {
   tenantId: "",
   name: "",
-  category: "",
-  featuredCategory: "",
+  category: "generico",
+  featuredCategory: "Generico",
+  designPresetId: "generico-bistro-calido",
   description: "",
   greeting: "",
   estimatedTime: "15–20 min",
@@ -55,7 +56,6 @@ const EMPTY_TENANT_FORM: SuperAdminTenantInput = {
   },
   deliveryEnabled: false,
   deliveryFee: 0,
-  tenantTheme: DEFAULT_TENANT_THEME,
 };
 
 type SectionKey = "create" | "tenants" | "products" | "theme" | "operations";
@@ -68,6 +68,7 @@ function getTenantFormFromSummary(
     name: tenant.name,
     category: tenant.category,
     featuredCategory: tenant.featuredCategory,
+    designPresetId: tenant.designPresetId,
     description: tenant.description,
     greeting: tenant.greeting,
     estimatedTime: tenant.estimatedTime,
@@ -85,7 +86,6 @@ function getTenantFormFromSummary(
     orderConfirmationPolicy: tenant.orderConfirmationPolicy,
     deliveryEnabled: tenant.deliveryEnabled,
     deliveryFee: tenant.deliveryFee,
-    tenantTheme: tenant.tenantTheme,
   };
 }
 
@@ -662,10 +662,10 @@ export function SuperAdminClient() {
             </CollapsibleSection>
           ) : null}
 
-          {selectedTenant?.tenantTheme ? (
+          {selectedTenant ? (
             <CollapsibleSection
-              title="Diseño visual / theme"
-              description="Theme aplicado al menú público del negocio seleccionado."
+              title="Diseño visual"
+              description="Preset aplicado al menú público del negocio seleccionado."
               isOpen={openSections.theme}
               onToggle={() => toggleSection("theme")}
               badge={selectedTenant.name}
@@ -698,28 +698,34 @@ function ThemePreview({
   tenant: SuperAdminTenantSummary;
   onEdit: (tenant: SuperAdminTenantSummary) => void;
 }) {
-  const theme = tenant.tenantTheme;
+  const preset = getPresetForTenant(tenant.category, tenant.designPresetId);
 
   return (
     <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
       <div className="rounded-2xl border border-stone-200 bg-stone-50 p-5">
+        <div className="mb-5">
+          <p className="text-sm font-black text-stone-950">{preset.name}</p>
+          <p className="mt-1 text-sm leading-6 text-stone-600">
+            {preset.description}
+          </p>
+        </div>
         <div className="flex flex-wrap gap-3">
-          <ColorToken label="Principal" value={theme.primaryColor} />
-          <ColorToken label="Secundario" value={theme.secondaryColor} />
-          <ColorToken label="Acento" value={theme.accentColor} />
-          <ColorToken label="Fondo" value={theme.backgroundColor} />
-          <ColorToken label="Superficie" value={theme.surfaceColor} />
-          <ColorToken label="Texto" value={theme.textColor} />
+          <ColorToken label="Principal" value={preset.primaryColor} />
+          <ColorToken label="Secundario" value={preset.secondaryColor} />
+          <ColorToken label="Acento" value={preset.accentColor} />
+          <ColorToken label="Fondo" value={preset.backgroundColor} />
+          <ColorToken label="Tarjeta" value={preset.cardColor} />
+          <ColorToken label="Texto" value={preset.textColor} />
         </div>
         <div className="mt-5 grid gap-3 sm:grid-cols-2">
-          <InfoItem label="Estilo visual" value={theme.visualStyle} />
-          <InfoItem label="Tipografía" value={theme.typography} />
+          <InfoItem label="Preset" value={tenant.designPresetId} />
+          <InfoItem label="Mood" value={preset.fontMood} />
         </div>
       </div>
       <AppButton
         onClick={() => onEdit(tenant)}
       >
-        Editar theme
+        Editar diseño
       </AppButton>
     </div>
   );

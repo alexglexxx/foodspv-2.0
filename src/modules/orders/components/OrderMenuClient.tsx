@@ -6,10 +6,9 @@ import { collection, doc, getDoc, getDocs, query } from "firebase/firestore";
 import { AppButton } from "@/components/ui/AppButton";
 import { db } from "@/lib/firebase/client";
 import {
-  getTenantThemeCssVariables,
-  normalizeTenantTheme,
-} from "@/modules/theme/services/themeService";
-import type { TenantTheme } from "@/modules/theme/types/theme";
+  getPresetForTenant,
+  type TenantDesignPreset,
+} from "@/modules/design/tenantDesignPresets";
 import type { CartItem } from "@/types/cart.types";
 import type { Product } from "@/types/product.types";
 
@@ -37,7 +36,7 @@ interface RestaurantProfile {
   featuredCategory: string;
   deliveryEnabled: boolean;
   deliveryFee: number;
-  tenantTheme: TenantTheme;
+  designPreset: TenantDesignPreset;
 }
 
 interface FirestoreTenantRecord {
@@ -51,9 +50,9 @@ interface FirestoreTenantRecord {
   heroImageUrl?: unknown;
   featuredCategory?: unknown;
   category?: unknown;
+  designPresetId?: unknown;
   deliveryEnabled?: unknown;
   deliveryFee?: unknown;
-  tenantTheme?: unknown;
 }
 
 interface FirestoreProductRecord {
@@ -96,7 +95,7 @@ const DEFAULT_PROFILE: RestaurantProfile = {
   deliveryFee: 0,
   heroImageUrl:
     "https://images.unsplash.com/photo-1504674900247-0877df9cc836?q=80&w=1400&auto=format&fit=crop",
-  tenantTheme: normalizeTenantTheme(null),
+  designPreset: getPresetForTenant("generico", null),
 };
 
 const CATEGORY_ICONS: Record<string, string> = {
@@ -197,20 +196,35 @@ function getCategoryPriority(categoryKey: string, featuredCategoryKey: string): 
   return 50;
 }
 
-function getTypographyClassName(typography: TenantTheme["typography"]): string {
-  if (typography === "soft") {
+function getTypographyClassName(fontMood: TenantDesignPreset["fontMood"]): string {
+  if (fontMood === "soft") {
     return "font-medium";
   }
 
-  if (typography === "modern") {
+  if (fontMood === "modern") {
     return "font-sans";
   }
 
   return "font-black";
 }
 
-function getTenantThemeStyle(theme: TenantTheme): CSSProperties {
-  return getTenantThemeCssVariables(theme) as CSSProperties;
+function getTenantDesignStyle(preset: TenantDesignPreset): CSSProperties {
+  return {
+    "--tenant-primary": preset.primaryColor,
+    "--tenant-primary-hover": preset.accentColor,
+    "--tenant-secondary": preset.secondaryColor,
+    "--tenant-accent": preset.accentColor,
+    "--tenant-background": preset.backgroundColor,
+    "--tenant-surface": preset.cardColor,
+    "--tenant-text": preset.textColor,
+    "--tenant-button-text": preset.buttonTextColor,
+    "--tenant-radius": preset.borderRadius,
+    "--tenant-hero-overlay": preset.heroOverlay,
+    "--tenant-text-soft": preset.textColor,
+    "--tenant-muted": preset.secondaryColor,
+    "--tenant-subtle": preset.cardColor,
+    "--tenant-ring": preset.secondaryColor,
+  } as CSSProperties;
 }
 
 function getCustomerCodeStorageKey(tenantId: string): string {
@@ -287,6 +301,9 @@ function mapTenantProfile(record: FirestoreTenantRecord | undefined): Restaurant
     toOptionalString(record?.featuredCategory) ??
     toOptionalString(record?.category) ??
     DEFAULT_PROFILE.featuredCategory;
+  const category = toOptionalString(record?.category) ?? "generico";
+  const designPresetId = toOptionalString(record?.designPresetId);
+  const designPreset = getPresetForTenant(category, designPresetId);
 
   return {
     name: toOptionalString(record?.name) ?? DEFAULT_PROFILE.name,
@@ -302,7 +319,7 @@ function mapTenantProfile(record: FirestoreTenantRecord | undefined): Restaurant
     featuredCategory,
     deliveryEnabled: record?.deliveryEnabled === true,
     deliveryFee: toDeliveryFee(record?.deliveryFee),
-    tenantTheme: normalizeTenantTheme(record?.tenantTheme),
+    designPreset,
   };
 }
 
@@ -411,9 +428,9 @@ export function OrderMenuClient({ tenantId, tenantSlug }: OrderMenuClientProps) 
   const isSubmittingRef = useRef<boolean>(false);
 
   const featuredCategoryKey = normalizeCategory(restaurantProfile.featuredCategory);
-  const tenantThemeStyle = getTenantThemeStyle(restaurantProfile.tenantTheme);
+  const tenantDesignStyle = getTenantDesignStyle(restaurantProfile.designPreset);
   const typographyClassName = getTypographyClassName(
-    restaurantProfile.tenantTheme.typography
+    restaurantProfile.designPreset.fontMood
   );
   const deliveryEnabled = restaurantProfile.deliveryEnabled;
   const deliveryFee = restaurantProfile.deliveryFee;
@@ -752,45 +769,41 @@ export function OrderMenuClient({ tenantId, tenantSlug }: OrderMenuClientProps) 
 
   return (
     <div
-      className={`min-h-screen bg-[#2b2118] text-[#fff7ed] ${typographyClassName}`}
-      style={tenantThemeStyle}
+      className={`min-h-screen bg-[var(--tenant-background)] text-[var(--tenant-text)] ${typographyClassName}`}
+      style={tenantDesignStyle}
     >
       <main className="mx-auto flex w-full max-w-5xl flex-col pb-32">
-        <section className="relative overflow-hidden border-b border-[#6b5138] bg-[#3a2b1f] px-5 pb-5 pt-4 sm:px-8 sm:pb-6 sm:pt-5">
+        <section className="relative overflow-hidden border-b border-[var(--tenant-ring)] bg-[var(--tenant-surface)] px-5 pb-5 pt-4 sm:px-8 sm:pb-6 sm:pt-5">
           <div
             className="absolute inset-0 bg-cover bg-center opacity-50"
             style={{
-              backgroundImage: `linear-gradient(90deg, rgba(58,43,31,0.98) 0%, rgba(58,43,31,0.94) 45%, rgba(58,43,31,0.78) 100%), url(${restaurantProfile.heroImageUrl})`,
+              backgroundImage: `${restaurantProfile.designPreset.heroOverlay}, url(${restaurantProfile.heroImageUrl})`,
             }}
             aria-hidden="true"
           />
-          <div
-            className="absolute inset-0 bg-[#2b2118]/55"
-            aria-hidden="true"
-          />
 
-          <div className="relative z-10 drop-shadow-[0_2px_8px_rgba(43,33,24,0.72)]">
+          <div className="relative z-10 drop-shadow-[0_2px_8px_rgba(15,15,16,0.52)]">
             <div className="mb-5 flex items-center justify-end sm:mb-6">
-              <div className="inline-flex max-w-[75%] items-center gap-2 rounded-full bg-[#463426]/90 px-3 py-2 text-xs font-bold text-[#fff7ed] shadow-sm ring-1 ring-[#6b5138] backdrop-blur sm:text-sm">
+              <div className="inline-flex max-w-[75%] items-center gap-2 rounded-full bg-[var(--tenant-subtle)]/90 px-3 py-2 text-xs font-bold text-[var(--tenant-text)] shadow-sm ring-1 ring-[var(--tenant-ring)] backdrop-blur sm:text-sm">
                 <span aria-hidden="true">🏪</span>
                 <span className="truncate">{restaurantProfile.name}</span>
                 <span aria-hidden="true">⌄</span>
               </div>
             </div>
 
-            <p className="text-sm font-extrabold text-orange-400">
+            <p className="text-sm font-extrabold text-[var(--tenant-accent)]">
               {restaurantProfile.greeting}
             </p>
 
-            <h1 className="mt-2 max-w-[14rem] text-3xl font-black leading-[1.05] tracking-tight text-[#fff7ed] sm:max-w-md sm:text-4xl">
+            <h1 className="mt-2 max-w-[14rem] text-3xl font-black leading-[1.05] tracking-tight text-[var(--tenant-text)] sm:max-w-md sm:text-4xl">
               {restaurantProfile.name}
             </h1>
 
-            <p className="mt-3 line-clamp-2 max-w-[17rem] text-sm font-medium leading-6 text-[#e7d4b8] sm:max-w-md">
+            <p className="mt-3 line-clamp-2 max-w-[17rem] text-sm font-medium leading-6 text-[var(--tenant-text)] opacity-85 sm:max-w-md">
               {restaurantProfile.description}
             </p>
 
-            <div className="mt-4 flex flex-wrap items-center gap-2 text-xs font-bold text-[#fff7ed] sm:text-sm">
+            <div className="mt-4 flex flex-wrap items-center gap-2 text-xs font-bold text-[var(--tenant-text)] sm:text-sm">
               <span className="inline-flex items-center gap-2">
                 <span aria-hidden="true">⭐</span>
                 {restaurantProfile.rating} ({restaurantProfile.reviews})
@@ -801,7 +814,7 @@ export function OrderMenuClient({ tenantId, tenantSlug }: OrderMenuClientProps) 
                 {restaurantProfile.estimatedTime}
               </span>
 
-              <span className="inline-flex items-center gap-2 rounded-full bg-[#463426]/90 px-3 py-1.5 shadow-sm ring-1 ring-[#6b5138] backdrop-blur">
+              <span className="inline-flex items-center gap-2 rounded-full bg-[var(--tenant-subtle)]/90 px-3 py-1.5 shadow-sm ring-1 ring-[var(--tenant-ring)] backdrop-blur">
                 <span aria-hidden="true">📍</span>
                 {restaurantProfile.location}
               </span>
@@ -812,11 +825,11 @@ export function OrderMenuClient({ tenantId, tenantSlug }: OrderMenuClientProps) 
         <section className="px-5 py-5 sm:px-8">
           <div className="mb-4 flex flex-col gap-4">
             <div className="flex items-center justify-between gap-4">
-              <h2 className="text-3xl font-black tracking-tight text-[#fff7ed]">
+              <h2 className="text-3xl font-black tracking-tight text-[var(--tenant-text)]">
                 Menú
               </h2>
 
-              <div className="hidden rounded-full bg-[#463426] px-4 py-3 text-sm font-medium text-[#b99f80] shadow-sm ring-1 ring-[#6b5138] sm:block">
+              <div className="hidden rounded-full bg-[var(--tenant-surface)] px-4 py-3 text-sm font-medium text-[var(--tenant-muted)] shadow-sm ring-1 ring-[var(--tenant-ring)] sm:block">
                 🔎 Buscar productos...
               </div>
             </div>
@@ -829,8 +842,8 @@ export function OrderMenuClient({ tenantId, tenantSlug }: OrderMenuClientProps) 
                   variant={index === 0 ? "primary" : "secondary"}
                   className={
                     index === 0
-                      ? "shrink-0 !border-orange-600 !bg-orange-600 px-5 py-3 text-sm text-[#fff7ed] hover:!bg-orange-500 active:!bg-orange-700 focus-visible:ring-offset-[#2b2118]"
-                      : "shrink-0 !border-[#6b5138] !bg-[#463426] px-5 py-3 text-sm text-[#e7d4b8] shadow-sm ring-1 ring-[#6b5138] hover:!bg-[#5a422e] active:!bg-[#3a2b1f] focus-visible:ring-offset-[#2b2118]"
+                      ? "shrink-0 !border-[var(--tenant-primary)] !bg-[var(--tenant-primary)] px-5 py-3 text-sm text-[var(--tenant-button-text)] hover:!bg-[var(--tenant-primary-hover)] active:!bg-[var(--tenant-primary)] focus-visible:ring-offset-[var(--tenant-background)]"
+                      : "shrink-0 !border-[var(--tenant-ring)] !bg-[var(--tenant-surface)] px-5 py-3 text-sm text-[var(--tenant-text)] shadow-sm ring-1 ring-[var(--tenant-ring)] hover:!bg-[var(--tenant-subtle)] active:!bg-[var(--tenant-surface)] focus-visible:ring-offset-[var(--tenant-background)]"
                   }
                 >
                   <span className="mr-2" aria-hidden="true">
@@ -843,7 +856,7 @@ export function OrderMenuClient({ tenantId, tenantSlug }: OrderMenuClientProps) 
           </div>
 
           {isLoading ? (
-            <div className="rounded-[2rem] border border-[#6b5138] bg-[#3a2b1f] p-6 text-sm font-medium text-[#b99f80] shadow-sm">
+            <div className="rounded-[var(--tenant-radius)] border border-[var(--tenant-ring)] bg-[var(--tenant-surface)] p-6 text-sm font-medium text-[var(--tenant-muted)] shadow-sm">
               Preparando el menú...
             </div>
           ) : null}
@@ -855,7 +868,7 @@ export function OrderMenuClient({ tenantId, tenantSlug }: OrderMenuClientProps) 
           ) : null}
 
           {!isLoading && !errorMessage && products.length === 0 ? (
-            <div className="rounded-[2rem] border border-dashed border-[#6b5138] bg-[#3a2b1f] p-6 text-sm font-medium text-[#b99f80] shadow-sm">
+            <div className="rounded-[var(--tenant-radius)] border border-dashed border-[var(--tenant-ring)] bg-[var(--tenant-surface)] p-6 text-sm font-medium text-[var(--tenant-muted)] shadow-sm">
               Por ahora no hay productos disponibles.
             </div>
           ) : null}
@@ -867,14 +880,14 @@ export function OrderMenuClient({ tenantId, tenantSlug }: OrderMenuClientProps) 
                 ref={(element) => {
                   categoryRefs.current[categoryKey] = element;
                 }}
-                className="rounded-[1.75rem] bg-[#3a2b1f] p-5 shadow-sm ring-1 ring-[#6b5138]"
+                className="rounded-[var(--tenant-radius)] bg-[var(--tenant-surface)] p-5 shadow-sm ring-1 ring-[var(--tenant-ring)]"
               >
                 <div className="mb-4 flex flex-wrap items-center gap-3">
                   <span className="text-2xl" aria-hidden="true">
                     {getCategoryIcon(categoryKey)}
                   </span>
 
-                  <h3 className="text-2xl font-black text-[#fff7ed]">
+                  <h3 className="text-2xl font-black text-[var(--tenant-text)]">
                     {getCategoryLabel(categoryKey)}
                   </h3>
 

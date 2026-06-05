@@ -4,9 +4,12 @@ import { FieldValue } from "firebase-admin/firestore";
 import QRCode from "qrcode";
 
 import { adminDb } from "@/lib/firebase-admin";
-import { generateThemeFromCategory } from "@/modules/theme/agents/designerAgent";
-import { DEFAULT_TENANT_THEME } from "@/modules/theme/constants/themePresets";
-import { normalizeTenantTheme } from "@/modules/theme/services/themeService";
+import {
+  DESIGN_PRESETS_BY_CATEGORY,
+  getDefaultPresetForCategory,
+  getPresetForTenant,
+  normalizeTenantCategory,
+} from "@/modules/design/tenantDesignPresets";
 import type {
   SuperAdminOrderConfirmationAction,
   SuperAdminOrderConfirmationPolicy,
@@ -24,6 +27,7 @@ interface TenantRecord {
   name?: unknown;
   category?: unknown;
   featuredCategory?: unknown;
+  designPresetId?: unknown;
   description?: unknown;
   greeting?: unknown;
   estimatedTime?: unknown;
@@ -40,7 +44,6 @@ interface TenantRecord {
   orderConfirmationPolicy?: unknown;
   deliveryEnabled?: unknown;
   deliveryFee?: unknown;
-  tenantTheme?: unknown;
   publicUrl?: unknown;
   qrCode?: unknown;
 }
@@ -68,8 +71,9 @@ type TenantInputResult =
 const DEFAULT_TENANT_INPUT: SuperAdminTenantInput = {
   tenantId: "",
   name: "",
-  category: "",
-  featuredCategory: "",
+  category: "generico",
+  featuredCategory: "Generico",
+  designPresetId: getDefaultPresetForCategory("generico").id,
   description: "",
   greeting: "",
   estimatedTime: "15–20 min",
@@ -91,7 +95,6 @@ const DEFAULT_TENANT_INPUT: SuperAdminTenantInput = {
   },
   deliveryEnabled: false,
   deliveryFee: 0,
-  tenantTheme: DEFAULT_TENANT_THEME,
 };
 
 function isNonEmptyString(value: unknown): value is string {
@@ -201,6 +204,17 @@ function toTenantId(value: unknown): string | null {
   return /^[a-z0-9][a-z0-9-]{2,60}$/.test(tenantId) ? tenantId : null;
 }
 
+function isValidDesignPresetIdForCategory(
+  category: string,
+  designPresetId: string
+): boolean {
+  const normalizedCategory = normalizeTenantCategory(category);
+
+  return DESIGN_PRESETS_BY_CATEGORY[normalizedCategory].some(
+    (preset) => preset.id === designPresetId
+  );
+}
+
 export function generateTenantUrl(tenantId: string): string {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
 
@@ -220,13 +234,18 @@ function mapTenantRecord(
   record: TenantRecord,
   stats: SuperAdminTenantStats
 ): SuperAdminTenantSummary {
-  const category = toStringValue(record.category, DEFAULT_TENANT_INPUT.category);
+  const category = normalizeTenantCategory(record.category);
+  const designPreset = getPresetForTenant(
+    category,
+    toStringValue(record.designPresetId, "")
+  );
 
   return {
     tenantId,
     name: toStringValue(record.name, "Negocio sin nombre"),
     category,
     featuredCategory: toStringValue(record.featuredCategory, category),
+    designPresetId: designPreset.id,
     description: toStringValue(record.description, ""),
     greeting: toStringValue(record.greeting, ""),
     estimatedTime: toStringValue(
@@ -251,7 +270,6 @@ function mapTenantRecord(
     ),
     deliveryEnabled: record.deliveryEnabled === true,
     deliveryFee: toDeliveryFee(record.deliveryFee),
-    tenantTheme: normalizeTenantTheme(record.tenantTheme),
     publicUrl: toStringValue(record.publicUrl, ""),
     qrCode: toStringValue(record.qrCode, ""),
     stats,
@@ -324,8 +342,9 @@ export function validateSuperAdminTenantInput(
   }
 
   const name = toStringValue(record.name, "");
-  const category = toStringValue(record.category, "");
+  const category = normalizeTenantCategory(record.category);
   const featuredCategory = toStringValue(record.featuredCategory, category);
+  const designPresetId = toStringValue(record.designPresetId, "");
   const estimatedPreparationMinutes = toPreparationMinutes(
     record.estimatedPreparationMinutes
   );
@@ -339,10 +358,10 @@ export function validateSuperAdminTenantInput(
   );
   const deliveryEnabled = record.deliveryEnabled === true;
   const deliveryFee = toDeliveryFee(record.deliveryFee);
-  const tenantTheme =
-    record.tenantTheme && typeof record.tenantTheme === "object"
-      ? normalizeTenantTheme(record.tenantTheme)
-      : generateThemeFromCategory(category);
+  const resolvedDesignPresetId =
+    designPresetId.length > 0
+      ? designPresetId
+      : getDefaultPresetForCategory(category).id;
 
   if (name.length < 3 || name.length > 80) {
     return {
@@ -351,10 +370,17 @@ export function validateSuperAdminTenantInput(
     };
   }
 
-  if (category.length < 3 || category.length > 40) {
+  if (!DESIGN_PRESETS_BY_CATEGORY[category]) {
     return {
       valid: false,
-      message: "La categoría debe tener entre 3 y 40 caracteres.",
+      message: "Selecciona una categoría válida.",
+    };
+  }
+
+  if (!isValidDesignPresetIdForCategory(category, resolvedDesignPresetId)) {
+    return {
+      valid: false,
+      message: "El preset de diseño no existe para esa categoría.",
     };
   }
 
@@ -394,6 +420,7 @@ export function validateSuperAdminTenantInput(
       name,
       category,
       featuredCategory,
+      designPresetId: resolvedDesignPresetId,
       description: toStringValue(record.description, ""),
       greeting: toStringValue(record.greeting, ""),
       estimatedTime: toStringValue(
@@ -414,7 +441,6 @@ export function validateSuperAdminTenantInput(
       orderConfirmationPolicy,
       deliveryEnabled,
       deliveryFee: deliveryEnabled ? deliveryFee : 0,
-      tenantTheme,
     },
   };
 }
@@ -523,7 +549,8 @@ export async function updateSuperAdminTenant(
     orderConfirmationPolicy: input.orderConfirmationPolicy,
     deliveryEnabled: input.deliveryEnabled,
     deliveryFee: input.deliveryEnabled ? input.deliveryFee : 0,
-    tenantTheme: input.tenantTheme,
+    designPresetId: input.designPresetId,
+    tenantTheme: FieldValue.delete(),
     updatedAt: FieldValue.serverTimestamp(),
   });
 
