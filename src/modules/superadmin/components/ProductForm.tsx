@@ -188,8 +188,8 @@ export function ProductForm({
         </div>
 
         <ModifierEditor
-          modifiers={form.modifiers ?? []}
-          onChange={(modifiers) => onChange({ ...form, modifiers })}
+          options={form.options ?? []}
+          onChange={(options) => onChange({ ...form, options })}
         />
       </div>
 

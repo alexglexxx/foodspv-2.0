@@ -21,8 +21,12 @@ function formatCustomerCode(customerCode: string | undefined): string {
 }
 
 export function whatsappComandaAgent(order: Order): string {
-  const productLines = order.productos.map((producto, index) => {
-    return `${index + 1}. ${producto.cantidad} x ${producto.nombre}`;
+  const productLines = order.productos.flatMap((producto, index) => {
+    const optionLines = (producto.selectedOptions ?? []).map(
+      (option) => `   - ${option.optionName}: ${option.valueLabels.join(", ")}`
+    );
+
+    return [`${index + 1}. ${producto.cantidad} x ${producto.nombre}`, ...optionLines];
   });
   const isDelivery = order.deliveryType === "delivery";
   const deliveryLines = isDelivery

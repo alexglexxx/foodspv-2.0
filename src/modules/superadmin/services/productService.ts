@@ -5,10 +5,10 @@ import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import { adminDb } from "@/lib/firebase-admin";
 import type {
   SuperAdminProductInput,
-  SuperAdminProductModifier,
-  SuperAdminProductPricingMode,
+  SuperAdminProductOption,
   SuperAdminProductSummary,
 } from "../types/superAdmin";
+import type { ProductOptionValue } from "@/types/product.types";
 
 interface ProductRecord {
   name?: unknown;
@@ -19,6 +19,7 @@ interface ProductRecord {
   active?: unknown;
   available?: unknown;
   modifiers?: unknown;
+  options?: unknown;
   createdAt?: unknown;
   updatedAt?: unknown;
 }
@@ -33,11 +34,7 @@ type ProductInputResult =
       message: string;
     };
 
-const PRICING_MODES: readonly SuperAdminProductPricingMode[] = [
-  "included",
-  "additive",
-  "tier_upgrade",
-];
+const OPTION_TYPES = ["single", "multiple"] as const;
 
 function isNonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
@@ -47,8 +44,8 @@ function toStringValue(value: unknown, fallback = ""): string {
   return isNonEmptyString(value) ? value.trim() : fallback;
 }
 
-function isValidPricingMode(value: unknown): value is SuperAdminProductPricingMode {
-  return PRICING_MODES.includes(value as SuperAdminProductPricingMode);
+function isValidOptionType(value: unknown): value is SuperAdminProductOption["type"] {
+  return OPTION_TYPES.includes(value as SuperAdminProductOption["type"]);
 }
 
 function toTimestampMillis(value: unknown): number | null {
@@ -63,26 +60,56 @@ function toTimestampMillis(value: unknown): number | null {
   return null;
 }
 
-function normalizeModifiers(value: unknown): SuperAdminProductModifier[] {
+function toPriceDelta(value: unknown): number {
+  return typeof value === "number" && Number.isFinite(value) && value > 0
+    ? Math.round(value * 100) / 100
+    : 0;
+}
+
+function normalizeProductOptionValues(value: unknown): ProductOptionValue[] {
   if (!Array.isArray(value)) {
     return [];
   }
 
-  return value.flatMap((modifier): SuperAdminProductModifier[] => {
-    if (!modifier || typeof modifier !== "object") {
+  return value.flatMap((optionValue): ProductOptionValue[] => {
+    if (!optionValue || typeof optionValue !== "object") {
       return [];
     }
 
-    const record = modifier as Record<string, unknown>;
+    const record = optionValue as Record<string, unknown>;
+    const id = toStringValue(record.id);
+    const label = toStringValue(record.label);
+
+    if (!id || !label) {
+      return [];
+    }
+
+    const priceDelta = toPriceDelta(record.priceDelta);
+
+    return [
+      {
+        id,
+        label,
+        ...(priceDelta > 0 ? { priceDelta } : {}),
+        active: typeof record.active === "boolean" ? record.active : true,
+      },
+    ];
+  });
+}
+
+function normalizeOptions(value: unknown): SuperAdminProductOption[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.flatMap((option): SuperAdminProductOption[] => {
+    if (!option || typeof option !== "object") {
+      return [];
+    }
+
+    const record = option as Record<string, unknown>;
     const id = toStringValue(record.id);
     const name = toStringValue(record.name);
-    const pricingMode = isValidPricingMode(record.pricingMode)
-      ? record.pricingMode
-      : "included";
-    const priceDelta =
-      typeof record.priceDelta === "number" && Number.isFinite(record.priceDelta)
-        ? Math.max(0, Math.round(record.priceDelta * 100) / 100)
-        : 0;
 
     if (!id || !name) {
       return [];
@@ -92,9 +119,9 @@ function normalizeModifiers(value: unknown): SuperAdminProductModifier[] {
       {
         id,
         name,
-        pricingMode,
-        priceDelta,
-        active: typeof record.active === "boolean" ? record.active : true,
+        type: isValidOptionType(record.type) ? record.type : "single",
+        required: typeof record.required === "boolean" ? record.required : false,
+        values: normalizeProductOptionValues(record.values),
       },
     ];
   });
@@ -118,7 +145,7 @@ function mapProductRecord(
     imageUrl: toStringValue(record.imageUrl),
     active,
     available: typeof record.available === "boolean" ? record.available : active,
-    modifiers: normalizeModifiers(record.modifiers),
+    options: normalizeOptions(record.options),
     createdAt: toTimestampMillis(record.createdAt),
     updatedAt: toTimestampMillis(record.updatedAt),
   };
@@ -204,74 +231,127 @@ export function validateSuperAdminProductInput(
     };
   }
 
-  const modifiersValue = record.modifiers;
+  const optionsValue = record.options;
 
-  if (modifiersValue !== undefined && !Array.isArray(modifiersValue)) {
+  if (optionsValue !== undefined && !Array.isArray(optionsValue)) {
     return {
       valid: false,
-      message: "Los modificadores deben enviarse como una lista.",
+      message: "Las opciones deben enviarse como una lista.",
     };
   }
 
-  const modifiers: SuperAdminProductModifier[] = [];
+  const options: SuperAdminProductOption[] = [];
 
-  for (const modifier of Array.isArray(modifiersValue) ? modifiersValue : []) {
-    if (!modifier || typeof modifier !== "object") {
+  for (const option of Array.isArray(optionsValue) ? optionsValue : []) {
+    if (!option || typeof option !== "object") {
       return {
         valid: false,
-        message: "Cada modificador debe ser un objeto válido.",
+        message: "Cada opción debe ser un objeto válido.",
       };
     }
 
-    const modifierRecord = modifier as Record<string, unknown>;
-    const id = toStringValue(modifierRecord.id);
-    const modifierName = toStringValue(modifierRecord.name);
+    const optionRecord = option as Record<string, unknown>;
+    const id = toStringValue(optionRecord.id);
+    const optionName = toStringValue(optionRecord.name);
 
     if (!id) {
       return {
         valid: false,
-        message: "Cada modificador debe tener id.",
+        message: "Cada opción debe tener id.",
       };
     }
 
-    if (modifierName.length < 2 || modifierName.length > 60) {
+    if (optionName.length < 2 || optionName.length > 60) {
       return {
         valid: false,
-        message: "Cada modificador debe tener nombre de 2 a 60 caracteres.",
+        message: "Cada opción debe tener nombre de 2 a 60 caracteres.",
       };
     }
 
-    if (!isValidPricingMode(modifierRecord.pricingMode)) {
+    if (!isValidOptionType(optionRecord.type)) {
       return {
         valid: false,
-        message: "Tipo de precio de modificador inválido.",
+        message: "Tipo de opción inválido.",
       };
     }
 
-    if (
-      typeof modifierRecord.priceDelta !== "number" ||
-      !Number.isFinite(modifierRecord.priceDelta) ||
-      modifierRecord.priceDelta < 0
-    ) {
+    if (typeof optionRecord.required !== "boolean") {
       return {
         valid: false,
-        message: "Precio extra de modificador inválido.",
+        message: "El campo obligatoria de cada opción es requerido.",
       };
     }
 
-    if (typeof modifierRecord.active !== "boolean") {
+    if (!Array.isArray(optionRecord.values)) {
       return {
         valid: false,
-        message: "El estado activo del modificador es requerido.",
+        message: "Cada opción debe tener lista de valores.",
       };
     }
 
-    modifiers.push({
+    const values: ProductOptionValue[] = [];
+
+    for (const value of optionRecord.values) {
+      if (!value || typeof value !== "object") {
+        return {
+          valid: false,
+          message: "Cada valor de opción debe ser un objeto válido.",
+        };
+      }
+
+      const valueRecord = value as Record<string, unknown>;
+      const valueId = toStringValue(valueRecord.id);
+      const label = toStringValue(valueRecord.label);
+
+      if (!valueId) {
+        return {
+          valid: false,
+          message: "Cada valor de opción debe tener id.",
+        };
+      }
+
+      if (label.length < 1 || label.length > 60) {
+        return {
+          valid: false,
+          message: "Cada valor debe tener etiqueta de 1 a 60 caracteres.",
+        };
+      }
+
+      if (
+        valueRecord.priceDelta !== undefined &&
+        (typeof valueRecord.priceDelta !== "number" ||
+          !Number.isFinite(valueRecord.priceDelta) ||
+          valueRecord.priceDelta < 0)
+      ) {
+        return {
+          valid: false,
+          message: "Precio extra de valor inválido.",
+        };
+      }
+
+      if (typeof valueRecord.active !== "boolean") {
+        return {
+          valid: false,
+          message: "El estado activo de cada valor es requerido.",
+        };
+      }
+
+      const priceDelta = toPriceDelta(valueRecord.priceDelta);
+
+      values.push({
+        id: valueId,
+        label,
+        ...(priceDelta > 0 ? { priceDelta } : {}),
+        active: valueRecord.active,
+      });
+    }
+
+    options.push({
       id,
-      name: modifierName,
-      pricingMode: modifierRecord.pricingMode,
-      priceDelta: Math.round(modifierRecord.priceDelta * 100) / 100,
-      active: modifierRecord.active,
+      name: optionName,
+      type: optionRecord.type,
+      required: optionRecord.required,
+      values,
     });
   }
 
@@ -285,7 +365,7 @@ export function validateSuperAdminProductInput(
       imageUrl,
       active: record.active,
       available: record.available,
-      modifiers,
+      options,
     },
   };
 }
@@ -327,7 +407,7 @@ export async function createSuperAdminTenantProduct(
     imageUrl: input.imageUrl,
     active: input.active,
     available: input.active ? input.available : false,
-    modifiers: input.modifiers ?? [],
+    options: input.options ?? [],
     createdAt: FieldValue.serverTimestamp(),
     updatedAt: FieldValue.serverTimestamp(),
   });
@@ -367,7 +447,7 @@ export async function updateSuperAdminTenantProduct(
     imageUrl: input.imageUrl,
     active: input.active,
     available: input.active ? input.available : false,
-    modifiers: input.modifiers ?? [],
+    options: input.options ?? [],
     updatedAt: FieldValue.serverTimestamp(),
   });
 

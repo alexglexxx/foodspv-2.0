@@ -1,4 +1,17 @@
 import { CartItem } from "./cart.types";
+import type { SelectedProductOption } from "./product.types";
+
+export interface OrderItem {
+productId:string;
+
+name:string;
+
+quantity:number;
+
+unitPrice:number;
+
+selectedOptions?:SelectedProductOption[];
+}
 
 export interface OrderCustomer {
 customerId:string;

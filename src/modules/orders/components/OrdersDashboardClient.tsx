@@ -20,6 +20,7 @@ import {
   isOrderState,
 } from "../agents/orderStateAgent";
 import type { Order, OrderState } from "../types/order";
+import type { SelectedProductOption } from "@/types/product.types";
 
 interface OrdersDashboardClientProps {
   tenantId: string;
@@ -37,6 +38,7 @@ interface FirestoreOrderRecord {
     nombre?: unknown;
     precio?: unknown;
     cantidad?: unknown;
+    selectedOptions?: unknown;
   }>;
   total?: unknown;
   deliveryType?: unknown;
@@ -77,6 +79,53 @@ function isValidNumber(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value);
 }
 
+function mapSelectedOptions(value: unknown): SelectedProductOption[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.flatMap((option): SelectedProductOption[] => {
+    if (!option || typeof option !== "object") {
+      return [];
+    }
+
+    const record = option as {
+      optionId?: unknown;
+      optionName?: unknown;
+      valueIds?: unknown;
+      valueLabels?: unknown;
+      priceDeltaTotal?: unknown;
+    };
+
+    if (
+      !isNonEmptyString(record.optionId) ||
+      !isNonEmptyString(record.optionName) ||
+      !Array.isArray(record.valueIds) ||
+      !Array.isArray(record.valueLabels) ||
+      !isValidNumber(record.priceDeltaTotal)
+    ) {
+      return [];
+    }
+
+    const valueIds = record.valueIds.filter(isNonEmptyString);
+    const valueLabels = record.valueLabels.filter(isNonEmptyString);
+
+    if (valueIds.length === 0 || valueLabels.length === 0) {
+      return [];
+    }
+
+    return [
+      {
+        optionId: record.optionId.trim(),
+        optionName: record.optionName.trim(),
+        valueIds: valueIds.map((valueId) => valueId.trim()),
+        valueLabels: valueLabels.map((label) => label.trim()),
+        priceDeltaTotal: record.priceDeltaTotal,
+      },
+    ];
+  });
+}
+
 function isOrderFlowMode(value: unknown): value is OrderFlowMode {
   return value === "simple_whatsapp" || value === "dashboard_managed";
 }
@@ -114,6 +163,7 @@ function mapOrderDocument(
         nombre: producto.nombre.trim(),
         precio: producto.precio,
         cantidad: producto.cantidad,
+        selectedOptions: mapSelectedOptions(producto.selectedOptions),
       };
     })
     .filter(
@@ -124,6 +174,7 @@ function mapOrderDocument(
         nombre: string;
         precio: number;
         cantidad: number;
+        selectedOptions: SelectedProductOption[];
       } => producto !== null
     );
 
@@ -463,6 +514,16 @@ export function OrdersDashboardClient({
                           <p className="mt-1 text-stone-500">
                             {producto.cantidad} x {formatCurrency(producto.precio)}
                           </p>
+                          {(producto.selectedOptions ?? []).length > 0 ? (
+                            <div className="mt-2 space-y-1 text-stone-500">
+                              {producto.selectedOptions?.map((option) => (
+                                <p key={option.optionId}>
+                                  {option.optionName}:{" "}
+                                  {option.valueLabels.join(", ")}
+                                </p>
+                              ))}
+                            </div>
+                          ) : null}
                         </div>
                         <p className="font-semibold text-stone-900">
                           {formatCurrency(producto.cantidad * producto.precio)}

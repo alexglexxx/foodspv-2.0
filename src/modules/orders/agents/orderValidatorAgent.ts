@@ -75,6 +75,72 @@ export function orderValidatorAgent(input: unknown): ValidationResult {
       ) {
         errors.push(`Producto ${index + 1}: cantidad inválida.`);
       }
+
+      if (producto.selectedOptions !== undefined) {
+        if (!Array.isArray(producto.selectedOptions)) {
+          errors.push(`Producto ${index + 1}: opciones inválidas.`);
+        } else {
+          producto.selectedOptions.forEach((option, optionIndex) => {
+            if (!option || typeof option !== "object") {
+              errors.push(
+                `Producto ${index + 1}, opción ${optionIndex + 1}: formato inválido.`
+              );
+              return;
+            }
+
+            if (
+              typeof option.optionId !== "string" ||
+              option.optionId.trim().length === 0
+            ) {
+              errors.push(
+                `Producto ${index + 1}, opción ${optionIndex + 1}: falta optionId.`
+              );
+            }
+
+            if (
+              typeof option.optionName !== "string" ||
+              option.optionName.trim().length === 0
+            ) {
+              errors.push(
+                `Producto ${index + 1}, opción ${optionIndex + 1}: falta optionName.`
+              );
+            }
+
+            if (
+              !Array.isArray(option.valueIds) ||
+              option.valueIds.some(
+                (valueId) =>
+                  typeof valueId !== "string" || valueId.trim().length === 0
+              )
+            ) {
+              errors.push(
+                `Producto ${index + 1}, opción ${optionIndex + 1}: valueIds inválidos.`
+              );
+            }
+
+            if (
+              !Array.isArray(option.valueLabels) ||
+              option.valueLabels.some(
+                (label) => typeof label !== "string" || label.trim().length === 0
+              )
+            ) {
+              errors.push(
+                `Producto ${index + 1}, opción ${optionIndex + 1}: valueLabels inválidos.`
+              );
+            }
+
+            if (
+              typeof option.priceDeltaTotal !== "number" ||
+              !Number.isFinite(option.priceDeltaTotal) ||
+              option.priceDeltaTotal < 0
+            ) {
+              errors.push(
+                `Producto ${index + 1}, opción ${optionIndex + 1}: priceDeltaTotal inválido.`
+              );
+            }
+          });
+        }
+      }
     });
   }
 

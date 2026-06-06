@@ -2,6 +2,7 @@ import type {
   TenantCategory,
   TenantDesignPreset,
 } from "@/modules/design/tenantDesignPresets";
+import type { ProductOption } from "@/types/product.types";
 
 export type SuperAdminTenantStatus = "active" | "inactive";
 
@@ -92,13 +93,7 @@ export interface SuperAdminTenantInput {
   deliveryFee: number;
 }
 
-export interface SuperAdminProductModifier {
-  id: string;
-  name: string;
-  pricingMode: SuperAdminProductPricingMode;
-  priceDelta: number;
-  active: boolean;
-}
+export type SuperAdminProductOption = ProductOption;
 
 export interface SuperAdminProductSummary {
   productId: string;
@@ -109,7 +104,7 @@ export interface SuperAdminProductSummary {
   imageUrl: string;
   active: boolean;
   available: boolean;
-  modifiers: SuperAdminProductModifier[];
+  options: SuperAdminProductOption[];
   createdAt: number | null;
   updatedAt: number | null;
 }
@@ -122,7 +117,7 @@ export interface SuperAdminProductInput {
   imageUrl: string;
   active: boolean;
   available: boolean;
-  modifiers?: SuperAdminProductModifier[];
+  options?: SuperAdminProductOption[];
 }
 
 export type SuperAdminTenantsResponse =

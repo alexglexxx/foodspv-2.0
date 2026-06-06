@@ -10,6 +10,7 @@ import { customerStatusNotificationAgent } from "@/modules/orders/agents/custome
 import { tenantOrderFlowConfigAgent } from "@/modules/orders/agents/tenantOrderFlowConfigAgent";
 import { whatsappSenderAgent } from "@/modules/orders/agents/whatsappSenderAgent";
 import type { CustomerInfo, Order, OrderItem, OrderState } from "@/modules/orders/types/order";
+import type { SelectedProductOption } from "@/types/product.types";
 
 interface StatusUpdateRequest {
   tenantId: string;
@@ -49,6 +50,53 @@ function isNonEmptyString(value: unknown): value is string {
 
 function isValidNumber(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value);
+}
+
+function mapSelectedOptions(value: unknown): SelectedProductOption[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.flatMap((option): SelectedProductOption[] => {
+    if (!option || typeof option !== "object") {
+      return [];
+    }
+
+    const record = option as {
+      optionId?: unknown;
+      optionName?: unknown;
+      valueIds?: unknown;
+      valueLabels?: unknown;
+      priceDeltaTotal?: unknown;
+    };
+
+    if (
+      !isNonEmptyString(record.optionId) ||
+      !isNonEmptyString(record.optionName) ||
+      !Array.isArray(record.valueIds) ||
+      !Array.isArray(record.valueLabels) ||
+      !isValidNumber(record.priceDeltaTotal)
+    ) {
+      return [];
+    }
+
+    const valueIds = record.valueIds.filter(isNonEmptyString);
+    const valueLabels = record.valueLabels.filter(isNonEmptyString);
+
+    if (valueIds.length === 0 || valueLabels.length === 0) {
+      return [];
+    }
+
+    return [
+      {
+        optionId: record.optionId.trim(),
+        optionName: record.optionName.trim(),
+        valueIds: valueIds.map((valueId) => valueId.trim()),
+        valueLabels: valueLabels.map((label) => label.trim()),
+        priceDeltaTotal: record.priceDeltaTotal,
+      },
+    ];
+  });
 }
 
 function parseStatusUpdateRequest(value: unknown): StatusUpdateRequest | null {
@@ -109,6 +157,7 @@ function mapOrderItems(value: unknown): OrderItem[] | null {
       nombre?: unknown;
       precio?: unknown;
       cantidad?: unknown;
+      selectedOptions?: unknown;
     };
 
     if (
@@ -125,6 +174,7 @@ function mapOrderItems(value: unknown): OrderItem[] | null {
       nombre: record.nombre.trim(),
       precio: record.precio,
       cantidad: record.cantidad,
+      selectedOptions: mapSelectedOptions(record.selectedOptions),
     });
   }
 

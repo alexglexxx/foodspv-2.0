@@ -1,4 +1,7 @@
+import type { SelectedProductOption } from "./product.types";
+
 export interface CartItem {
+  cartItemId:string;
 
   productId:string;
 
@@ -9,5 +12,7 @@ export interface CartItem {
   unitPrice:number;
 
   notes?:string;
+
+  selectedOptions?:SelectedProductOption[];
 
 }

@@ -8,9 +8,9 @@ interface CartDrawerProps {
   items: CartItem[];
   total: number;
   onClose: () => void;
-  onIncreaseItem: (productId: string) => void;
-  onDecreaseItem: (productId: string) => void;
-  onRemoveItem: (productId: string) => void;
+  onIncreaseItem: (cartItemId: string) => void;
+  onDecreaseItem: (cartItemId: string) => void;
+  onRemoveItem: (cartItemId: string) => void;
   onGenerateOrder: () => void;
 }
 
@@ -20,6 +20,16 @@ function formatCurrency(value: number): string {
     currency: "MXN",
     maximumFractionDigits: 2,
   }).format(value);
+}
+
+function getCartItemUnitPrice(item: CartItem): number {
+  return (
+    item.unitPrice +
+    (item.selectedOptions ?? []).reduce(
+      (sum, option) => sum + option.priceDeltaTotal,
+      0
+    )
+  );
 }
 
 export function CartDrawer({
@@ -77,7 +87,7 @@ export function CartDrawer({
 
           {items.map((item) => (
             <article
-              key={item.productId}
+              key={item.cartItemId}
               className="rounded-[var(--tenant-radius)] border border-[var(--tenant-ring)] bg-[var(--tenant-subtle)] p-4"
             >
               <div className="flex items-start justify-between gap-4">
@@ -86,8 +96,17 @@ export function CartDrawer({
                     {item.productName}
                   </h3>
                   <p className="mt-1 text-sm text-[var(--tenant-muted)]">
-                    {formatCurrency(item.unitPrice)} c/u
+                    {formatCurrency(getCartItemUnitPrice(item))} c/u
                   </p>
+                  {(item.selectedOptions ?? []).length > 0 ? (
+                    <div className="mt-2 space-y-1 text-sm text-[var(--tenant-muted)]">
+                      {item.selectedOptions?.map((option) => (
+                        <p key={option.optionId}>
+                          {option.optionName}: {option.valueLabels.join(", ")}
+                        </p>
+                      ))}
+                    </div>
+                  ) : null}
                   {item.notes ? (
                     <p className="mt-2 text-sm text-[var(--tenant-muted)]">
                       {item.notes}
@@ -96,7 +115,7 @@ export function CartDrawer({
                 </div>
 
                 <AppButton
-                  onClick={() => onRemoveItem(item.productId)}
+                  onClick={() => onRemoveItem(item.cartItemId)}
                   variant="ghost"
                   size="sm"
                     className="min-h-[44px] text-rose-300 hover:!bg-rose-500/10 hover:text-rose-200 active:!bg-rose-500/20 focus-visible:ring-offset-[var(--tenant-subtle)]"
@@ -108,7 +127,7 @@ export function CartDrawer({
               <div className="mt-4 flex items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
                   <AppButton
-                    onClick={() => onDecreaseItem(item.productId)}
+                    onClick={() => onDecreaseItem(item.cartItemId)}
                     variant="secondary"
                     size="sm"
                     className="h-11 w-11 !border-[var(--tenant-ring)] !bg-[var(--tenant-background)] px-0 text-lg text-[var(--tenant-text)] hover:!bg-[var(--tenant-surface)] active:!bg-[var(--tenant-subtle)] focus-visible:ring-offset-[var(--tenant-subtle)]"
@@ -120,7 +139,7 @@ export function CartDrawer({
                     {item.quantity}
                   </span>
                   <AppButton
-                    onClick={() => onIncreaseItem(item.productId)}
+                    onClick={() => onIncreaseItem(item.cartItemId)}
                     variant="secondary"
                     size="sm"
                     className="h-11 w-11 !border-[var(--tenant-ring)] !bg-[var(--tenant-background)] px-0 text-lg text-[var(--tenant-text)] hover:!bg-[var(--tenant-surface)] active:!bg-[var(--tenant-subtle)] focus-visible:ring-offset-[var(--tenant-subtle)]"
@@ -131,7 +150,7 @@ export function CartDrawer({
                 </div>
 
                 <p className="text-base font-semibold text-[var(--tenant-accent)]">
-                  {formatCurrency(item.quantity * item.unitPrice)}
+                  {formatCurrency(item.quantity * getCartItemUnitPrice(item))}
                 </p>
               </div>
             </article>

@@ -32,7 +32,7 @@ const EMPTY_PRODUCT_FORM: SuperAdminProductInput = {
   imageUrl: "",
   active: true,
   available: true,
-  modifiers: [],
+  options: [],
 };
 
 function formatCurrency(value: number): string {
@@ -54,7 +54,7 @@ function getProductFormFromSummary(
     imageUrl: product.imageUrl,
     active: product.active,
     available: product.available,
-    modifiers: product.modifiers,
+    options: product.options,
   };
 }
 
@@ -122,7 +122,7 @@ export function ProductManager({
       return;
     }
 
-    setForm({ ...EMPTY_PRODUCT_FORM, modifiers: [] });
+    setForm({ ...EMPTY_PRODUCT_FORM, options: [] });
     setEditingProductId(null);
     setIsProductModalOpen(true);
     setMessage(null);
@@ -266,8 +266,8 @@ export function ProductManager({
 
       <div className="mt-6 grid gap-4 xl:grid-cols-2">
         {products.map((product) => {
-          const activeModifiers = product.modifiers.filter(
-            (modifier) => modifier.active
+          const activeOptions = product.options.filter((option) =>
+            option.values.some((value) => value.active)
           ).length;
 
           return (
@@ -310,7 +310,7 @@ export function ProductManager({
               </p>
 
               <p className="mt-4 text-sm font-bold text-stone-700">
-                {activeModifiers} modificadores activos
+                {activeOptions} opciones activas
               </p>
 
               <div className="mt-5 flex flex-wrap gap-2">

@@ -8,7 +8,12 @@ import { orderValidatorAgent } from "@/modules/orders/agents/orderValidatorAgent
 import { tenantOrderFlowConfigAgent } from "@/modules/orders/agents/tenantOrderFlowConfigAgent";
 import { whatsappComandaAgent } from "@/modules/orders/agents/whatsappComandaAgent";
 import { whatsappSenderAgent } from "@/modules/orders/agents/whatsappSenderAgent";
-import type { Order } from "@/modules/orders/types/order";
+import type { Order, OrderItem } from "@/modules/orders/types/order";
+import type {
+  ProductOption,
+  ProductOptionValue,
+  SelectedProductOption,
+} from "@/types/product.types";
 
 interface OrderConfirmationPolicyRecord {
   enabled?: unknown;
@@ -31,6 +36,33 @@ interface TenantOrderContext {
   confirmationPolicy: OrderConfirmationPolicy;
   tenantSlug: string;
 }
+
+interface CatalogProductRecord {
+  name?: unknown;
+  price?: unknown;
+  active?: unknown;
+  available?: unknown;
+  options?: unknown;
+}
+
+interface CatalogProduct {
+  id: string;
+  name: string;
+  price: number;
+  active: boolean;
+  available: boolean;
+  options: ProductOption[];
+}
+
+type CatalogValidationResult =
+  | {
+      valid: true;
+      order: Order;
+    }
+  | {
+      valid: false;
+      errors: string[];
+    };
 
 const DEFAULT_ORDER_CONFIRMATION_POLICY: OrderConfirmationPolicy = {
   enabled: false,
@@ -58,6 +90,268 @@ function normalizeOrderConfirmationPolicy(
     enabled,
     amountThreshold,
     action: enabled ? "require_manual_confirmation" : "allow",
+  };
+}
+
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+function toPriceDelta(value: unknown): number {
+  return typeof value === "number" && Number.isFinite(value) && value > 0
+    ? Math.round(value * 100) / 100
+    : 0;
+}
+
+function normalizeProductOptionValues(value: unknown): ProductOptionValue[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.flatMap((optionValue): ProductOptionValue[] => {
+    if (!optionValue || typeof optionValue !== "object") {
+      return [];
+    }
+
+    const record = optionValue as Record<string, unknown>;
+
+    if (!isNonEmptyString(record.id) || !isNonEmptyString(record.label)) {
+      return [];
+    }
+
+    const priceDelta = toPriceDelta(record.priceDelta);
+
+    return [
+      {
+        id: record.id.trim(),
+        label: record.label.trim(),
+        ...(priceDelta > 0 ? { priceDelta } : {}),
+        active: typeof record.active === "boolean" ? record.active : true,
+      },
+    ];
+  });
+}
+
+function normalizeProductOptions(value: unknown): ProductOption[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.flatMap((option): ProductOption[] => {
+    if (!option || typeof option !== "object") {
+      return [];
+    }
+
+    const record = option as Record<string, unknown>;
+
+    if (!isNonEmptyString(record.id) || !isNonEmptyString(record.name)) {
+      return [];
+    }
+
+    return [
+      {
+        id: record.id.trim(),
+        name: record.name.trim(),
+        type: record.type === "multiple" ? "multiple" : "single",
+        required: typeof record.required === "boolean" ? record.required : false,
+        values: normalizeProductOptionValues(record.values),
+      },
+    ];
+  });
+}
+
+function mapCatalogProduct(
+  id: string,
+  record: CatalogProductRecord | undefined
+): CatalogProduct | null {
+  if (!record || !isNonEmptyString(record.name) || typeof record.price !== "number") {
+    return null;
+  }
+
+  const active = typeof record.active === "boolean" ? record.active : true;
+
+  return {
+    id,
+    name: record.name.trim(),
+    price: Math.round(record.price * 100) / 100,
+    active,
+    available: typeof record.available === "boolean" ? record.available : active,
+    options: normalizeProductOptions(record.options),
+  };
+}
+
+function getActiveOptions(product: CatalogProduct): ProductOption[] {
+  return product.options
+    .map((option) => ({
+      ...option,
+      values: option.values.filter((value) => value.active),
+    }))
+    .filter((option) => option.values.length > 0);
+}
+
+function validateSelectedOptions(
+  item: OrderItem,
+  product: CatalogProduct,
+  itemIndex: number
+): { selectedOptions: SelectedProductOption[]; priceDeltaTotal: number; errors: string[] } {
+  const errors: string[] = [];
+  const activeOptions = getActiveOptions(product);
+  const optionMap = new Map(activeOptions.map((option) => [option.id, option]));
+  const selectedOptionsInput = item.selectedOptions ?? [];
+  const selectedOptionIds = new Set<string>();
+  const selectedOptions: SelectedProductOption[] = [];
+  let priceDeltaTotal = 0;
+
+  for (const selectedOption of selectedOptionsInput) {
+    const option = optionMap.get(selectedOption.optionId);
+
+    if (!option) {
+      errors.push(
+        `Producto ${itemIndex + 1}: opción ${selectedOption.optionId} inválida.`
+      );
+      continue;
+    }
+
+    if (selectedOptionIds.has(option.id)) {
+      errors.push(`Producto ${itemIndex + 1}: opción duplicada ${option.name}.`);
+      continue;
+    }
+
+    selectedOptionIds.add(option.id);
+
+    const valueIds = [...new Set(selectedOption.valueIds.map((valueId) => valueId.trim()))];
+
+    if (option.type === "single" && valueIds.length !== 1) {
+      errors.push(`Producto ${itemIndex + 1}: ${option.name} requiere una selección.`);
+      continue;
+    }
+
+    if (option.type === "multiple" && valueIds.length === 0) {
+      errors.push(`Producto ${itemIndex + 1}: ${option.name} no tiene valores.`);
+      continue;
+    }
+
+    const valueMap = new Map(option.values.map((value) => [value.id, value]));
+    const values: ProductOptionValue[] = [];
+
+    for (const valueId of valueIds) {
+      const value = valueMap.get(valueId);
+
+      if (!value) {
+        errors.push(
+          `Producto ${itemIndex + 1}: valor ${valueId} inválido para ${option.name}.`
+        );
+        continue;
+      }
+
+      values.push(value);
+    }
+
+    if (values.length !== valueIds.length) {
+      continue;
+    }
+
+    const optionPriceDelta = values.reduce(
+      (sum, value) => sum + (value.priceDelta ?? 0),
+      0
+    );
+
+    selectedOptions.push({
+      optionId: option.id,
+      optionName: option.name,
+      valueIds: values.map((value) => value.id),
+      valueLabels: values.map((value) => value.label),
+      priceDeltaTotal: Math.round(optionPriceDelta * 100) / 100,
+    });
+    priceDeltaTotal += optionPriceDelta;
+  }
+
+  for (const option of activeOptions) {
+    if (option.required && !selectedOptionIds.has(option.id)) {
+      errors.push(`Producto ${itemIndex + 1}: falta ${option.name}.`);
+    }
+  }
+
+  return {
+    selectedOptions,
+    priceDeltaTotal: Math.round(priceDeltaTotal * 100) / 100,
+    errors,
+  };
+}
+
+async function validateOrderAgainstCatalog(order: Order): Promise<CatalogValidationResult> {
+  const uniqueProductIds = [...new Set(order.productos.map((item) => item.id))];
+  const productRefs = uniqueProductIds.map((productId) =>
+    adminDb
+      .collection("tenants")
+      .doc(order.tenantId)
+      .collection("products")
+      .doc(productId)
+  );
+  const productSnapshots = await adminDb.getAll(...productRefs);
+  const productMap = new Map<string, CatalogProduct>();
+  const errors: string[] = [];
+
+  productSnapshots.forEach((snapshot) => {
+    const product = mapCatalogProduct(
+      snapshot.id,
+      snapshot.exists ? (snapshot.data() as CatalogProductRecord) : undefined
+    );
+
+    if (product) {
+      productMap.set(product.id, product);
+    }
+  });
+
+  const productos: OrderItem[] = [];
+  let subtotal = 0;
+
+  order.productos.forEach((item, index) => {
+    const product = productMap.get(item.id);
+
+    if (!product || !product.active || !product.available) {
+      errors.push(`Producto ${index + 1}: no existe o no está disponible.`);
+      return;
+    }
+
+    const optionValidation = validateSelectedOptions(item, product, index);
+
+    if (optionValidation.errors.length > 0) {
+      errors.push(...optionValidation.errors);
+      return;
+    }
+
+    productos.push({
+      id: product.id,
+      nombre: product.name,
+      precio: product.price,
+      cantidad: item.cantidad,
+      selectedOptions: optionValidation.selectedOptions,
+    });
+    subtotal += (product.price + optionValidation.priceDeltaTotal) * item.cantidad;
+  });
+
+  if (errors.length > 0) {
+    return {
+      valid: false,
+      errors,
+    };
+  }
+
+  const deliveryFee =
+    order.deliveryType === "delivery" && typeof order.deliveryFee === "number"
+      ? order.deliveryFee
+      : 0;
+  const total = Math.round((subtotal + deliveryFee) * 100) / 100;
+
+  return {
+    valid: true,
+    order: {
+      ...order,
+      productos,
+      total,
+      deliveryFee: order.deliveryType === "delivery" ? deliveryFee : undefined,
+    },
   };
 }
 
@@ -114,34 +408,47 @@ export async function POST(request: Request) {
       );
     }
 
+    const catalogValidation = await validateOrderAgainstCatalog(validation.data);
+
+    if (!catalogValidation.valid) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Pedido inválido.",
+          errors: catalogValidation.errors,
+        },
+        { status: 400 }
+      );
+    }
+
     const tenantContext = await getTenantOrderContext(
-      validation.data.tenantId
+      catalogValidation.order.tenantId
     );
     const customerProfileResult = await upsertCustomerProfile({
-      tenantId: validation.data.tenantId,
-      tenantSlug: validation.data.tenantSlug ?? tenantContext.tenantSlug,
-      displayName: validation.data.cliente.nombre,
-      phone: validation.data.cliente.telefono,
-      customerCode: validation.data.cliente.customerCode,
+      tenantId: catalogValidation.order.tenantId,
+      tenantSlug: catalogValidation.order.tenantSlug ?? tenantContext.tenantSlug,
+      displayName: catalogValidation.order.cliente.nombre,
+      phone: catalogValidation.order.cliente.telefono,
+      customerCode: catalogValidation.order.cliente.customerCode,
       address:
-        validation.data.deliveryType === "delivery" &&
-        validation.data.deliveryAddress
+        catalogValidation.order.deliveryType === "delivery" &&
+        catalogValidation.order.deliveryAddress
           ? {
-              street: validation.data.deliveryAddress,
+              street: catalogValidation.order.deliveryAddress,
             }
           : undefined,
     });
     const orderWithCustomer: Order = {
-      ...validation.data,
+      ...catalogValidation.order,
       cliente: {
-        ...validation.data.cliente,
+        ...catalogValidation.order.cliente,
         customerCode: customerProfileResult.customerProfile.customerCode,
       },
       customer: {
         customerId: customerProfileResult.customerProfile.id,
         customerCode: customerProfileResult.customerProfile.customerCode,
-        nombre: validation.data.cliente.nombre,
-        telefono: validation.data.cliente.telefono,
+        nombre: catalogValidation.order.cliente.nombre,
+        telefono: catalogValidation.order.cliente.telefono,
       },
     };
     const orderConfirmation = applyOrderConfirmationPolicy(

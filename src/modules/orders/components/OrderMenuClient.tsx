@@ -10,12 +10,18 @@ import {
   type TenantDesignPreset,
 } from "@/modules/design/tenantDesignPresets";
 import type { CartItem } from "@/types/cart.types";
-import type { Product } from "@/types/product.types";
+import type {
+  Product,
+  ProductOption,
+  ProductOptionValue,
+  SelectedProductOption,
+} from "@/types/product.types";
 
 import { CartDrawer } from "./CartDrawer";
 import { CartSummary } from "./CartSummary";
 import { CustomerInfoModal } from "./CustomerInfoModal";
 import { ProductCard } from "./ProductCard";
+import { ProductOptionsModal } from "./ProductOptionsModal";
 import { createOrder } from "../services/orderService";
 import type { CustomerInfo, Order } from "../types/order";
 
@@ -67,6 +73,7 @@ interface FirestoreProductRecord {
   available?: unknown;
   active?: unknown;
   category?: unknown;
+  options?: unknown;
 }
 
 interface StoredCustomerProfile {
@@ -237,6 +244,77 @@ function getCategoryPriority(categoryKey: string, featuredCategoryKey: string): 
   if (categoryKey === "especiales") return 85;
 
   return 50;
+}
+
+function toPriceDelta(value: unknown): number {
+  return typeof value === "number" && Number.isFinite(value) && value > 0
+    ? Math.round(value * 100) / 100
+    : 0;
+}
+
+function normalizeProductOptionValues(value: unknown): ProductOptionValue[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.flatMap((optionValue): ProductOptionValue[] => {
+    if (!optionValue || typeof optionValue !== "object") {
+      return [];
+    }
+
+    const record = optionValue as Record<string, unknown>;
+    const id = toOptionalString(record.id);
+    const label = toOptionalString(record.label);
+
+    if (!id || !label) {
+      return [];
+    }
+
+    const priceDelta = toPriceDelta(record.priceDelta);
+
+    return [
+      {
+        id,
+        label,
+        ...(priceDelta > 0 ? { priceDelta } : {}),
+        active: typeof record.active === "boolean" ? record.active : true,
+      },
+    ];
+  });
+}
+
+function normalizeProductOptions(value: unknown): ProductOption[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.flatMap((option): ProductOption[] => {
+    if (!option || typeof option !== "object") {
+      return [];
+    }
+
+    const record = option as Record<string, unknown>;
+    const id = toOptionalString(record.id);
+    const name = toOptionalString(record.name);
+    const type =
+      record.type === "multiple" || record.type === "single"
+        ? record.type
+        : "single";
+
+    if (!id || !name) {
+      return [];
+    }
+
+    return [
+      {
+        id,
+        name,
+        type,
+        required: typeof record.required === "boolean" ? record.required : false,
+        values: normalizeProductOptionValues(record.values),
+      },
+    ];
+  });
 }
 
 function getTypographyClassName(fontMood: TenantDesignPreset["fontMood"]): string {
@@ -413,7 +491,44 @@ function mapProduct(
     imageUrl: toOptionalString(record.imageUrl),
     available,
     category: toOptionalString(record.category),
+    options: normalizeProductOptions(record.options),
   };
+}
+
+function getActiveProductOptions(product: Product): ProductOption[] {
+  return (product.options ?? [])
+    .map((option) => ({
+      ...option,
+      values: option.values.filter((value) => value.active),
+    }))
+    .filter((option) => option.values.length > 0);
+}
+
+function getCartItemUnitPrice(item: CartItem): number {
+  return (
+    item.unitPrice +
+    (item.selectedOptions ?? []).reduce(
+      (sum, option) => sum + option.priceDeltaTotal,
+      0
+    )
+  );
+}
+
+function getCartItemId(
+  productId: string,
+  selectedOptions: SelectedProductOption[]
+): string {
+  const optionsKey = selectedOptions
+    .map(
+      (option) =>
+        `${option.optionId}:${[...option.valueIds].sort((left, right) =>
+          left.localeCompare(right)
+        ).join(",")}`
+    )
+    .sort((left, right) => left.localeCompare(right))
+    .join("|");
+
+  return optionsKey ? `${productId}__${optionsKey}` : productId;
 }
 
 function mapCartItemsToOrderItems(items: CartItem[]): Order["productos"] {
@@ -422,6 +537,7 @@ function mapCartItemsToOrderItems(items: CartItem[]): Order["productos"] {
     nombre: item.productName,
     precio: item.unitPrice,
     cantidad: item.quantity,
+    selectedOptions: item.selectedOptions,
   }));
 }
 
@@ -467,6 +583,9 @@ export function OrderMenuClient({ tenantId, tenantSlug }: OrderMenuClientProps) 
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isCartOpen, setIsCartOpen] = useState<boolean>(false);
+  const [customizingProduct, setCustomizingProduct] = useState<Product | null>(
+    null
+  );
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState<boolean>(false);
   const [customerModalSession, setCustomerModalSession] = useState<number>(0);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
@@ -638,7 +757,7 @@ export function OrderMenuClient({ tenantId, tenantSlug }: OrderMenuClientProps) 
   }, [products, featuredCategoryKey]);
 
   const subtotal = cartItems.reduce(
-    (sum, item) => sum + item.quantity * item.unitPrice,
+    (sum, item) => sum + item.quantity * getCartItemUnitPrice(item),
     0
   );
   const effectiveDeliveryType =
@@ -649,34 +768,56 @@ export function OrderMenuClient({ tenantId, tenantSlug }: OrderMenuClientProps) 
     effectiveDeliveryType === "delivery" ? deliveryFee : 0;
   const total = subtotal + deliveryFeeApplied;
 
-  function addProduct(product: Product): void {
+  function addConfiguredProduct(
+    product: Product,
+    selectedOptions: SelectedProductOption[]
+  ): void {
     if (!product.available) {
       return;
     }
 
+    const cartItemId = getCartItemId(product.id, selectedOptions);
+
     setCartItems((currentItems) => {
       const existingItem = currentItems.find(
-        (item) => item.productId === product.id
+        (item) => item.cartItemId === cartItemId
       );
 
       if (!existingItem) {
         return [
           ...currentItems,
           {
+            cartItemId,
             productId: product.id,
             productName: product.name,
             quantity: 1,
             unitPrice: product.price,
+            selectedOptions,
           },
         ];
       }
 
       return currentItems.map((item) =>
-        item.productId === product.id
+        item.cartItemId === cartItemId
           ? { ...item, quantity: item.quantity + 1 }
           : item
       );
     });
+
+    setCustomizingProduct(null);
+  }
+
+  function addProduct(product: Product): void {
+    if (!product.available) {
+      return;
+    }
+
+    if (getActiveProductOptions(product).length > 0) {
+      setCustomizingProduct(product);
+      return;
+    }
+
+    addConfiguredProduct(product, []);
   }
 
   function scrollToCategory(categoryKey: string): void {
@@ -686,21 +827,21 @@ export function OrderMenuClient({ tenantId, tenantSlug }: OrderMenuClientProps) 
     });
   }
 
-  function increaseItem(productId: string): void {
+  function increaseItem(cartItemId: string): void {
     setCartItems((currentItems) =>
       currentItems.map((item) =>
-        item.productId === productId
+        item.cartItemId === cartItemId
           ? { ...item, quantity: item.quantity + 1 }
           : item
       )
     );
   }
 
-  function decreaseItem(productId: string): void {
+  function decreaseItem(cartItemId: string): void {
     setCartItems((currentItems) =>
       currentItems
         .map((item) =>
-          item.productId === productId
+          item.cartItemId === cartItemId
             ? { ...item, quantity: item.quantity - 1 }
             : item
         )
@@ -708,9 +849,9 @@ export function OrderMenuClient({ tenantId, tenantSlug }: OrderMenuClientProps) 
     );
   }
 
-  function removeItem(productId: string): void {
+  function removeItem(cartItemId: string): void {
     setCartItems((currentItems) =>
-      currentItems.filter((item) => item.productId !== productId)
+      currentItems.filter((item) => item.cartItemId !== cartItemId)
     );
   }
 
@@ -975,8 +1116,11 @@ export function OrderMenuClient({ tenantId, tenantSlug }: OrderMenuClientProps) 
 
                 <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 [-webkit-overflow-scrolling:touch]">
                   {categoryProducts.map((product) => {
-                    const cartItem = cartItems.find(
-                      (item) => item.productId === product.id
+                    const quantityInCart = cartItems
+                      .filter((item) => item.productId === product.id)
+                      .reduce(
+                        (sum, item) => sum + item.quantity,
+                        0
                     );
 
                     return (
@@ -984,7 +1128,7 @@ export function OrderMenuClient({ tenantId, tenantSlug }: OrderMenuClientProps) 
                         key={product.id}
                         className="shrink-0 snap-start"
                         product={product}
-                        quantityInCart={cartItem?.quantity ?? 0}
+                        quantityInCart={quantityInCart}
                         onAddProduct={addProduct}
                       />
                     );
@@ -1052,6 +1196,16 @@ export function OrderMenuClient({ tenantId, tenantSlug }: OrderMenuClientProps) 
           onForgetCustomerCode={forgetStoredCustomerCode}
           onClose={closeCustomerModal}
           onSubmit={submitOrder}
+        />
+      ) : null}
+
+      {customizingProduct ? (
+        <ProductOptionsModal
+          key={customizingProduct.id}
+          product={customizingProduct}
+          isOpen={customizingProduct !== null}
+          onClose={() => setCustomizingProduct(null)}
+          onAddToCart={addConfiguredProduct}
         />
       ) : null}
     </div>

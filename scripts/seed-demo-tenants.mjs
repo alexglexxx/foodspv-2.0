@@ -80,8 +80,8 @@ const tenants = [
     ],
   },
   {
-    tenantId: "tacos-demo",
-    name: "Taquería Los Compas",
+    tenantId: "tacos-juan",
+    name: "Tacos Juan",
     category: "tacos",
     featuredCategory: "Tacos",
     designPresetId: "tacos-comal-rojo",
@@ -98,13 +98,84 @@ const tenants = [
     deliveryFee: 25,
     products: [
       ["taco-asada", "Taco de asada", "Con cebolla, cilantro y salsa.", 28, "Tacos"],
-      ["taco-pastor", "Taco al pastor", "Pastor con piña.", 24, "Tacos"],
+      [
+        "taco-pastor",
+        "Taco Pastor",
+        "Pastor con piña.",
+        24,
+        "Tacos",
+        [
+          {
+            id: "tortilla",
+            name: "Tortilla",
+            type: "single",
+            required: true,
+            values: [
+              { id: "maiz", label: "Maíz", active: true },
+              { id: "harina", label: "Harina", active: true },
+            ],
+          },
+          {
+            id: "salsa",
+            name: "Salsa",
+            type: "single",
+            required: false,
+            values: [
+              { id: "verde", label: "Verde", active: true },
+              { id: "roja", label: "Roja", active: true },
+              { id: "sin-salsa", label: "Sin salsa", active: true },
+            ],
+          },
+        ],
+      ],
       ["taco-chorizo", "Taco de chorizo", "Chorizo doradito.", 24, "Tacos"],
       ["taco-tripa", "Taco de tripa", "Dorada o suave.", 32, "Tacos"],
       ["quesadilla-asada", "Quesadilla con asada", "Grande con queso y asada.", 65, "Quesadillas"],
       ["gringa-pastor", "Gringa de pastor", "Harina, queso, pastor y piña.", 75, "Especiales"],
       ["orden-asada", "Orden de asada", "Carne, tortillas y salsa.", 150, "Órdenes"],
-      ["agua-horchata", "Agua de horchata", "Vaso grande.", 30, "Bebidas"],
+      [
+        "refresco-600",
+        "Refresco 600ml",
+        "Botella fría de 600ml.",
+        25,
+        "Bebidas",
+        [
+          {
+            id: "sabor",
+            name: "Sabor",
+            type: "single",
+            required: true,
+            values: [
+              { id: "coca-cola", label: "Coca-Cola", active: true },
+              { id: "fanta", label: "Fanta", active: true },
+              { id: "sprite", label: "Sprite", active: true },
+              { id: "manzanita", label: "Manzanita", active: true },
+            ],
+          },
+        ],
+      ],
+      [
+        "agua-fresca",
+        "Agua fresca",
+        "Vaso grande de agua fresca.",
+        30,
+        "Bebidas",
+        [
+          {
+            id: "sabor",
+            name: "Sabor",
+            type: "single",
+            required: true,
+            values: [
+              { id: "jamaica", label: "Jamaica", active: true },
+              { id: "horchata", label: "Horchata", active: true },
+              { id: "tamarindo", label: "Tamarindo", active: true },
+              { id: "limon", label: "Limón", active: true },
+              { id: "sabor-del-dia", label: "Sabor del día", active: true },
+            ],
+          },
+        ],
+      ],
     ],
   },
   {
@@ -185,7 +256,7 @@ for (const tenant of tenants) {
     { merge: true }
   );
 
-  for (const [id, name, description, price, category] of products) {
+  for (const [id, name, description, price, category, options = []] of products) {
     await db.collection("tenants").doc(tenantId).collection("products").doc(id).set(
       {
         tenantId,
@@ -193,6 +264,7 @@ for (const tenant of tenants) {
         description,
         price,
         category,
+        options,
         available: true,
         active: true,
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),

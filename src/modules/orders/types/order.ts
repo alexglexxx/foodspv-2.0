@@ -1,3 +1,5 @@
+import type { SelectedProductOption } from "@/types/product.types";
+
 export const ORDER_STATES = [
   "requires_confirmation",
   "pendiente",
@@ -14,6 +16,7 @@ export interface OrderItem {
   nombre:string;
   precio:number;
   cantidad:number;
+  selectedOptions?:SelectedProductOption[];
 }
 
 export interface CustomerInfo {
