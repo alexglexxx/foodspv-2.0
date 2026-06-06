@@ -20,6 +20,7 @@ interface ProductRecord {
   available?: unknown;
   modifiers?: unknown;
   options?: unknown;
+  deletedAt?: unknown;
   createdAt?: unknown;
   updatedAt?: unknown;
 }
@@ -149,6 +150,10 @@ function mapProductRecord(
     createdAt: toTimestampMillis(record.createdAt),
     updatedAt: toTimestampMillis(record.updatedAt),
   };
+}
+
+function isDeletedProduct(record: ProductRecord): boolean {
+  return record.deletedAt !== null && record.deletedAt !== undefined;
 }
 
 async function ensureTenantExists(tenantId: string): Promise<void> {
@@ -382,9 +387,13 @@ export async function listSuperAdminTenantProducts(
     .orderBy("name")
     .get();
 
-  return productsSnapshot.docs.map((document) =>
-    mapProductRecord(document.id, document.data() as ProductRecord)
-  );
+  return productsSnapshot.docs
+    .map((document) => ({
+      id: document.id,
+      record: document.data() as ProductRecord,
+    }))
+    .filter(({ record }) => record.active !== false && !isDeletedProduct(record))
+    .map(({ id, record }) => mapProductRecord(id, record));
 }
 
 export async function createSuperAdminTenantProduct(
@@ -480,6 +489,7 @@ export async function deleteSuperAdminTenantProduct(
   await productRef.update({
     active: false,
     available: false,
+    deletedAt: FieldValue.serverTimestamp(),
     updatedAt: FieldValue.serverTimestamp(),
   });
 }

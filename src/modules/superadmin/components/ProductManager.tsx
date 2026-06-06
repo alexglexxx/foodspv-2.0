@@ -69,6 +69,8 @@ export function ProductManager({
     useState<SuperAdminProductInput>(EMPTY_PRODUCT_FORM);
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
   const [isProductModalOpen, setIsProductModalOpen] = useState<boolean>(false);
+  const [productPendingDelete, setProductPendingDelete] =
+    useState<SuperAdminProductSummary | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [deletingProductId, setDeletingProductId] = useState<string | null>(null);
@@ -181,10 +183,36 @@ export function ProductManager({
     }
   }
 
-  async function handleDeleteProduct(productId: string): Promise<void> {
+  function openDeleteProductModal(product: SuperAdminProductSummary): void {
     if (deletingProductRef.current !== null) {
       return;
     }
+
+    setProductPendingDelete(product);
+    setMessage(null);
+    setErrorMessage(null);
+  }
+
+  function closeDeleteProductModal(): void {
+    if (deletingProductRef.current !== null) {
+      return;
+    }
+
+    setProductPendingDelete(null);
+  }
+
+  async function handleDeleteProduct(): Promise<void> {
+    const product = productPendingDelete;
+
+    if (!product) {
+      return;
+    }
+
+    if (deletingProductRef.current !== null) {
+      return;
+    }
+
+    const productId = product.productId;
 
     deletingProductRef.current = productId;
     setDeletingProductId(productId);
@@ -203,14 +231,15 @@ export function ProductManager({
         cancelForm();
       }
 
-      setMessage("Producto desactivado.");
+      setProductPendingDelete(null);
+      setMessage("Producto eliminado correctamente.");
       await loadProducts();
       await onProductsChanged();
     } catch (error) {
       setErrorMessage(
         error instanceof Error
           ? error.message
-          : "No se pudo desactivar producto."
+          : "No se pudo eliminar producto."
       );
     } finally {
       deletingProductRef.current = null;
@@ -320,20 +349,20 @@ export function ProductManager({
                   size="sm"
                   disabled={isSaving || deletingProductId !== null}
                 >
-                  Editar
+                  ✏️ Editar
                 </AppButton>
                 <AppButton
-                  onClick={() => void handleDeleteProduct(product.productId)}
+                  onClick={() => openDeleteProductModal(product)}
                   disabled={
                     deletingProductId !== null &&
                     deletingProductId !== product.productId
                   }
                   loading={deletingProductId === product.productId}
-                  loadingText="Desactivando..."
+                  loadingText="Eliminando..."
                   variant="danger"
                   size="sm"
                 >
-                  Desactivar
+                  🗑️ Eliminar
                 </AppButton>
               </div>
             </article>
@@ -351,6 +380,85 @@ export function ProductManager({
           onSubmit={(event) => void handleSaveProduct(event)}
         />
       ) : null}
+
+      {productPendingDelete ? (
+        <DeleteProductModal
+          productName={productPendingDelete.name}
+          isDeleting={deletingProductId === productPendingDelete.productId}
+          onCancel={closeDeleteProductModal}
+          onDelete={() => void handleDeleteProduct()}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+function DeleteProductModal({
+  productName,
+  isDeleting,
+  onCancel,
+  onDelete,
+}: {
+  productName: string;
+  isDeleting: boolean;
+  onCancel: () => void;
+  onDelete: () => void;
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-stone-950/40 px-4 py-4 sm:items-center"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="delete-product-modal-title"
+      onMouseDown={() => {
+        if (!isDeleting) {
+          onCancel();
+        }
+      }}
+    >
+      <div
+        className="w-full max-w-md rounded-2xl bg-white shadow-2xl"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <div className="border-b border-stone-100 px-5 py-4">
+          <p className="text-xs font-extrabold uppercase tracking-[0.2em] text-rose-700">
+            Productos
+          </p>
+          <h2
+            id="delete-product-modal-title"
+            className="mt-1 text-xl font-black text-stone-950"
+          >
+            Eliminar producto
+          </h2>
+        </div>
+
+        <div className="px-5 py-5">
+          <p className="text-base font-semibold leading-7 text-stone-800">
+            ¿Seguro que deseas eliminar &quot;{productName}&quot;?
+          </p>
+          <p className="mt-3 text-sm font-semibold leading-6 text-stone-500">
+            Esta acción no afecta pedidos anteriores.
+          </p>
+        </div>
+
+        <div className="flex flex-col gap-3 border-t border-stone-100 px-5 py-4 sm:flex-row sm:justify-end">
+          <AppButton
+            onClick={onCancel}
+            variant="secondary"
+            disabled={isDeleting}
+          >
+            Cancelar
+          </AppButton>
+          <AppButton
+            onClick={onDelete}
+            variant="danger"
+            loading={isDeleting}
+            loadingText="Eliminando..."
+          >
+            Eliminar
+          </AppButton>
+        </div>
+      </div>
     </div>
   );
 }

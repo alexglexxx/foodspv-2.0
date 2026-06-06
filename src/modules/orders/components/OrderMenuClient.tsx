@@ -74,6 +74,7 @@ interface FirestoreProductRecord {
   active?: unknown;
   category?: unknown;
   options?: unknown;
+  deletedAt?: unknown;
 }
 
 interface StoredCustomerProfile {
@@ -476,6 +477,13 @@ function mapProduct(
 
   const active =
     typeof record.active === "boolean" ? record.active : true;
+
+  if (
+    active === false ||
+    (record.deletedAt !== null && record.deletedAt !== undefined)
+  ) {
+    return null;
+  }
 
   const available =
     typeof record.available === "boolean" ? record.available : active;

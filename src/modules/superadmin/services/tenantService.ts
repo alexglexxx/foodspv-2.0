@@ -57,6 +57,7 @@ interface TenantRecord {
 interface ProductRecord {
   active?: unknown;
   available?: unknown;
+  deletedAt?: unknown;
 }
 
 interface OrderRecord {
@@ -331,16 +332,22 @@ async function getTenantStats(tenantId: string): Promise<SuperAdminTenantStats> 
     adminDb.collection("tenants").doc(tenantId).collection("orders").get(),
   ]);
 
+  let productsCount = 0;
   let activeProductsCount = 0;
   let pendingOrdersCount = 0;
   let totalSales = 0;
 
   productsSnapshot.forEach((document) => {
     const product = document.data() as ProductRecord;
+    const isDeleted = product.deletedAt !== null && product.deletedAt !== undefined;
+    const isListed = !isDeleted && product.active !== false;
     const isActive =
-      typeof product.available === "boolean"
-        ? product.available
-        : product.active !== false;
+      isListed &&
+      (typeof product.available === "boolean" ? product.available : true);
+
+    if (isListed) {
+      productsCount += 1;
+    }
 
     if (isActive) {
       activeProductsCount += 1;
@@ -360,7 +367,7 @@ async function getTenantStats(tenantId: string): Promise<SuperAdminTenantStats> 
   });
 
   return {
-    productsCount: productsSnapshot.size,
+    productsCount,
     activeProductsCount,
     ordersCount: ordersSnapshot.size,
     pendingOrdersCount,
