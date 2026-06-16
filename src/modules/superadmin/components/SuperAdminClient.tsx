@@ -14,9 +14,9 @@ import { getVisualPreset } from "@/modules/design/tenantVisualPresets";
 
 import {
   createSuperAdminTenant,
-  deleteSuperAdminTenant,
   fetchSuperAdminTenants,
   permanentlyDeleteTenant,
+  setSuperAdminTenantActive,
   updateSuperAdminTenant,
 } from "../services/superAdminApiService";
 import type {
@@ -25,7 +25,6 @@ import type {
 } from "../types/superAdmin";
 import { CollapsibleSection } from "./CollapsibleSection";
 import { ProductManager } from "./ProductManager";
-import { TenantAccessCard } from "./TenantAccessCard";
 import { TenantFormSection } from "./TenantFormSection";
 import { TenantList } from "./TenantList";
 
@@ -63,6 +62,8 @@ const EMPTY_TENANT_FORM: SuperAdminTenantInput = {
   deliveryEnabled: false,
   deliveryFee: 0,
 };
+
+const SELECTED_TENANT_STORAGE_KEY = "foodspv.superadmin.selectedTenantId";
 
 type SectionKey = "create" | "tenants" | "products" | "theme" | "operations";
 
@@ -148,6 +149,57 @@ function normalizeTenantFormForSave(
   };
 }
 
+function getStoredSelectedTenantId(): string | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  try {
+    return window.localStorage.getItem(SELECTED_TENANT_STORAGE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function setStoredSelectedTenantId(tenantId: string | null): void {
+  if (tenantId === null || typeof window === "undefined") {
+    return;
+  }
+
+  try {
+    window.localStorage.setItem(SELECTED_TENANT_STORAGE_KEY, tenantId);
+  } catch {
+    // localStorage can be unavailable in restricted browser contexts.
+  }
+}
+
+function resolveSelectedTenantId(
+  tenants: SuperAdminTenantSummary[],
+  currentTenantId: string | null
+): string | null {
+  if (tenants.length === 0) {
+    return null;
+  }
+
+  if (
+    currentTenantId !== null &&
+    tenants.some((tenant) => tenant.tenantId === currentTenantId)
+  ) {
+    return currentTenantId;
+  }
+
+  const storedTenantId = getStoredSelectedTenantId();
+  const storedTenant =
+    storedTenantId !== null
+      ? tenants.find((tenant) => tenant.tenantId === storedTenantId)
+      : undefined;
+  const firstActiveTenant = tenants.find(
+    (tenant) => tenant.active && tenant.status === "active"
+  );
+
+  return storedTenant?.tenantId ?? firstActiveTenant?.tenantId ?? tenants[0].tenantId;
+}
+
 export function SuperAdminClient() {
   const [user, setUser] = useState<User | null>(null);
   const [authReady, setAuthReady] = useState<boolean>(false);
@@ -187,6 +239,10 @@ export function SuperAdminClient() {
         : null,
     [selectedTenantId, tenants]
   );
+
+  useEffect(() => {
+    setStoredSelectedTenantId(selectedTenantId);
+  }, [selectedTenantId]);
 
   useEffect(() => {
     return onAuthStateChanged(auth, (nextUser) => {
@@ -235,6 +291,9 @@ export function SuperAdminClient() {
       }
 
       setTenants(response.tenants);
+      setSelectedTenantId((currentTenantId) =>
+        resolveSelectedTenantId(response.tenants, currentTenantId)
+      );
     } catch (error) {
       setErrorMessage(
         error instanceof Error ? error.message : "No se pudieron cargar tenants."
@@ -374,7 +433,9 @@ export function SuperAdminClient() {
     }
   }
 
-  async function handleDeleteTenant(tenantId: string): Promise<void> {
+  async function handleToggleTenantActive(
+    tenant: SuperAdminTenantSummary
+  ): Promise<void> {
     if (
       deletingTenantRef.current !== null ||
       permanentlyDeletingTenantRef.current !== null
@@ -387,31 +448,41 @@ export function SuperAdminClient() {
       return;
     }
 
-    deletingTenantRef.current = tenantId;
-    setDeletingTenantId(tenantId);
+    const nextActive = !(tenant.active && tenant.status === "active");
+
+    deletingTenantRef.current = tenant.tenantId;
+    setDeletingTenantId(tenant.tenantId);
     setMessage(null);
     setErrorMessage(null);
 
     try {
-      const response = await deleteSuperAdminTenant(user, tenantId);
+      const response = await setSuperAdminTenantActive(
+        user,
+        tenant.tenantId,
+        nextActive
+      );
 
       if (!response.success) {
         setErrorMessage(response.message);
         return;
       }
 
-      if (editingTenantId === tenantId) {
-        resetForm();
+      if (editingTenantId === tenant.tenantId) {
+        setForm((currentForm) => ({
+          ...currentForm,
+          active: nextActive,
+          status: nextActive ? "active" : "inactive",
+        }));
       }
 
-      setSelectedTenantId(tenantId);
-      setMessage("Negocio desactivado.");
+      setSelectedTenantId(tenant.tenantId);
+      setMessage(nextActive ? "Negocio activado." : "Negocio desactivado.");
       await loadTenants(user);
     } catch (error) {
       setErrorMessage(
         error instanceof Error
           ? error.message
-          : "No se pudo desactivar el tenant."
+          : "No se pudo actualizar el estado del tenant."
       );
     } finally {
       deletingTenantRef.current = null;
@@ -459,13 +530,15 @@ export function SuperAdminClient() {
         return;
       }
 
-      setTenants((currentTenants) =>
-        currentTenants.filter((tenant) => tenant.tenantId !== tenantId)
-      );
+      const nextTenants = tenants.filter((tenant) => tenant.tenantId !== tenantId);
 
-      if (selectedTenantId === tenantId) {
-        setSelectedTenantId(null);
-      }
+      setTenants(nextTenants);
+      setSelectedTenantId((currentTenantId) =>
+        resolveSelectedTenantId(
+          nextTenants,
+          currentTenantId === tenantId ? null : currentTenantId
+        )
+      );
 
       if (editingTenantId === tenantId) {
         resetForm();
@@ -484,38 +557,25 @@ export function SuperAdminClient() {
     }
   }
 
-  async function copyTenantUrl(tenant: SuperAdminTenantSummary): Promise<void> {
-    if (!tenant.publicUrl) {
-      setErrorMessage("No configurada");
-      setMessage(null);
-      return;
-    }
+  function openTenantWebapp(tenant: SuperAdminTenantSummary): void {
+    const tenantUrl = tenant.publicUrl || `/${tenant.tenantId}`;
 
-    try {
-      await navigator.clipboard.writeText(tenant.publicUrl);
-      setMessage("URL pública copiada.");
-      setErrorMessage(null);
-    } catch {
-      setErrorMessage("No se pudo copiar la URL pública.");
-      setMessage(null);
-    }
+    window.open(tenantUrl, "_blank", "noopener,noreferrer");
+    setSelectedTenantId(tenant.tenantId);
   }
 
-  function downloadTenantQr(tenant: SuperAdminTenantSummary): void {
-    if (!tenant.qrCode) {
-      setErrorMessage("QR no disponible");
-      setMessage(null);
-      return;
-    }
-
-    const link = document.createElement("a");
-    link.href = tenant.qrCode;
-    link.download = `tenant-${tenant.tenantId}-qr.png`;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    setMessage("QR descargado.");
+  function openSelectedTenantProducts(tenant: SuperAdminTenantSummary): void {
+    setSelectedTenantId(tenant.tenantId);
+    openSection("products");
+    setMessage(`Productos: ${tenant.name}`);
     setErrorMessage(null);
+  }
+
+  function openSelectedTenantOrders(tenant: SuperAdminTenantSummary): void {
+    setSelectedTenantId(tenant.tenantId);
+    window.location.href = `/admin?tenantId=${encodeURIComponent(
+      tenant.tenantId
+    )}`;
   }
 
   if (!authReady) {
@@ -638,8 +698,8 @@ export function SuperAdminClient() {
           </CollapsibleSection>
 
           <CollapsibleSection
-            title="Negocios registrados"
-            description="Selecciona un negocio para ver su acceso, productos y configuración."
+            title="Seleccionar negocio"
+            description="Busca y selecciona un negocio sin renderizar todas las cards."
             isOpen={openSections.tenants}
             onToggle={() => toggleSection("tenants")}
             badge={selectedTenant?.name}
@@ -652,22 +712,15 @@ export function SuperAdminClient() {
               permanentlyDeletingTenantId={permanentlyDeletingTenantId}
               onRefresh={() => void loadTenants(user)}
               onSelect={selectTenant}
+              onOpenWebapp={openTenantWebapp}
               onEdit={editTenant}
-              onDeactivate={(tenantId) => void handleDeleteTenant(tenantId)}
+              onOpenProducts={openSelectedTenantProducts}
+              onOpenOrders={openSelectedTenantOrders}
+              onToggleActive={(tenant) => void handleToggleTenantActive(tenant)}
               onPermanentDelete={(tenantId) =>
                 void handlePermanentDeleteTenant(tenantId)
               }
             />
-
-            {selectedTenant ? (
-              <div className="mt-5">
-                <TenantAccessCard
-                  tenant={selectedTenant}
-                  onCopyUrl={(tenant) => void copyTenantUrl(tenant)}
-                  onDownloadQr={downloadTenantQr}
-                />
-              </div>
-            ) : null}
           </CollapsibleSection>
 
           {selectedTenant ? (

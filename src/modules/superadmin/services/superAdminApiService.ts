@@ -68,6 +68,23 @@ export async function updateSuperAdminTenant(
   return (await response.json()) as SuperAdminTenantMutationResponse;
 }
 
+export async function setSuperAdminTenantActive(
+  user: User,
+  tenantId: string,
+  active: boolean
+): Promise<SuperAdminTenantMutationResponse> {
+  const response = await fetch(`/api/superadmin/tenants/${tenantId}`, {
+    method: "PATCH",
+    headers: await getAuthorizationHeaders(user),
+    body: JSON.stringify({
+      active,
+      status: active ? "active" : "inactive",
+    }),
+  });
+
+  return (await response.json()) as SuperAdminTenantMutationResponse;
+}
+
 export async function deleteSuperAdminTenant(
   user: User,
   tenantId: string
