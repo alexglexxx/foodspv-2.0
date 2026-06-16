@@ -19,6 +19,13 @@ export interface OrderItem {
   selectedOptions?:SelectedProductOption[];
 }
 
+export interface DeliveryAddressDetails {
+  street:string;
+  number:string;
+  neighborhood:string;
+  reference:string;
+}
+
 export interface CustomerInfo {
   nombre:string;
   telefono:string;
@@ -50,6 +57,8 @@ export interface Order {
   deliveryType?:"pickup" | "delivery";
 
   deliveryAddress?:string;
+
+  deliveryAddressDetails?:DeliveryAddressDetails;
 
   deliveryFee?:number;
 

@@ -20,22 +20,55 @@ function formatCustomerCode(customerCode: string | undefined): string {
   return `${prefix} ${digitBlocks}`;
 }
 
+function getProductEmoji(productName: string): string {
+  const normalizedName = productName
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "");
+
+  if (normalizedName.includes("refresco")) {
+    return "🥤";
+  }
+
+  if (normalizedName.includes("agua fresca")) {
+    return "🥛";
+  }
+
+  if (normalizedName.includes("taco")) {
+    return "🌮";
+  }
+
+  return "🍽️";
+}
+
 export function whatsappComandaAgent(order: Order): string {
   const productLines = order.productos.flatMap((producto, index) => {
     const optionLines = (producto.selectedOptions ?? []).map(
-      (option) => `   - ${option.optionName}: ${option.valueLabels.join(", ")}`
+      (option) => `   * ${option.optionName}: ${option.valueLabels.join(", ")}`
     );
 
-    return [`${index + 1}. ${producto.cantidad} x ${producto.nombre}`, ...optionLines];
+    return [
+      `${index + 1}. ${producto.cantidad} x ${getProductEmoji(producto.nombre)} ${producto.nombre}`,
+      ...optionLines,
+    ];
   });
   const isDelivery = order.deliveryType === "delivery";
   const deliveryLines = isDelivery
-    ? [
-        "Entrega: A domicilio",
-        `Direccion: ${order.deliveryAddress ?? ""}`,
-        `Costo envio: ${formatAmount(order.deliveryFee ?? 0)}`,
-      ]
-    : ["Entrega: Recoger pedido"];
+    ? order.deliveryAddressDetails
+      ? [
+          "ENTREGA A DOMICILIO",
+          `Calle: ${order.deliveryAddressDetails.street}`,
+          `Número: ${order.deliveryAddressDetails.number}`,
+          `Colonia: ${order.deliveryAddressDetails.neighborhood}`,
+          `Referencia: ${order.deliveryAddressDetails.reference}`,
+          `Costo envio: ${formatAmount(order.deliveryFee ?? 0)}`,
+        ]
+      : [
+          "ENTREGA A DOMICILIO",
+          `Direccion: ${order.deliveryAddress ?? ""}`,
+          `Costo envio: ${formatAmount(order.deliveryFee ?? 0)}`,
+        ]
+    : ["RECOGER PEDIDO"];
   const header =
     order.estado === "requires_confirmation"
       ? "PEDIDO GRANDE - REQUIERE CONFIRMACIÓN"

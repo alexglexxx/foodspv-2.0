@@ -7,9 +7,9 @@ import {
   isOrderState,
 } from "@/modules/orders/agents/orderStateAgent";
 import { customerStatusNotificationAgent } from "@/modules/orders/agents/customerStatusNotificationAgent";
-import { tenantOrderFlowConfigAgent } from "@/modules/orders/agents/tenantOrderFlowConfigAgent";
 import { whatsappSenderAgent } from "@/modules/orders/agents/whatsappSenderAgent";
 import type { CustomerInfo, Order, OrderItem, OrderState } from "@/modules/orders/types/order";
+import type { DeliveryAddressDetails } from "@/modules/orders/types/order";
 import type { SelectedProductOption } from "@/types/product.types";
 
 interface StatusUpdateRequest {
@@ -28,6 +28,7 @@ interface OrderStateRecord {
   total?: unknown;
   deliveryType?: unknown;
   deliveryAddress?: unknown;
+  deliveryAddressDetails?: unknown;
   deliveryFee?: unknown;
   estado?: unknown;
 }
@@ -181,6 +182,30 @@ function mapOrderItems(value: unknown): OrderItem[] | null {
   return items;
 }
 
+function mapDeliveryAddressDetails(value: unknown): DeliveryAddressDetails | undefined {
+  if (!value || typeof value !== "object") {
+    return undefined;
+  }
+
+  const record = value as Record<string, unknown>;
+
+  if (
+    !isNonEmptyString(record.street) ||
+    !isNonEmptyString(record.number) ||
+    !isNonEmptyString(record.neighborhood) ||
+    !isNonEmptyString(record.reference)
+  ) {
+    return undefined;
+  }
+
+  return {
+    street: record.street.trim(),
+    number: record.number.trim(),
+    neighborhood: record.neighborhood.trim(),
+    reference: record.reference.trim(),
+  };
+}
+
 function mapOrderRecord(
   tenantId: string,
   record: OrderStateRecord,
@@ -211,6 +236,9 @@ function mapOrderRecord(
     deliveryAddress: isNonEmptyString(record.deliveryAddress)
       ? record.deliveryAddress.trim()
       : undefined,
+    deliveryAddressDetails: mapDeliveryAddressDetails(
+      record.deliveryAddressDetails
+    ),
     deliveryFee: isValidNumber(record.deliveryFee) ? record.deliveryFee : undefined,
     estado,
     createdAt: 0,
@@ -243,19 +271,6 @@ export async function PATCH(request: Request) {
           message: "tenantId, orderId y nextState válido son obligatorios.",
         },
         { status: 400 }
-      );
-    }
-
-    const tenantOrderFlow = await tenantOrderFlowConfigAgent(input.tenantId);
-
-    if (tenantOrderFlow.config.orderFlowMode !== "dashboard_managed") {
-      return NextResponse.json(
-        {
-          success: false,
-          message:
-            "Las actualizaciones de estado solo aplican para dashboard_managed.",
-        },
-        { status: 409 }
       );
     }
 

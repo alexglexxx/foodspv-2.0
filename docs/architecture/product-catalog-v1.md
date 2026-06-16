@@ -16,6 +16,14 @@ Filtros:
 - Webapp pública ignora productos con `active === false` o `deletedAt`.
 - Checkout/backend vuelve a validar contra catálogo y rechaza productos eliminados o no disponibles.
 
+## Product Actions
+
+Admin/superadmin soporta acciones completas sin tocar Firestore manualmente:
+- Editar: abre el formulario completo de producto.
+- Duplicar: crea una copia con nombre `Producto (Copia)` y conserva categoría, precio, `imageUrl`, `images[]`, opciones y estado.
+- Activar/desactivar: cambia `active`; si queda inactivo, también queda fuera de venta pública.
+- Eliminar: aplica soft delete y desaparece de admin/webapp sin borrar pedidos históricos.
+
 ## Image Handling: Legacy `imageUrl` vs `images[]`
 
 Modelo nuevo:

@@ -23,6 +23,16 @@ nombre:string;
 telefono:string;
 }
 
+export interface DeliveryAddressDetails {
+street:string;
+
+number:string;
+
+neighborhood:string;
+
+reference:string;
+}
+
 export interface Order {
 
 id:string;
@@ -42,6 +52,8 @@ total:number;
 deliveryType?:"pickup" | "delivery";
 
 deliveryAddress?:string;
+
+deliveryAddressDetails?:DeliveryAddressDetails;
 
 deliveryFee?:number;
 

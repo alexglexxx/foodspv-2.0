@@ -8,7 +8,9 @@ import { AppButton } from "@/components/ui/AppButton";
 import {
   createSuperAdminProduct,
   deleteSuperAdminProduct,
+  duplicateSuperAdminProduct,
   fetchSuperAdminTenantProducts,
+  setSuperAdminProductActive,
   updateSuperAdminProduct,
 } from "../services/superAdminApiService";
 import type {
@@ -76,6 +78,7 @@ export function ProductManager({
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [deletingProductId, setDeletingProductId] = useState<string | null>(null);
+  const [actionProductId, setActionProductId] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const isLoadingProductsRef = useRef<boolean>(false);
@@ -249,6 +252,83 @@ export function ProductManager({
     }
   }
 
+  async function handleDuplicateProduct(
+    product: SuperAdminProductSummary
+  ): Promise<void> {
+    if (actionProductId !== null || deletingProductRef.current !== null) {
+      return;
+    }
+
+    setActionProductId(product.productId);
+    setMessage(null);
+    setErrorMessage(null);
+
+    try {
+      const response = await duplicateSuperAdminProduct(
+        user,
+        tenantId,
+        product.productId
+      );
+
+      if (!response.success) {
+        setErrorMessage(response.message);
+        return;
+      }
+
+      setMessage(`Producto duplicado: ${response.product?.name ?? "copia creada"}.`);
+      await loadProducts();
+      await onProductsChanged();
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "No se pudo duplicar producto."
+      );
+    } finally {
+      setActionProductId(null);
+    }
+  }
+
+  async function handleToggleProductActive(
+    product: SuperAdminProductSummary
+  ): Promise<void> {
+    if (actionProductId !== null || deletingProductRef.current !== null) {
+      return;
+    }
+
+    const nextActive = !product.active;
+
+    setActionProductId(product.productId);
+    setMessage(null);
+    setErrorMessage(null);
+
+    try {
+      const response = await setSuperAdminProductActive(
+        user,
+        tenantId,
+        product.productId,
+        nextActive
+      );
+
+      if (!response.success) {
+        setErrorMessage(response.message);
+        return;
+      }
+
+      setMessage(nextActive ? "Producto activado." : "Producto desactivado.");
+      await loadProducts();
+      await onProductsChanged();
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "No se pudo cambiar el estado del producto."
+      );
+    } finally {
+      setActionProductId(null);
+    }
+  }
+
   return (
     <div>
       <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
@@ -349,15 +429,48 @@ export function ProductManager({
                   onClick={() => editProduct(product)}
                   variant="secondary"
                   size="sm"
-                  disabled={isSaving || deletingProductId !== null}
+                  disabled={
+                    isSaving ||
+                    deletingProductId !== null ||
+                    actionProductId !== null
+                  }
                 >
                   ✏️ Editar
                 </AppButton>
                 <AppButton
+                  onClick={() => void handleDuplicateProduct(product)}
+                  variant="secondary"
+                  size="sm"
+                  disabled={
+                    deletingProductId !== null ||
+                    (actionProductId !== null &&
+                      actionProductId !== product.productId)
+                  }
+                  loading={actionProductId === product.productId}
+                  loadingText="Copiando..."
+                >
+                  📄 Duplicar
+                </AppButton>
+                <AppButton
+                  onClick={() => void handleToggleProductActive(product)}
+                  variant="secondary"
+                  size="sm"
+                  disabled={
+                    deletingProductId !== null ||
+                    (actionProductId !== null &&
+                      actionProductId !== product.productId)
+                  }
+                  loading={actionProductId === product.productId}
+                  loadingText="Actualizando..."
+                >
+                  {product.active ? "👁 Desactivar" : "👁 Activar"}
+                </AppButton>
+                <AppButton
                   onClick={() => openDeleteProductModal(product)}
                   disabled={
-                    deletingProductId !== null &&
-                    deletingProductId !== product.productId
+                    actionProductId !== null ||
+                    (deletingProductId !== null &&
+                      deletingProductId !== product.productId)
                   }
                   loading={deletingProductId === product.productId}
                   loadingText="Eliminando..."

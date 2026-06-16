@@ -527,6 +527,98 @@ export async function updateSuperAdminTenantProduct(
   return product;
 }
 
+export async function duplicateSuperAdminTenantProduct(
+  tenantId: string,
+  productId: string
+): Promise<SuperAdminProductSummary> {
+  await ensureTenantExists(tenantId);
+
+  const sourceProductRef = adminDb
+    .collection("tenants")
+    .doc(tenantId)
+    .collection("products")
+    .doc(productId);
+  const sourceProductSnapshot = await sourceProductRef.get();
+
+  if (!sourceProductSnapshot.exists) {
+    throw new Error("PRODUCT_NOT_FOUND");
+  }
+
+  const sourceRecord = sourceProductSnapshot.data() as ProductRecord;
+
+  if (isDeletedProduct(sourceRecord)) {
+    throw new Error("PRODUCT_NOT_FOUND");
+  }
+
+  const sourceProduct = mapProductRecord(productId, sourceRecord);
+  const productRef = adminDb
+    .collection("tenants")
+    .doc(tenantId)
+    .collection("products")
+    .doc();
+
+  await productRef.set({
+    name: `${sourceProduct.name} (Copia)`,
+    description: sourceProduct.description,
+    price: sourceProduct.price,
+    category: sourceProduct.category,
+    imageUrl: sourceProduct.imageUrl,
+    images: sourceProduct.images ?? [],
+    active: sourceProduct.active,
+    available: sourceProduct.active ? sourceProduct.available : false,
+    options: sourceProduct.options,
+    createdAt: FieldValue.serverTimestamp(),
+    updatedAt: FieldValue.serverTimestamp(),
+  });
+
+  const product = await getSuperAdminTenantProduct(tenantId, productRef.id);
+
+  if (!product) {
+    throw new Error("PRODUCT_NOT_FOUND");
+  }
+
+  return product;
+}
+
+export async function setSuperAdminTenantProductActive(
+  tenantId: string,
+  productId: string,
+  active: boolean
+): Promise<SuperAdminProductSummary> {
+  await ensureTenantExists(tenantId);
+
+  const productRef = adminDb
+    .collection("tenants")
+    .doc(tenantId)
+    .collection("products")
+    .doc(productId);
+  const productSnapshot = await productRef.get();
+
+  if (!productSnapshot.exists) {
+    throw new Error("PRODUCT_NOT_FOUND");
+  }
+
+  const productRecord = productSnapshot.data() as ProductRecord;
+
+  if (isDeletedProduct(productRecord)) {
+    throw new Error("PRODUCT_NOT_FOUND");
+  }
+
+  await productRef.update({
+    active,
+    available: active,
+    updatedAt: FieldValue.serverTimestamp(),
+  });
+
+  const product = await getSuperAdminTenantProduct(tenantId, productId);
+
+  if (!product) {
+    throw new Error("PRODUCT_NOT_FOUND");
+  }
+
+  return product;
+}
+
 export async function deleteSuperAdminTenantProduct(
   tenantId: string,
   productId: string

@@ -140,6 +140,41 @@ export async function updateSuperAdminProduct(
   return (await response.json()) as SuperAdminProductMutationResponse;
 }
 
+export async function duplicateSuperAdminProduct(
+  user: User,
+  tenantId: string,
+  productId: string
+): Promise<SuperAdminProductMutationResponse> {
+  const response = await fetch(
+    `/api/superadmin/tenants/${tenantId}/products/${productId}`,
+    {
+      method: "POST",
+      headers: await getAuthorizationHeaders(user),
+      body: JSON.stringify({ action: "duplicate" }),
+    }
+  );
+
+  return (await response.json()) as SuperAdminProductMutationResponse;
+}
+
+export async function setSuperAdminProductActive(
+  user: User,
+  tenantId: string,
+  productId: string,
+  active: boolean
+): Promise<SuperAdminProductMutationResponse> {
+  const response = await fetch(
+    `/api/superadmin/tenants/${tenantId}/products/${productId}`,
+    {
+      method: "PATCH",
+      headers: await getAuthorizationHeaders(user),
+      body: JSON.stringify({ action: "set-active", active }),
+    }
+  );
+
+  return (await response.json()) as SuperAdminProductMutationResponse;
+}
+
 export async function deleteSuperAdminProduct(
   user: User,
   tenantId: string,

@@ -24,7 +24,7 @@ import { CustomerInfoModal } from "./CustomerInfoModal";
 import { ProductCard } from "./ProductCard";
 import { ProductOptionsModal } from "./ProductOptionsModal";
 import { createOrder } from "../services/orderService";
-import type { CustomerInfo, Order } from "../types/order";
+import type { CustomerInfo, DeliveryAddressDetails, Order } from "../types/order";
 
 interface OrderMenuClientProps {
   tenantId: string;
@@ -94,6 +94,13 @@ interface CustomerProfileLookupResponse {
   };
   message?: string;
 }
+
+const EMPTY_DELIVERY_ADDRESS_DETAILS: DeliveryAddressDetails = {
+  street: "",
+  number: "",
+  neighborhood: "",
+  reference: "",
+};
 
 const DEFAULT_PROFILE: RestaurantProfile = {
   name: "Menú del negocio",
@@ -585,6 +592,31 @@ function mapCartItemsToOrderItems(items: CartItem[]): Order["productos"] {
   }));
 }
 
+function formatDeliveryAddress(details: DeliveryAddressDetails): string {
+  return [
+    `${details.street.trim()} ${details.number.trim()}`.trim(),
+    details.neighborhood.trim(),
+    details.reference.trim(),
+  ]
+    .filter((part) => part.length > 0)
+    .join(", ");
+}
+
+function normalizeDeliveryAddressDetails(
+  details: DeliveryAddressDetails
+): DeliveryAddressDetails {
+  return {
+    street: details.street.trim(),
+    number: details.number.trim(),
+    neighborhood: details.neighborhood.trim(),
+    reference: details.reference.trim(),
+  };
+}
+
+function isCompleteDeliveryAddress(details: DeliveryAddressDetails): boolean {
+  return Object.values(details).every((value) => value.trim().length > 0);
+}
+
 function buildOrder(
   tenantId: string,
   tenantSlug: string,
@@ -592,15 +624,21 @@ function buildOrder(
   items: CartItem[],
   total: number,
   deliveryType: "pickup" | "delivery",
-  deliveryAddress: string,
+  deliveryAddressDetails: DeliveryAddressDetails | null,
   deliveryFee: number
 ): Order {
-  const normalizedDeliveryAddress = deliveryAddress.trim();
+  const normalizedDeliveryAddressDetails = deliveryAddressDetails
+    ? normalizeDeliveryAddressDetails(deliveryAddressDetails)
+    : null;
+  const normalizedDeliveryAddress = normalizedDeliveryAddressDetails
+    ? formatDeliveryAddress(normalizedDeliveryAddressDetails)
+    : "";
   const deliveryFields =
-    deliveryType === "delivery"
+    deliveryType === "delivery" && normalizedDeliveryAddressDetails
       ? {
           deliveryType,
           deliveryAddress: normalizedDeliveryAddress,
+          deliveryAddressDetails: normalizedDeliveryAddressDetails,
           deliveryFee,
         }
       : {
@@ -640,7 +678,9 @@ export function OrderMenuClient({ tenantId, tenantSlug }: OrderMenuClientProps) 
   const [deliveryType, setDeliveryType] = useState<"pickup" | "delivery">(
     "pickup"
   );
-  const [deliveryAddress, setDeliveryAddress] = useState<string>("");
+  const [, setDeliveryAddress] = useState<string>("");
+  const [deliveryAddressDetails, setDeliveryAddressDetails] =
+    useState<DeliveryAddressDetails>(EMPTY_DELIVERY_ADDRESS_DETAILS);
   const [storedCustomerCode, setStoredCustomerCode] = useState<string>("");
   const [storedCustomerProfile, setStoredCustomerProfile] =
     useState<StoredCustomerProfile | null>(null);
@@ -699,6 +739,7 @@ export function OrderMenuClient({ tenantId, tenantSlug }: OrderMenuClientProps) 
         if (!profile.deliveryEnabled) {
           setDeliveryType("pickup");
           setDeliveryAddress("");
+          setDeliveryAddressDetails(EMPTY_DELIVERY_ADDRESS_DETAILS);
         }
 
         setProducts(
@@ -806,8 +847,12 @@ export function OrderMenuClient({ tenantId, tenantSlug }: OrderMenuClientProps) 
   );
   const effectiveDeliveryType =
     deliveryEnabled && deliveryType === "delivery" ? "delivery" : "pickup";
+  const effectiveDeliveryAddressDetails =
+    effectiveDeliveryType === "delivery" ? deliveryAddressDetails : null;
   const effectiveDeliveryAddress =
-    effectiveDeliveryType === "delivery" ? deliveryAddress : "";
+    effectiveDeliveryAddressDetails !== null
+      ? formatDeliveryAddress(effectiveDeliveryAddressDetails)
+      : "";
   const deliveryFeeApplied =
     effectiveDeliveryType === "delivery" ? deliveryFee : 0;
   const total = subtotal + deliveryFeeApplied;
@@ -951,7 +996,8 @@ export function OrderMenuClient({ tenantId, tenantSlug }: OrderMenuClientProps) 
     try {
       if (
         effectiveDeliveryType === "delivery" &&
-        effectiveDeliveryAddress.trim().length === 0
+        (effectiveDeliveryAddressDetails === null ||
+          !isCompleteDeliveryAddress(effectiveDeliveryAddressDetails))
       ) {
         setSubmitError("Agrega la dirección para poder enviar tu pedido a domicilio.");
         return;
@@ -975,7 +1021,7 @@ export function OrderMenuClient({ tenantId, tenantSlug }: OrderMenuClientProps) 
         cartItems,
         total,
         effectiveDeliveryType,
-        effectiveDeliveryAddress,
+        effectiveDeliveryAddressDetails,
         deliveryFeeApplied
       );
       const result = await createOrder(order);
@@ -1225,6 +1271,9 @@ export function OrderMenuClient({ tenantId, tenantSlug }: OrderMenuClientProps) 
           deliveryMinimumOrder={restaurantProfile.deliveryMinimumOrder}
           deliveryNotes={restaurantProfile.deliveryNotes}
           deliveryAddress={effectiveDeliveryAddress}
+          deliveryAddressDetails={
+            effectiveDeliveryAddressDetails ?? EMPTY_DELIVERY_ADDRESS_DETAILS
+          }
           isSubmitting={isSubmitting}
           successMessage={successMessage}
           successOrderId={successOrderId}
@@ -1236,6 +1285,7 @@ export function OrderMenuClient({ tenantId, tenantSlug }: OrderMenuClientProps) 
           isLoadingCustomerProfile={isLoadingStoredCustomerProfile}
           onDeliveryTypeChange={setDeliveryType}
           onDeliveryAddressChange={setDeliveryAddress}
+          onDeliveryAddressDetailsChange={setDeliveryAddressDetails}
           onCustomerCodeChange={updateStoredCustomerCode}
           onForgetCustomerCode={forgetStoredCustomerCode}
           onClose={closeCustomerModal}

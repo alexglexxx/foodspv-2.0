@@ -4,7 +4,7 @@ import { useState, type FormEvent } from "react";
 
 import { AppButton } from "@/components/ui/AppButton";
 
-import type { CustomerInfo } from "../types/order";
+import type { CustomerInfo, DeliveryAddressDetails } from "../types/order";
 
 interface CustomerInfoModalProps {
   isOpen: boolean;
@@ -15,6 +15,7 @@ interface CustomerInfoModalProps {
   deliveryMinimumOrder: number;
   deliveryNotes: string;
   deliveryAddress: string;
+  deliveryAddressDetails: DeliveryAddressDetails;
   isSubmitting: boolean;
   successMessage: string | null;
   successOrderId: string | null;
@@ -26,6 +27,9 @@ interface CustomerInfoModalProps {
   isLoadingCustomerProfile: boolean;
   onDeliveryTypeChange: (deliveryType: "pickup" | "delivery") => void;
   onDeliveryAddressChange: (deliveryAddress: string) => void;
+  onDeliveryAddressDetailsChange: (
+    deliveryAddressDetails: DeliveryAddressDetails
+  ) => void;
   onCustomerCodeChange: (customerCode: string) => void;
   onForgetCustomerCode: () => void;
   onClose: () => void;
@@ -33,6 +37,7 @@ interface CustomerInfoModalProps {
 }
 
 type CustomerInfoErrors = Partial<Record<keyof CustomerInfo, string>>;
+type DeliveryAddressErrors = Partial<Record<keyof DeliveryAddressDetails, string>>;
 
 function formatCurrency(value: number): string {
   return new Intl.NumberFormat("es-MX", {
@@ -63,6 +68,40 @@ function validateCustomerInfo(customerInfo: CustomerInfo): CustomerInfoErrors {
   return errors;
 }
 
+function formatDeliveryAddress(details: DeliveryAddressDetails): string {
+  return [
+    `${details.street.trim()} ${details.number.trim()}`.trim(),
+    details.neighborhood.trim(),
+    details.reference.trim(),
+  ]
+    .filter((part) => part.length > 0)
+    .join(", ");
+}
+
+function validateDeliveryAddress(
+  details: DeliveryAddressDetails
+): DeliveryAddressErrors {
+  const errors: DeliveryAddressErrors = {};
+
+  if (details.street.trim().length === 0) {
+    errors.street = "Escribe la calle.";
+  }
+
+  if (details.number.trim().length === 0) {
+    errors.number = "Escribe el número.";
+  }
+
+  if (details.neighborhood.trim().length === 0) {
+    errors.neighborhood = "Escribe la colonia.";
+  }
+
+  if (details.reference.trim().length === 0) {
+    errors.reference = "Agrega una referencia.";
+  }
+
+  return errors;
+}
+
 function getCustomerFriendlyStatus(deliveryType: "pickup" | "delivery"): {
   title: string;
   body: string;
@@ -87,6 +126,7 @@ export function CustomerInfoModal({
   deliveryMinimumOrder,
   deliveryNotes,
   deliveryAddress,
+  deliveryAddressDetails,
   isSubmitting,
   successMessage,
   successOrderId,
@@ -98,6 +138,7 @@ export function CustomerInfoModal({
   isLoadingCustomerProfile,
   onDeliveryTypeChange,
   onDeliveryAddressChange,
+  onDeliveryAddressDetailsChange,
   onCustomerCodeChange,
   onForgetCustomerCode,
   onClose,
@@ -109,9 +150,8 @@ export function CustomerInfoModal({
     customerCode: initialCustomerCode,
   });
   const [errors, setErrors] = useState<CustomerInfoErrors>({});
-  const [deliveryAddressError, setDeliveryAddressError] = useState<string | null>(
-    null
-  );
+  const [deliveryAddressErrors, setDeliveryAddressErrors] =
+    useState<DeliveryAddressErrors>({});
 
   const customerStatus = successMessage
     ? getCustomerFriendlyStatus(deliveryType)
@@ -143,16 +183,32 @@ export function CustomerInfoModal({
     onDeliveryTypeChange(nextDeliveryType);
 
     if (nextDeliveryType === "pickup") {
-      setDeliveryAddressError(null);
+      setDeliveryAddressErrors({});
     }
   }
 
-  function updateDeliveryAddress(value: string): void {
-    onDeliveryAddressChange(value);
+  function updateDeliveryAddressField(
+    field: keyof DeliveryAddressDetails,
+    value: string
+  ): void {
+    const nextDetails = {
+      ...deliveryAddressDetails,
+      [field]: value,
+    };
 
-    if (deliveryAddressError) {
-      setDeliveryAddressError(null);
-    }
+    onDeliveryAddressDetailsChange(nextDetails);
+    onDeliveryAddressChange(formatDeliveryAddress(nextDetails));
+
+    setDeliveryAddressErrors((currentErrors) => {
+      if (!currentErrors[field]) {
+        return currentErrors;
+      }
+
+      return {
+        ...currentErrors,
+        [field]: undefined,
+      };
+    });
   }
 
   function forgetCustomerCode(): void {
@@ -177,22 +233,29 @@ export function CustomerInfoModal({
     };
 
     const validationErrors = validateCustomerInfo(normalizedCustomerInfo);
-    const normalizedDeliveryAddress = deliveryAddress.trim();
 
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
       return;
     }
 
-    if (deliveryType === "delivery" && normalizedDeliveryAddress.length === 0) {
-      setDeliveryAddressError(
-        "Agrega la dirección para poder enviar tu pedido a domicilio."
-      );
-      return;
-    }
-
     if (deliveryType === "delivery") {
+      const deliveryValidationErrors =
+        validateDeliveryAddress(deliveryAddressDetails);
+      const normalizedDeliveryAddress = formatDeliveryAddress(deliveryAddressDetails);
+
+      if (Object.keys(deliveryValidationErrors).length > 0) {
+        setDeliveryAddressErrors(deliveryValidationErrors);
+        return;
+      }
+
       onDeliveryAddressChange(normalizedDeliveryAddress);
+      onDeliveryAddressDetailsChange({
+        street: deliveryAddressDetails.street.trim(),
+        number: deliveryAddressDetails.number.trim(),
+        neighborhood: deliveryAddressDetails.neighborhood.trim(),
+        reference: deliveryAddressDetails.reference.trim(),
+      });
     }
 
     void onSubmit(normalizedCustomerInfo);
@@ -339,26 +402,50 @@ export function CustomerInfoModal({
                           : ""}
                       </p>
                     ) : null}
-                  <label className="mt-4 block">
-                    <span className="text-sm font-extrabold text-[var(--tenant-text)]">
-                      Dirección de entrega
-                    </span>
-                    <textarea
-                      name="deliveryAddress"
-                      value={deliveryAddress}
-                      onChange={(event) =>
-                        updateDeliveryAddress(event.target.value)
-                      }
-                      className="mt-2 min-h-24 w-full resize-none rounded-2xl border border-[var(--tenant-ring)] bg-[var(--tenant-background)] px-4 py-4 text-base font-semibold text-[var(--tenant-text)] outline-none transition placeholder:text-[var(--tenant-muted)] focus:border-[var(--tenant-primary)] focus:ring-4 focus:ring-[var(--tenant-primary)]/20"
-                      placeholder="Calle, número, colonia y referencias"
-                      autoComplete="street-address"
-                    />
-                    {deliveryAddressError ? (
-                      <span className="mt-2 block text-sm font-semibold text-rose-300">
-                        {deliveryAddressError}
-                      </span>
+                    <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                      <DeliveryField
+                        label="Calle"
+                        name="street"
+                        value={deliveryAddressDetails.street}
+                        error={deliveryAddressErrors.street}
+                        onChange={(value) =>
+                          updateDeliveryAddressField("street", value)
+                        }
+                      />
+                      <DeliveryField
+                        label="Número"
+                        name="number"
+                        value={deliveryAddressDetails.number}
+                        error={deliveryAddressErrors.number}
+                        onChange={(value) =>
+                          updateDeliveryAddressField("number", value)
+                        }
+                      />
+                      <DeliveryField
+                        label="Colonia"
+                        name="neighborhood"
+                        value={deliveryAddressDetails.neighborhood}
+                        error={deliveryAddressErrors.neighborhood}
+                        onChange={(value) =>
+                          updateDeliveryAddressField("neighborhood", value)
+                        }
+                      />
+                      <DeliveryField
+                        label="Referencia"
+                        name="reference"
+                        value={deliveryAddressDetails.reference}
+                        error={deliveryAddressErrors.reference}
+                        onChange={(value) =>
+                          updateDeliveryAddressField("reference", value)
+                        }
+                      />
+                    </div>
+
+                    {deliveryAddress.trim().length > 0 ? (
+                      <p className="mt-3 rounded-2xl bg-[var(--tenant-background)] px-4 py-3 text-sm font-semibold text-[var(--tenant-muted)] ring-1 ring-[var(--tenant-ring)]">
+                        {deliveryAddress}
+                      </p>
                     ) : null}
-                  </label>
                   </>
                 ) : (
                   <p className="mt-4 rounded-2xl bg-[var(--tenant-background)] px-4 py-3 text-sm font-semibold text-[var(--tenant-muted)] ring-1 ring-[var(--tenant-ring)]">
@@ -478,5 +565,40 @@ export function CustomerInfoModal({
         )}
       </div>
     </div>
+  );
+}
+
+function DeliveryField({
+  label,
+  name,
+  value,
+  error,
+  onChange,
+}: {
+  label: string;
+  name: keyof DeliveryAddressDetails;
+  value: string;
+  error?: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <label className="block">
+      <span className="text-sm font-extrabold text-[var(--tenant-text)]">
+        {label}
+      </span>
+      <input
+        type="text"
+        name={name}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="mt-2 w-full rounded-2xl border border-[var(--tenant-ring)] bg-[var(--tenant-background)] px-4 py-4 text-base font-semibold text-[var(--tenant-text)] outline-none transition placeholder:text-[var(--tenant-muted)] focus:border-[var(--tenant-primary)] focus:ring-4 focus:ring-[var(--tenant-primary)]/20"
+        autoComplete={name === "street" ? "address-line1" : "off"}
+      />
+      {error ? (
+        <span className="mt-2 block text-sm font-semibold text-rose-300">
+          {error}
+        </span>
+      ) : null}
+    </label>
   );
 }

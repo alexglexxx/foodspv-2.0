@@ -436,12 +436,22 @@ export async function POST(request: Request) {
       phone: catalogValidation.order.cliente.telefono,
       customerCode: catalogValidation.order.cliente.customerCode,
       address:
-        catalogValidation.order.deliveryType === "delivery" &&
-        catalogValidation.order.deliveryAddress
-          ? {
-              street: catalogValidation.order.deliveryAddress,
-            }
-          : undefined,
+        catalogValidation.order.deliveryType !== "delivery"
+          ? undefined
+          : catalogValidation.order.deliveryAddressDetails
+            ? {
+                street:
+                  `${catalogValidation.order.deliveryAddressDetails.street} ${catalogValidation.order.deliveryAddressDetails.number}`.trim(),
+                neighborhood:
+                  catalogValidation.order.deliveryAddressDetails.neighborhood,
+                references:
+                  catalogValidation.order.deliveryAddressDetails.reference,
+              }
+            : catalogValidation.order.deliveryAddress
+              ? {
+                  street: catalogValidation.order.deliveryAddress,
+                }
+              : undefined,
     });
     const orderWithCustomer: Order = {
       ...catalogValidation.order,

@@ -157,14 +157,45 @@ export function orderValidatorAgent(input: unknown): ValidationResult {
   }
 
   if (order.deliveryType === "delivery") {
+    const deliveryAddressDetails =
+      order.deliveryAddressDetails &&
+      typeof order.deliveryAddressDetails === "object"
+        ? order.deliveryAddressDetails
+        : null;
+    const legacyDeliveryAddress =
+      typeof order.deliveryAddress === "string" ? order.deliveryAddress.trim() : "";
+
     if (
-      !order.deliveryAddress ||
-      typeof order.deliveryAddress !== "string" ||
-      order.deliveryAddress.trim().length === 0
+      !deliveryAddressDetails ||
+      typeof deliveryAddressDetails.street !== "string" ||
+      deliveryAddressDetails.street.trim().length === 0 ||
+      typeof deliveryAddressDetails.number !== "string" ||
+      deliveryAddressDetails.number.trim().length === 0 ||
+      typeof deliveryAddressDetails.neighborhood !== "string" ||
+      deliveryAddressDetails.neighborhood.trim().length === 0 ||
+      typeof deliveryAddressDetails.reference !== "string" ||
+      deliveryAddressDetails.reference.trim().length === 0
     ) {
-      errors.push("Agrega la dirección para poder enviar tu pedido a domicilio.");
+      if (legacyDeliveryAddress.length === 0) {
+        errors.push(
+          "Agrega calle, número, colonia y referencia para enviar tu pedido a domicilio."
+        );
+      } else {
+        delete order.deliveryAddressDetails;
+        order.deliveryAddress = legacyDeliveryAddress;
+      }
     } else {
-      order.deliveryAddress = order.deliveryAddress.trim();
+      order.deliveryAddressDetails = {
+        street: deliveryAddressDetails.street.trim(),
+        number: deliveryAddressDetails.number.trim(),
+        neighborhood: deliveryAddressDetails.neighborhood.trim(),
+        reference: deliveryAddressDetails.reference.trim(),
+      };
+      order.deliveryAddress = [
+        `${order.deliveryAddressDetails.street} ${order.deliveryAddressDetails.number}`.trim(),
+        order.deliveryAddressDetails.neighborhood,
+        order.deliveryAddressDetails.reference,
+      ].join(", ");
     }
 
     if (
@@ -177,6 +208,7 @@ export function orderValidatorAgent(input: unknown): ValidationResult {
     }
   } else {
     delete order.deliveryAddress;
+    delete order.deliveryAddressDetails;
     delete order.deliveryFee;
   }
 

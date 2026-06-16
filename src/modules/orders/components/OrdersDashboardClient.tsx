@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   collection,
   doc,
@@ -19,7 +19,7 @@ import {
   getOrderStateLabel,
   isOrderState,
 } from "../agents/orderStateAgent";
-import type { Order, OrderState } from "../types/order";
+import type { DeliveryAddressDetails, Order, OrderState } from "../types/order";
 import type { SelectedProductOption } from "@/types/product.types";
 
 interface OrdersDashboardClientProps {
@@ -43,6 +43,7 @@ interface FirestoreOrderRecord {
   total?: unknown;
   deliveryType?: unknown;
   deliveryAddress?: unknown;
+  deliveryAddressDetails?: unknown;
   deliveryFee?: unknown;
   estado?: unknown;
   createdAt?: Timestamp | { toDate?: () => Date } | null;
@@ -56,6 +57,33 @@ type DashboardOrder = Order & {
   orderId: string;
   createdAtLabel: string | null;
 };
+
+const KANBAN_COLUMNS: Array<{
+  state: OrderState;
+  title: string;
+  description: string;
+}> = [
+  {
+    state: "pendiente",
+    title: "Pedidos Nuevos",
+    description: "Ordenes recien recibidas.",
+  },
+  {
+    state: "preparando",
+    title: "Pedidos Preparando",
+    description: "Cocina trabajando en estas ordenes.",
+  },
+  {
+    state: "listo",
+    title: "Pedidos Listos",
+    description: "Listos para entrega o recoleccion.",
+  },
+  {
+    state: "entregado",
+    title: "Pedidos Entregados",
+    description: "Cerrados por operacion.",
+  },
+];
 
 type UpdateOrderStatusResponse =
   | {
@@ -124,6 +152,30 @@ function mapSelectedOptions(value: unknown): SelectedProductOption[] {
       },
     ];
   });
+}
+
+function mapDeliveryAddressDetails(value: unknown): DeliveryAddressDetails | undefined {
+  if (!value || typeof value !== "object") {
+    return undefined;
+  }
+
+  const record = value as Record<string, unknown>;
+
+  if (
+    !isNonEmptyString(record.street) ||
+    !isNonEmptyString(record.number) ||
+    !isNonEmptyString(record.neighborhood) ||
+    !isNonEmptyString(record.reference)
+  ) {
+    return undefined;
+  }
+
+  return {
+    street: record.street.trim(),
+    number: record.number.trim(),
+    neighborhood: record.neighborhood.trim(),
+    reference: record.reference.trim(),
+  };
 }
 
 function isOrderFlowMode(value: unknown): value is OrderFlowMode {
@@ -199,6 +251,9 @@ function mapOrderDocument(
     deliveryAddress: isNonEmptyString(record.deliveryAddress)
       ? record.deliveryAddress.trim()
       : undefined,
+    deliveryAddressDetails: mapDeliveryAddressDetails(
+      record.deliveryAddressDetails
+    ),
     deliveryFee: isValidNumber(record.deliveryFee) ? record.deliveryFee : undefined,
     estado: record.estado,
     createdAt: createdAtDate ? createdAtDate.getTime() : 0,
@@ -376,7 +431,23 @@ export function OrdersDashboardClient({
     }
   }
 
-  const isDashboardManaged = tenantOrderFlowMode === "dashboard_managed";
+  const ordersByState = useMemo(() => {
+    const groups = new Map<OrderState, DashboardOrder[]>();
+
+    for (const column of KANBAN_COLUMNS) {
+      groups.set(column.state, []);
+    }
+
+    for (const order of orders) {
+      const columnState =
+        order.estado === "requires_confirmation" ? "pendiente" : order.estado;
+      const currentOrders = groups.get(columnState) ?? [];
+
+      groups.set(columnState, [...currentOrders, order]);
+    }
+
+    return groups;
+  }, [orders]);
 
   return (
     <div className="min-h-screen bg-[#f7f1e8] text-stone-900">
@@ -436,168 +507,202 @@ export function OrdersDashboardClient({
             </div>
           ) : null}
 
-          {!isLoading && !ordersErrorMessage && !isDashboardManaged ? (
-            <div className="mb-5 rounded-[2rem] border border-amber-200 bg-amber-50 p-6 text-sm text-amber-800 shadow-sm">
-              Este tenant está en modo `simple_whatsapp`. El dashboard muestra
-              el estado actual, pero no habilita cambios manuales todavía.
+          {!isLoading && !ordersErrorMessage && orders.length > 0 ? (
+            <div className="-mx-4 overflow-x-auto px-4 pb-4">
+              <div className="grid min-w-[960px] grid-cols-4 gap-4 xl:min-w-0">
+                {KANBAN_COLUMNS.map((column) => {
+                  const columnOrders = ordersByState.get(column.state) ?? [];
+
+                  return (
+                    <section
+                      key={column.state}
+                      className="flex min-h-[30rem] flex-col rounded-[1.5rem] border border-stone-200 bg-white/80 p-4 shadow-sm"
+                    >
+                      <div className="border-b border-stone-200 pb-3">
+                        <div className="flex items-center justify-between gap-3">
+                          <h3 className="text-base font-black text-stone-950">
+                            {column.title}
+                          </h3>
+                          <span className="rounded-full bg-stone-950 px-2.5 py-1 text-xs font-black text-white">
+                            {columnOrders.length}
+                          </span>
+                        </div>
+                        <p className="mt-1 text-xs font-semibold leading-5 text-stone-500">
+                          {column.description}
+                        </p>
+                      </div>
+
+                      <div className="mt-4 flex flex-1 flex-col gap-3">
+                        {columnOrders.length === 0 ? (
+                          <div className="rounded-2xl border border-dashed border-stone-300 bg-white px-4 py-5 text-sm font-semibold text-stone-400">
+                            Sin pedidos en esta columna.
+                          </div>
+                        ) : null}
+
+                        {columnOrders.map((order) => (
+                          <OrderKanbanCard
+                            key={order.orderId}
+                            order={order}
+                            isUpdating={
+                              updatingOrderIds[order.orderId] === true
+                            }
+                            errorMessage={orderActionErrors[order.orderId]}
+                            onStateChange={handleStateChange}
+                          />
+                        ))}
+                      </div>
+                    </section>
+                  );
+                })}
+              </div>
             </div>
           ) : null}
-
-          <div className="space-y-5">
-            {orders.map((order) => (
-              <article
-                key={order.orderId}
-                className="rounded-[2rem] border border-stone-200 bg-white p-6 shadow-sm"
-              >
-                <div className="flex flex-col gap-4 border-b border-stone-100 pb-4 sm:flex-row sm:items-start sm:justify-between">
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.24em] text-amber-700">
-                      Pedido
-                    </p>
-                    <h3 className="mt-2 text-2xl font-semibold text-stone-900">
-                      {order.orderId}
-                    </h3>
-                    <p className="mt-2 text-sm text-stone-600">
-                      {order.cliente.nombre} · {order.cliente.telefono}
-                    </p>
-                    <p className="mt-1 text-sm font-semibold text-stone-700">
-                      {order.deliveryType === "delivery"
-                        ? "Entrega a domicilio"
-                        : "Recoger pedido"}
-                    </p>
-                    {order.deliveryType === "delivery" &&
-                    order.deliveryAddress ? (
-                      <p className="mt-1 max-w-xl text-sm text-stone-600">
-                        Dirección: {order.deliveryAddress}
-                      </p>
-                    ) : null}
-                    {order.createdAtLabel ? (
-                      <p className="mt-1 text-sm text-stone-500">
-                        Creado: {order.createdAtLabel}
-                      </p>
-                    ) : (
-                      <p className="mt-1 text-sm text-stone-400">
-                        Creado: sin timestamp todavía
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="rounded-2xl bg-stone-950 px-4 py-3 text-white">
-                    <p className="text-xs uppercase tracking-[0.24em] text-amber-300">
-                      Estado
-                    </p>
-                    <div
-                      className={`mt-3 inline-flex rounded-full px-3 py-1 text-sm font-semibold ${getStatusBadgeClassName(
-                        order.estado
-                      )}`}
-                    >
-                      {getOrderStateLabel(order.estado)}
-                    </div>
-                    <p className="mt-3 text-2xl font-semibold">
-                      {formatCurrency(order.total)}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="mt-5">
-                  <p className="text-sm font-semibold text-stone-800">Productos</p>
-                  <ul className="mt-3 space-y-3">
-                    {order.productos.map((producto) => (
-                      <li
-                        key={`${order.orderId}-${producto.id}`}
-                        className="flex items-start justify-between gap-4 rounded-2xl bg-stone-50 px-4 py-3 text-sm"
-                      >
-                        <div>
-                          <p className="font-semibold text-stone-900">
-                            {producto.nombre}
-                          </p>
-                          <p className="mt-1 text-stone-500">
-                            {producto.cantidad} x {formatCurrency(producto.precio)}
-                          </p>
-                          {(producto.selectedOptions ?? []).length > 0 ? (
-                            <div className="mt-2 space-y-1 text-stone-500">
-                              {producto.selectedOptions?.map((option) => (
-                                <p key={option.optionId}>
-                                  {option.optionName}:{" "}
-                                  {option.valueLabels.join(", ")}
-                                </p>
-                              ))}
-                            </div>
-                          ) : null}
-                        </div>
-                        <p className="font-semibold text-stone-900">
-                          {formatCurrency(producto.cantidad * producto.precio)}
-                        </p>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                <div className="mt-5 border-t border-stone-100 pt-5">
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                      <p className="text-sm font-semibold text-stone-800">
-                        Acciones de estado
-                      </p>
-                      <p className="mt-1 text-sm text-stone-500">
-                        {isDashboardManaged
-                          ? "Solo se muestran las transiciones válidas para el estado actual."
-                          : "Las transiciones manuales se habilitan solo para tenants dashboard_managed."}
-                      </p>
-                    </div>
-
-                    <div className="flex flex-wrap gap-2">
-                      {isDashboardManaged ? (
-                        getAvailableOrderStateTransitions(order.estado).length > 0 ? (
-                          getAvailableOrderStateTransitions(order.estado).map(
-                            (nextState) => (
-                              <button
-                                key={`${order.orderId}-${nextState}`}
-                                type="button"
-                                onClick={() =>
-                                  void handleStateChange(order.orderId, nextState)
-                                }
-                                disabled={updatingOrderIds[order.orderId] === true}
-                                className="rounded-full border border-stone-300 bg-white px-4 py-2 text-sm font-semibold text-stone-800 transition hover:border-stone-950 hover:bg-stone-950 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
-                              >
-                                {nextState === "cancelado"
-                                  ? "Cancelar pedido"
-                                  : `Marcar como ${getOrderStateLabel(
-                                      nextState
-                                    ).toLowerCase()}`}
-                              </button>
-                            )
-                          )
-                        ) : (
-                          <span className="text-sm text-stone-500">
-                            Estado final sin acciones disponibles.
-                          </span>
-                        )
-                      ) : (
-                        <span className="text-sm text-stone-500">
-                          Acciones deshabilitadas para este modo.
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {updatingOrderIds[order.orderId] === true ? (
-                    <p className="mt-3 text-sm text-stone-500">
-                      Actualizando estado en Firestore...
-                    </p>
-                  ) : null}
-
-                  {orderActionErrors[order.orderId] ? (
-                    <p className="mt-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-                      {orderActionErrors[order.orderId]}
-                    </p>
-                  ) : null}
-                </div>
-              </article>
-            ))}
-          </div>
         </section>
       </main>
     </div>
+  );
+}
+
+function formatDeliveryLabel(order: DashboardOrder): string {
+  return order.deliveryType === "delivery"
+    ? "📍 Entrega a domicilio"
+    : "🏪 Recoger pedido";
+}
+
+function formatDeliveryAddress(order: DashboardOrder): string | null {
+  if (order.deliveryType !== "delivery") {
+    return null;
+  }
+
+  if (order.deliveryAddressDetails) {
+    return [
+      `Calle: ${order.deliveryAddressDetails.street}`,
+      `Numero: ${order.deliveryAddressDetails.number}`,
+      `Colonia: ${order.deliveryAddressDetails.neighborhood}`,
+      `Referencia: ${order.deliveryAddressDetails.reference}`,
+    ].join(" · ");
+  }
+
+  return order.deliveryAddress ?? null;
+}
+
+function OrderKanbanCard({
+  order,
+  isUpdating,
+  errorMessage,
+  onStateChange,
+}: {
+  order: DashboardOrder;
+  isUpdating: boolean;
+  errorMessage?: string | null;
+  onStateChange: (orderId: string, nextState: OrderState) => Promise<void>;
+}) {
+  const nextStates = getAvailableOrderStateTransitions(order.estado);
+  const deliveryAddress = formatDeliveryAddress(order);
+
+  return (
+    <article className="rounded-[1.25rem] border border-stone-200 bg-white p-4 shadow-sm">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="truncate text-xs font-black uppercase tracking-[0.18em] text-amber-700">
+            {order.orderId}
+          </p>
+          <h4 className="mt-2 text-base font-black text-stone-950">
+            {order.cliente.nombre}
+          </h4>
+          <p className="mt-1 text-xs font-semibold text-stone-500">
+            {order.cliente.telefono}
+          </p>
+        </div>
+        <span
+          className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-black ${getStatusBadgeClassName(
+            order.estado
+          )}`}
+        >
+          {getOrderStateLabel(order.estado)}
+        </span>
+      </div>
+
+      <div className="mt-3 grid gap-2 rounded-2xl bg-stone-50 p-3 text-xs font-semibold text-stone-600">
+        <p>{order.createdAtLabel ?? "Sin hora registrada"}</p>
+        <p>{formatDeliveryLabel(order)}</p>
+        {deliveryAddress ? <p className="leading-5">{deliveryAddress}</p> : null}
+      </div>
+
+      <div className="mt-3 flex items-center justify-between gap-3">
+        <span className="text-xs font-bold text-stone-500">Total</span>
+        <span className="text-lg font-black text-stone-950">
+          {formatCurrency(order.total)}
+        </span>
+      </div>
+
+      <div className="mt-3 border-t border-stone-100 pt-3">
+        <p className="text-xs font-black uppercase tracking-[0.16em] text-stone-500">
+          Productos
+        </p>
+        <ul className="mt-2 space-y-2">
+          {order.productos.map((producto) => (
+            <li
+              key={`${order.orderId}-${producto.id}`}
+              className="rounded-2xl bg-stone-50 px-3 py-2 text-xs"
+            >
+              <div className="flex items-start justify-between gap-2">
+                <p className="font-black text-stone-900">
+                  {producto.cantidad} x {producto.nombre}
+                </p>
+                <p className="shrink-0 font-bold text-stone-700">
+                  {formatCurrency(producto.cantidad * producto.precio)}
+                </p>
+              </div>
+              {(producto.selectedOptions ?? []).length > 0 ? (
+                <div className="mt-1 space-y-1 text-stone-500">
+                  {producto.selectedOptions?.map((option) => (
+                    <p key={option.optionId}>
+                      {option.optionName}: {option.valueLabels.join(", ")}
+                    </p>
+                  ))}
+                </div>
+              ) : null}
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      <div className="mt-3 border-t border-stone-100 pt-3">
+        {nextStates.length > 0 ? (
+          <div className="grid gap-2">
+            {nextStates.map((nextState) => (
+              <button
+                key={`${order.orderId}-${nextState}`}
+                type="button"
+                onClick={() => void onStateChange(order.orderId, nextState)}
+                disabled={isUpdating}
+                className="min-h-10 rounded-xl border border-stone-300 bg-white px-3 py-2 text-xs font-black text-stone-800 transition hover:border-stone-950 hover:bg-stone-950 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {nextState === "cancelado"
+                  ? "Cancelar"
+                  : `Mover a ${getOrderStateLabel(nextState)}`}
+              </button>
+            ))}
+          </div>
+        ) : (
+          <p className="text-xs font-semibold text-stone-400">
+            Estado final sin acciones.
+          </p>
+        )}
+
+        {isUpdating ? (
+          <p className="mt-2 text-xs font-semibold text-stone-500">
+            Actualizando...
+          </p>
+        ) : null}
+
+        {errorMessage ? (
+          <p className="mt-2 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700">
+            {errorMessage}
+          </p>
+        ) : null}
+      </div>
+    </article>
   );
 }

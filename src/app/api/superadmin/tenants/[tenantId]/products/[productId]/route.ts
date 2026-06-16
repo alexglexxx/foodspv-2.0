@@ -3,6 +3,8 @@ import { NextResponse } from "next/server";
 import { requireSuperAdminAuth } from "@/modules/superadmin/services/authService";
 import {
   deleteSuperAdminTenantProduct,
+  duplicateSuperAdminTenantProduct,
+  setSuperAdminTenantProductActive,
   updateSuperAdminTenantProduct,
   validateSuperAdminProductInput,
 } from "@/modules/superadmin/services/productService";
@@ -75,7 +77,36 @@ export async function PATCH(
   }
 
   try {
-    const validation = validateSuperAdminProductInput(await request.json());
+    const body = await request.json();
+
+    if (
+      body &&
+      typeof body === "object" &&
+      (body as { action?: unknown }).action === "set-active"
+    ) {
+      const active = (body as { active?: unknown }).active;
+
+      if (typeof active !== "boolean") {
+        return NextResponse.json(
+          {
+            success: false,
+            message: "active debe ser booleano.",
+          },
+          { status: 400 }
+        );
+      }
+
+      return NextResponse.json({
+        success: true,
+        product: await setSuperAdminTenantProductActive(
+          tenantId,
+          productId,
+          active
+        ),
+      });
+    }
+
+    const validation = validateSuperAdminProductInput(body);
 
     if (!validation.valid) {
       return NextResponse.json(
@@ -97,6 +128,80 @@ export async function PATCH(
     });
   } catch (error) {
     console.error("Error actualizando producto desde superadmin:", error);
+
+    const mutationError = getProductMutationError(error);
+
+    return NextResponse.json(
+      {
+        success: false,
+        message: mutationError.message,
+      },
+      { status: mutationError.status }
+    );
+  }
+}
+
+export async function POST(
+  request: Request,
+  context: RouteContext<"/api/superadmin/tenants/[tenantId]/products/[productId]">
+) {
+  const auth = await requireSuperAdminAuth(request);
+
+  if (!auth.authorized) {
+    return NextResponse.json(
+      { success: false, message: auth.message },
+      { status: auth.status }
+    );
+  }
+
+  const { tenantId, productId } = await context.params;
+
+  if (!isValidTenantId(tenantId)) {
+    return NextResponse.json(
+      {
+        success: false,
+        message: "tenantId inválido.",
+      },
+      { status: 400 }
+    );
+  }
+
+  if (!isValidProductId(productId)) {
+    return NextResponse.json(
+      {
+        success: false,
+        message: "productId inválido.",
+      },
+      { status: 400 }
+    );
+  }
+
+  try {
+    const body = await request.json();
+
+    if (
+      !body ||
+      typeof body !== "object" ||
+      (body as { action?: unknown }).action !== "duplicate"
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Acción de producto inválida.",
+        },
+        { status: 400 }
+      );
+    }
+
+    return NextResponse.json(
+      {
+        success: true,
+        product: await duplicateSuperAdminTenantProduct(tenantId, productId),
+      },
+      { status: 201 }
+    );
+  } catch (error) {
+    console.error("Error duplicando producto desde superadmin:", error);
 
     const mutationError = getProductMutationError(error);
 
