@@ -1,4 +1,5 @@
 import type { TenantCategory } from "@/modules/design/tenantDesignPresets";
+import type { TenantVisualPresetId } from "@/modules/design/tenantVisualPresets";
 
 export type {
   TenantTheme,
@@ -38,6 +39,7 @@ export interface Tenant {
   slug?: string;
   category?: TenantCategory;
   featuredCategory?: string;
+  visualPresetId?: TenantVisualPresetId;
   designPresetId?: string;
 
   description?: string;

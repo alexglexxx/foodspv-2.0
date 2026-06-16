@@ -1,7 +1,8 @@
+import type { TenantCategory } from "@/modules/design/tenantDesignPresets";
 import type {
-  TenantCategory,
-  TenantDesignPreset,
-} from "@/modules/design/tenantDesignPresets";
+  TenantVisualPreset,
+  TenantVisualPresetId,
+} from "@/modules/design/tenantVisualPresets";
 import type { ProductOption, ProductImage } from "@/types/product.types";
 
 export type SuperAdminTenantStatus = "active" | "inactive";
@@ -43,7 +44,7 @@ export interface SuperAdminTenantSummary {
   name: string;
   category: TenantCategory;
   featuredCategory: string;
-  designPresetId: string;
+  visualPresetId: TenantVisualPresetId;
   description: string;
   greeting: string;
   estimatedTime: string;
@@ -72,7 +73,7 @@ export interface SuperAdminTenantInput {
   name: string;
   category: TenantCategory;
   featuredCategory: string;
-  designPresetId: string;
+  visualPresetId: TenantVisualPresetId;
   description: string;
   greeting: string;
   estimatedTime: string;
@@ -136,7 +137,7 @@ export type SuperAdminTenantMutationResponse =
   | {
       success: true;
       tenant: SuperAdminTenantSummary | null;
-      availableDesignPresets?: TenantDesignPreset[];
+      availableVisualPresets?: TenantVisualPreset[];
     }
   | {
       success: false;
@@ -147,7 +148,7 @@ export type SuperAdminTenantResponse =
   | {
       success: true;
       tenant: SuperAdminTenantSummary;
-      availableDesignPresets: TenantDesignPreset[];
+      availableVisualPresets: TenantVisualPreset[];
     }
   | {
       success: false;

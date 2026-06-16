@@ -56,10 +56,13 @@ export async function updateSuperAdminTenant(
   tenantId: string,
   input: SuperAdminTenantInput
 ): Promise<SuperAdminTenantMutationResponse> {
+  const editableInput: Partial<SuperAdminTenantInput> = { ...input };
+  delete editableInput.tenantId;
+
   const response = await fetch(`/api/superadmin/tenants/${tenantId}`, {
     method: "PATCH",
     headers: await getAuthorizationHeaders(user),
-    body: JSON.stringify(input),
+    body: JSON.stringify(editableInput),
   });
 
   return (await response.json()) as SuperAdminTenantMutationResponse;

@@ -1,9 +1,11 @@
 import {
-  getDefaultPresetForCategory,
-  isValidPresetForCategory,
   normalizeTenantCategory,
   type TenantCategory,
 } from "@/modules/design/tenantDesignPresets";
+import {
+  isValidVisualPresetId,
+  type TenantVisualPresetId,
+} from "@/modules/design/tenantVisualPresets";
 import type { OrderFlowMode } from "@/types/tenant.types";
 
 export interface TenantDeliveryConfig {
@@ -13,8 +15,15 @@ export interface TenantDeliveryConfig {
   notes?: string;
 }
 
+export interface TenantOrderConfirmationPolicy {
+  enabled: boolean;
+  amountThreshold: number;
+  action: "allow" | "require_manual_confirmation";
+}
+
 export interface TenantEditableState {
   category?: unknown;
+  visualPresetId?: unknown;
   designPresetId?: unknown;
   deliveryConfig?: unknown;
   deliveryEnabled?: unknown;
@@ -27,6 +36,8 @@ export interface TenantUpdateInput {
   featuredCategory?: string;
   description?: string;
   greeting?: string;
+  rating?: string;
+  reviews?: string;
   estimatedTime?: string;
   location?: string;
   heroImageUrl?: string;
@@ -37,7 +48,8 @@ export interface TenantUpdateInput {
   status?: "active" | "inactive";
   orderFlowMode?: OrderFlowMode;
   estimatedPreparationMinutes?: number;
-  designPresetId?: string;
+  orderConfirmationPolicy?: TenantOrderConfirmationPolicy;
+  visualPresetId?: TenantVisualPresetId;
   deliveryConfig?: TenantDeliveryConfig;
   deliveryEnabled?: boolean;
   deliveryFee?: number;
@@ -71,6 +83,8 @@ const ALLOWED_FIELDS = new Set([
   "featuredCategory",
   "description",
   "greeting",
+  "rating",
+  "reviews",
   "estimatedTime",
   "location",
   "heroImageUrl",
@@ -81,7 +95,8 @@ const ALLOWED_FIELDS = new Set([
   "status",
   "orderFlowMode",
   "estimatedPreparationMinutes",
-  "designPresetId",
+  "orderConfirmationPolicy",
+  "visualPresetId",
   "deliveryConfig",
   "deliveryEnabled",
   "deliveryFee",
@@ -304,6 +319,53 @@ function normalizeDeliveryConfig(
   };
 }
 
+function normalizeOrderConfirmationPolicy(
+  value: unknown
+):
+  | { valid: true; value: TenantOrderConfirmationPolicy }
+  | { valid: false; message: string } {
+  if (!isRecord(value)) {
+    return {
+      valid: false,
+      message: "Política de confirmación inválida.",
+    };
+  }
+
+  if (typeof value.enabled !== "boolean") {
+    return {
+      valid: false,
+      message: "Pedidos grandes requiere enabled booleano.",
+    };
+  }
+
+  const amountThreshold = normalizeNumber(value.amountThreshold, "Monto desde", {
+    min: 1,
+    max: 100000,
+  });
+
+  if (!amountThreshold.valid) {
+    return amountThreshold;
+  }
+
+  const action = value.enabled ? "require_manual_confirmation" : "allow";
+
+  if (value.action !== undefined && value.action !== action) {
+    return {
+      valid: false,
+      message: "Acción de confirmación inválida.",
+    };
+  }
+
+  return {
+    valid: true,
+    value: {
+      enabled: value.enabled,
+      amountThreshold: amountThreshold.value,
+      action,
+    },
+  };
+}
+
 function hasDangerousField(record: Record<string, unknown>): string | null {
   return Object.keys(record).find((key) => DANGEROUS_FIELDS.has(key)) ?? null;
 }
@@ -314,16 +376,6 @@ function hasUnknownField(record: Record<string, unknown>): string | null {
 
 function getCurrentCategory(currentTenant: TenantEditableState): TenantCategory {
   return normalizeTenantCategory(currentTenant.category);
-}
-
-function getCurrentDesignPresetId(
-  currentTenant: TenantEditableState,
-  category: TenantCategory
-): string {
-  return typeof currentTenant.designPresetId === "string" &&
-    isValidPresetForCategory(category, currentTenant.designPresetId)
-    ? currentTenant.designPresetId
-    : getDefaultPresetForCategory(category).id;
 }
 
 export function validateTenantUpdateInput(
@@ -417,6 +469,32 @@ export function validateTenantUpdateInput(
     }
 
     updates.greeting = result.value;
+  }
+
+  if (value.rating !== undefined) {
+    const result = normalizeString(value.rating, "Rating", {
+      max: 10,
+      optionalEmpty: true,
+    });
+
+    if (!result.valid) {
+      return result;
+    }
+
+    updates.rating = result.value;
+  }
+
+  if (value.reviews !== undefined) {
+    const result = normalizeString(value.reviews, "Reviews", {
+      max: 20,
+      optionalEmpty: true,
+    });
+
+    if (!result.valid) {
+      return result;
+    }
+
+    updates.reviews = result.value;
   }
 
   if (value.estimatedTime !== undefined) {
@@ -545,27 +623,27 @@ export function validateTenantUpdateInput(
     updates.estimatedPreparationMinutes = result.value;
   }
 
-  if (value.designPresetId !== undefined) {
-    const result = normalizeString(value.designPresetId, "Preset de diseño", {
-      min: 2,
-      max: 80,
-    });
+  if (value.orderConfirmationPolicy !== undefined) {
+    const result = normalizeOrderConfirmationPolicy(
+      value.orderConfirmationPolicy
+    );
 
     if (!result.valid) {
       return result;
     }
 
-    if (!isValidPresetForCategory(nextCategory, result.value)) {
+    updates.orderConfirmationPolicy = result.value;
+  }
+
+  if (value.visualPresetId !== undefined) {
+    if (!isValidVisualPresetId(value.visualPresetId)) {
       return {
         valid: false,
-        message: "El preset de diseño no existe para esa categoría.",
+        message: "Preset visual inválido.",
       };
     }
 
-    updates.designPresetId = result.value;
-  } else if (value.category !== undefined) {
-    const currentPresetId = getCurrentDesignPresetId(currentTenant, nextCategory);
-    updates.designPresetId = currentPresetId;
+    updates.visualPresetId = value.visualPresetId;
   }
 
   if (value.deliveryConfig !== undefined) {

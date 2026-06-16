@@ -4,13 +4,15 @@ import { useState, type FormEvent } from "react";
 
 import { AppButton } from "@/components/ui/AppButton";
 import {
-  DESIGN_PRESETS_BY_CATEGORY,
   TENANT_CATEGORY_OPTIONS,
-  getPresetForTenant,
   normalizeTenantCategory,
   type TenantCategory,
-  type TenantDesignPreset,
 } from "@/modules/design/tenantDesignPresets";
+import {
+  VISUAL_PRESETS,
+  getVisualPreset,
+  type TenantVisualPreset,
+} from "@/modules/design/tenantVisualPresets";
 
 import type {
   SuperAdminOrderFlowMode,
@@ -52,7 +54,6 @@ export function TenantFormSection({
 
   function updateCategory(value: string): void {
     const category = normalizeTenantCategory(value);
-    const currentPreset = getPresetForTenant(category, form.designPresetId);
 
     onChange({
       ...form,
@@ -61,7 +62,6 @@ export function TenantFormSection({
         form.featuredCategory.trim().length > 0
           ? form.featuredCategory
           : getCategoryLabel(category),
-      designPresetId: currentPreset.id,
     });
   }
 
@@ -157,20 +157,14 @@ export function TenantFormSection({
     });
   }
 
-  function selectDesignPreset(preset: TenantDesignPreset): void {
+  function selectVisualPreset(preset: TenantVisualPreset): void {
     onChange({
       ...form,
-      category: preset.category,
-      designPresetId: preset.id,
+      visualPresetId: preset.id,
     });
   }
 
-  const selectedCategory = normalizeTenantCategory(form.category);
-  const categoryPresets = DESIGN_PRESETS_BY_CATEGORY[selectedCategory];
-  const selectedPreset = getPresetForTenant(
-    selectedCategory,
-    form.designPresetId
-  );
+  const selectedPreset = getVisualPreset(form.visualPresetId);
 
   return (
     <form onSubmit={onSubmit}>
@@ -335,23 +329,23 @@ export function TenantFormSection({
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <h3 className="text-lg font-black text-stone-950">
-                Diseño visual
+                Apariencia visual
               </h3>
               <p className="mt-1 text-sm font-semibold leading-6 text-stone-600">
-                El tenant guarda solo el preset seleccionado para su categoría.
+                El tenant guarda solo uno de tres estilos premium globales.
               </p>
             </div>
             <span className="rounded-full bg-white px-3 py-1.5 text-xs font-black text-orange-800 ring-1 ring-orange-100">
-              {getCategoryLabel(selectedCategory)}
+              {selectedPreset.name}
             </span>
           </div>
           <div className="mt-4 grid gap-3 md:grid-cols-3">
-            {categoryPresets.map((preset) => (
-              <PresetCard
+            {VISUAL_PRESETS.map((preset) => (
+              <VisualPresetCard
                 key={preset.id}
                 preset={preset}
                 selected={preset.id === selectedPreset.id}
-                onSelect={() => selectDesignPreset(preset)}
+                onSelect={() => selectVisualPreset(preset)}
               />
             ))}
           </div>
@@ -606,24 +600,12 @@ function getCategoryLabel(category: TenantCategory): string {
   );
 }
 
-function getPresetRadiusClass(radius: TenantDesignPreset["borderRadius"]): string {
-  if (radius === "large") {
-    return "1.5rem";
-  }
-
-  if (radius === "medium") {
-    return "1rem";
-  }
-
-  return "0.75rem";
-}
-
-function PresetCard({
+function VisualPresetCard({
   preset,
   selected,
   onSelect,
 }: {
-  preset: TenantDesignPreset;
+  preset: TenantVisualPreset;
   selected: boolean;
   onSelect: () => void;
 }) {
@@ -632,7 +614,7 @@ function PresetCard({
       type="button"
       onClick={onSelect}
       className={[
-        "rounded-2xl border bg-white p-3 text-left shadow-sm transition",
+        "flex h-full flex-col rounded-2xl border bg-white p-3 text-left shadow-sm transition",
         "hover:-translate-y-0.5 hover:border-orange-300 hover:shadow-md",
         selected
           ? "border-orange-500 ring-4 ring-orange-100"
@@ -643,36 +625,48 @@ function PresetCard({
       <div
         className="overflow-hidden rounded-xl p-3"
         style={{
-          backgroundColor: preset.backgroundColor,
-          color: preset.textColor,
-          borderRadius: getPresetRadiusClass(preset.borderRadius),
+          backgroundColor: preset.colors.background,
+          color: preset.colors.text,
+          border: `1px solid ${preset.colors.border}`,
+          borderRadius: preset.layout.radius,
         }}
       >
         <div
           className="rounded-lg p-3"
           style={{
-            backgroundColor: preset.cardColor,
-            border: `1px solid ${preset.secondaryColor}`,
+            backgroundColor: preset.colors.card,
+            border: `1px solid ${preset.colors.border}`,
+            boxShadow: preset.layout.cardShadow,
           }}
         >
           <div className="flex items-center gap-2">
             <span
               className="h-8 w-8 rounded-full"
-              style={{ backgroundColor: preset.primaryColor }}
+              style={{ backgroundColor: preset.colors.primary }}
               aria-hidden="true"
             />
             <div className="min-w-0">
               <p className="truncate text-sm font-black">{preset.name}</p>
-              <p className="text-[11px] font-bold opacity-70">
-                {preset.fontMood}
+              <p
+                className="truncate text-[11px] font-bold"
+                style={{ color: preset.colors.mutedText }}
+              >
+                {preset.tagline}
               </p>
             </div>
           </div>
           <div
+            className="mt-3 h-14 rounded-lg bg-cover bg-center"
+            style={{
+              backgroundImage: `${preset.colors.heroOverlay}, url(https://images.unsplash.com/photo-1504674900247-0877df9cc836?q=80&w=800&auto=format&fit=crop)`,
+            }}
+            aria-hidden="true"
+          />
+          <div
             className="mt-3 rounded-full px-3 py-2 text-center text-xs font-black"
             style={{
-              backgroundColor: preset.primaryColor,
-              color: preset.buttonTextColor,
+              backgroundColor: preset.colors.primary,
+              color: preset.colors.buttonText,
             }}
           >
             Agregar
@@ -680,24 +674,40 @@ function PresetCard({
         </div>
       </div>
       <div className="mt-3 flex gap-2">
-        {[preset.primaryColor, preset.secondaryColor, preset.accentColor].map(
-          (color) => (
+        {[
+          preset.colors.primary,
+          preset.colors.secondary,
+          preset.colors.accent,
+          preset.colors.background,
+        ].map((color) => (
             <span
               key={color}
               className="h-5 w-5 rounded-full ring-1 ring-stone-200"
               style={{ backgroundColor: color }}
               aria-hidden="true"
             />
-          )
-        )}
+          ))}
       </div>
       <p className="mt-3 text-sm font-black text-stone-950">{preset.name}</p>
+      <p className="mt-1 text-xs font-black text-orange-700">
+        {preset.tagline}
+      </p>
       {selected ? (
-        <p className="mt-1 text-xs font-black text-orange-700">Seleccionado</p>
+        <p className="mt-1 text-xs font-black text-emerald-700">Seleccionado</p>
       ) : null}
-      <p className="mt-1 line-clamp-2 text-xs font-semibold leading-5 text-stone-600">
+      <p className="mt-1 line-clamp-3 text-xs font-semibold leading-5 text-stone-600">
         {preset.description}
       </p>
+      <span
+        className={[
+          "mt-auto inline-flex min-h-10 items-center justify-center rounded-full px-3 py-2 text-xs font-black",
+          selected
+            ? "bg-orange-600 text-white"
+            : "bg-stone-100 text-stone-800",
+        ].join(" ")}
+      >
+        {selected ? "Diseño seleccionado" : "Seleccionar diseño"}
+      </span>
     </button>
   );
 }

@@ -6,11 +6,12 @@ import QRCode from "qrcode";
 import { adminDb } from "@/lib/firebase-admin";
 import {
   DESIGN_PRESETS_BY_CATEGORY,
-  getDefaultPresetForCategory,
-  getPresetForTenant,
-  isValidPresetForCategory,
   normalizeTenantCategory,
 } from "@/modules/design/tenantDesignPresets";
+import {
+  getVisualPreset,
+  isValidVisualPresetId,
+} from "@/modules/design/tenantVisualPresets";
 import type { TenantUpdateInput } from "@/modules/tenants/tenantUpdateValidator";
 import type {
   SuperAdminDeliveryConfig,
@@ -30,6 +31,7 @@ interface TenantRecord {
   name?: unknown;
   category?: unknown;
   featuredCategory?: unknown;
+  visualPresetId?: unknown;
   designPresetId?: unknown;
   description?: unknown;
   greeting?: unknown;
@@ -80,7 +82,7 @@ const DEFAULT_TENANT_INPUT: SuperAdminTenantInput = {
   name: "",
   category: "generico",
   featuredCategory: "Generico",
-  designPresetId: getDefaultPresetForCategory("generico").id,
+  visualPresetId: "fresh",
   description: "",
   greeting: "",
   estimatedTime: "15–20 min",
@@ -278,9 +280,10 @@ function mapTenantRecord(
   stats: SuperAdminTenantStats
 ): SuperAdminTenantSummary {
   const category = normalizeTenantCategory(record.category);
-  const designPreset = getPresetForTenant(
-    category,
-    toStringValue(record.designPresetId, "")
+  const visualPreset = getVisualPreset(
+    isValidVisualPresetId(record.visualPresetId)
+      ? record.visualPresetId
+      : undefined
   );
   const deliveryConfig = normalizeDeliveryConfig(record.deliveryConfig, {
     enabled: record.deliveryEnabled,
@@ -294,7 +297,7 @@ function mapTenantRecord(
     name: toStringValue(record.name, "Negocio sin nombre"),
     category,
     featuredCategory: toStringValue(record.featuredCategory, category),
-    designPresetId: designPreset.id,
+    visualPresetId: visualPreset.id,
     description: toStringValue(record.description, ""),
     greeting: toStringValue(record.greeting, ""),
     estimatedTime: toStringValue(
@@ -400,7 +403,7 @@ export function validateSuperAdminTenantInput(
   const name = toStringValue(record.name, "");
   const category = normalizeTenantCategory(record.category);
   const featuredCategory = toStringValue(record.featuredCategory, category);
-  const designPresetId = toStringValue(record.designPresetId, "");
+  const visualPresetId = record.visualPresetId ?? "fresh";
   const estimatedPreparationMinutes = toPreparationMinutes(
     record.estimatedPreparationMinutes
   );
@@ -420,11 +423,6 @@ export function validateSuperAdminTenantInput(
     minimumOrder: record.deliveryMinimumOrder,
     notes: record.deliveryNotes,
   });
-  const resolvedDesignPresetId =
-    designPresetId.length > 0
-      ? designPresetId
-      : getDefaultPresetForCategory(category).id;
-
   if (name.length < 3 || name.length > 80) {
     return {
       valid: false,
@@ -439,10 +437,10 @@ export function validateSuperAdminTenantInput(
     };
   }
 
-  if (!isValidPresetForCategory(category, resolvedDesignPresetId)) {
+  if (!isValidVisualPresetId(visualPresetId)) {
     return {
       valid: false,
-      message: "El preset de diseño no existe para esa categoría.",
+      message: "Selecciona un preset visual válido.",
     };
   }
 
@@ -482,7 +480,7 @@ export function validateSuperAdminTenantInput(
       name,
       category,
       featuredCategory,
-      designPresetId: resolvedDesignPresetId,
+      visualPresetId,
       description: toStringValue(record.description, ""),
       greeting: toStringValue(record.greeting, ""),
       estimatedTime: toStringValue(
@@ -613,8 +611,7 @@ export async function updateSuperAdminTenant(
     deliveryConfig: input.deliveryConfig,
     deliveryEnabled: input.deliveryConfig.enabled,
     deliveryFee: input.deliveryConfig.enabled ? input.deliveryConfig.fee ?? 0 : 0,
-    designPresetId: input.designPresetId,
-    tenantTheme: FieldValue.delete(),
+    visualPresetId: input.visualPresetId,
     updatedAt: FieldValue.serverTimestamp(),
   });
 
@@ -649,6 +646,8 @@ export async function updateSuperAdminTenantPartial(
   }
   if (input.description !== undefined) updatePayload.description = input.description;
   if (input.greeting !== undefined) updatePayload.greeting = input.greeting;
+  if (input.rating !== undefined) updatePayload.rating = input.rating;
+  if (input.reviews !== undefined) updatePayload.reviews = input.reviews;
   if (input.estimatedTime !== undefined) {
     updatePayload.estimatedTime = input.estimatedTime;
   }
@@ -674,9 +673,11 @@ export async function updateSuperAdminTenantPartial(
     updatePayload.estimatedPreparationMinutes =
       input.estimatedPreparationMinutes;
   }
-  if (input.designPresetId !== undefined) {
-    updatePayload.designPresetId = input.designPresetId;
-    updatePayload.tenantTheme = FieldValue.delete();
+  if (input.orderConfirmationPolicy !== undefined) {
+    updatePayload.orderConfirmationPolicy = input.orderConfirmationPolicy;
+  }
+  if (input.visualPresetId !== undefined) {
+    updatePayload.visualPresetId = input.visualPresetId;
   }
   if (input.deliveryConfig !== undefined) {
     updatePayload.deliveryConfig = input.deliveryConfig;

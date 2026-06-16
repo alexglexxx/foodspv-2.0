@@ -6,7 +6,7 @@ import {
   getSuperAdminTenant,
   updateSuperAdminTenantPartial,
 } from "@/modules/superadmin/services/tenantService";
-import { DESIGN_PRESETS_BY_CATEGORY } from "@/modules/design/tenantDesignPresets";
+import { VISUAL_PRESETS } from "@/modules/design/tenantVisualPresets";
 import { validateTenantUpdateInput } from "@/modules/tenants/tenantUpdateValidator";
 
 function isValidTenantId(value: string): boolean {
@@ -82,7 +82,7 @@ export async function PATCH(
     return NextResponse.json({
       success: true,
       tenant,
-      availableDesignPresets: DESIGN_PRESETS_BY_CATEGORY[tenant.category],
+      availableVisualPresets: VISUAL_PRESETS,
     });
   } catch (error) {
     console.error("Error actualizando tenant desde superadmin:", error);
@@ -140,7 +140,7 @@ export async function GET(
     return NextResponse.json({
       success: true,
       tenant,
-      availableDesignPresets: DESIGN_PRESETS_BY_CATEGORY[tenant.category],
+      availableVisualPresets: VISUAL_PRESETS,
     });
   } catch (error) {
     console.error("Error cargando tenant desde superadmin:", error);

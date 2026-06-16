@@ -1,6 +1,8 @@
 # Tenant design presets
 
-FoodSPV usa presets visuales por categoria en vez de permitir edicion libre de colores.
+> Legacy/deprecated: este documento describe el sistema anterior de `designPresetId` por categoria. La arquitectura activa esta en `docs/architecture/tenant-visual-presets.md` y usa `visualPresetId` con tres presets globales.
+
+FoodSPV usaba presets visuales por categoria en vez de permitir edicion libre de colores.
 
 La decision evita combinaciones con bajo contraste, marcas visualmente inconsistentes y configuraciones dificiles de soportar desde superadmin. El tenant guarda solo `category` y `designPresetId`; los colores reales viven en `src/modules/design/tenantDesignPresets.ts`.
 

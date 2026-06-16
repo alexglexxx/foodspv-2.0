@@ -6,9 +6,9 @@ import { collection, doc, getDoc, getDocs, query } from "firebase/firestore";
 import { AppButton } from "@/components/ui/AppButton";
 import { db } from "@/lib/firebase/client";
 import {
-  getPresetForTenant,
-  type TenantDesignPreset,
-} from "@/modules/design/tenantDesignPresets";
+  getVisualPreset,
+  type TenantVisualPreset,
+} from "@/modules/design/tenantVisualPresets";
 import type { CartItem } from "@/types/cart.types";
 import type {
   Product,
@@ -45,7 +45,7 @@ interface RestaurantProfile {
   deliveryFee: number;
   deliveryMinimumOrder: number;
   deliveryNotes: string;
-  designPreset: TenantDesignPreset;
+  visualPreset: TenantVisualPreset;
 }
 
 interface FirestoreTenantRecord {
@@ -59,7 +59,7 @@ interface FirestoreTenantRecord {
   heroImageUrl?: unknown;
   featuredCategory?: unknown;
   category?: unknown;
-  designPresetId?: unknown;
+  visualPresetId?: unknown;
   deliveryConfig?: unknown;
   deliveryEnabled?: unknown;
   deliveryFee?: unknown;
@@ -117,7 +117,7 @@ const DEFAULT_PROFILE: RestaurantProfile = {
   deliveryNotes: "",
   heroImageUrl:
     "https://images.unsplash.com/photo-1504674900247-0877df9cc836?q=80&w=1400&auto=format&fit=crop",
-  designPreset: getPresetForTenant("generico", null),
+  visualPreset: getVisualPreset(),
 };
 
 const CATEGORY_ICONS: Record<string, string> = {
@@ -360,52 +360,44 @@ function normalizeProductOptions(value: unknown): ProductOption[] {
   });
 }
 
-function getTypographyClassName(fontMood: TenantDesignPreset["fontMood"]): string {
-  if (fontMood === "modern") {
+function getTenantPresetClassName(preset: TenantVisualPreset): string {
+  if (preset.layout.density === "spacious") {
+    return "font-sans tracking-normal";
+  }
+
+  if (preset.layout.heroStyle === "cinematic") {
     return "font-sans";
   }
 
-  if (fontMood === "premium") {
-    return "font-semibold";
-  }
-
-  if (fontMood === "warm") {
-    return "font-medium";
-  }
-
-  return "font-black";
+  return "font-sans";
 }
 
-function getRadiusValue(radius: TenantDesignPreset["borderRadius"]): string {
-  if (radius === "large") {
-    return "1.5rem";
-  }
-
-  if (radius === "medium") {
-    return "1rem";
-  }
-
-  return "0.75rem";
+function getPrimaryHoverColor(preset: TenantVisualPreset): string {
+  return preset.id === "modern"
+    ? preset.colors.secondary
+    : preset.colors.accent;
 }
 
-function getTenantDesignStyle(preset: TenantDesignPreset): CSSProperties {
+function getTenantDesignStyle(preset: TenantVisualPreset): CSSProperties {
   return {
-    "--tenant-primary": preset.primaryColor,
-    "--tenant-primary-hover": preset.accentColor,
-    "--tenant-secondary": preset.secondaryColor,
-    "--tenant-accent": preset.accentColor,
-    "--tenant-bg": preset.backgroundColor,
-    "--tenant-background": preset.backgroundColor,
-    "--tenant-surface": preset.surfaceColor,
-    "--tenant-card": preset.cardColor,
-    "--tenant-text": preset.textColor,
-    "--tenant-button-text": preset.buttonTextColor,
-    "--tenant-radius": getRadiusValue(preset.borderRadius),
-    "--tenant-hero-overlay": preset.heroOverlay,
-    "--tenant-text-soft": preset.textColor,
-    "--tenant-muted": preset.mutedTextColor,
-    "--tenant-subtle": preset.cardColor,
-    "--tenant-ring": preset.secondaryColor,
+    "--tenant-primary": preset.colors.primary,
+    "--tenant-primary-hover": getPrimaryHoverColor(preset),
+    "--tenant-secondary": preset.colors.secondary,
+    "--tenant-accent": preset.colors.accent,
+    "--tenant-bg": preset.colors.background,
+    "--tenant-background": preset.colors.background,
+    "--tenant-surface": preset.colors.surface,
+    "--tenant-card": preset.colors.card,
+    "--tenant-text": preset.colors.text,
+    "--tenant-muted": preset.colors.mutedText,
+    "--tenant-button-text": preset.colors.buttonText,
+    "--tenant-border": preset.colors.border,
+    "--tenant-hero-overlay": preset.colors.heroOverlay,
+    "--tenant-radius": preset.layout.radius,
+    "--tenant-card-shadow": preset.layout.cardShadow,
+    "--tenant-text-soft": preset.colors.text,
+    "--tenant-subtle": preset.colors.card,
+    "--tenant-ring": preset.colors.border,
   } as CSSProperties;
 }
 
@@ -483,9 +475,7 @@ function mapTenantProfile(record: FirestoreTenantRecord | undefined): Restaurant
     toOptionalString(record?.featuredCategory) ??
     toOptionalString(record?.category) ??
     DEFAULT_PROFILE.featuredCategory;
-  const category = toOptionalString(record?.category) ?? "generico";
-  const designPresetId = toOptionalString(record?.designPresetId);
-  const designPreset = getPresetForTenant(category, designPresetId);
+  const visualPreset = getVisualPreset(toOptionalString(record?.visualPresetId));
   const deliveryConfig = mapDeliveryConfig(record);
 
   return {
@@ -504,7 +494,7 @@ function mapTenantProfile(record: FirestoreTenantRecord | undefined): Restaurant
     deliveryFee: deliveryConfig.fee,
     deliveryMinimumOrder: deliveryConfig.minimumOrder,
     deliveryNotes: deliveryConfig.notes,
-    designPreset,
+    visualPreset,
   };
 }
 
@@ -695,9 +685,9 @@ export function OrderMenuClient({ tenantId, tenantSlug }: OrderMenuClientProps) 
   const isSubmittingRef = useRef<boolean>(false);
 
   const featuredCategoryKey = normalizeCategory(restaurantProfile.featuredCategory);
-  const tenantDesignStyle = getTenantDesignStyle(restaurantProfile.designPreset);
-  const typographyClassName = getTypographyClassName(
-    restaurantProfile.designPreset.fontMood
+  const tenantDesignStyle = getTenantDesignStyle(restaurantProfile.visualPreset);
+  const presetClassName = getTenantPresetClassName(
+    restaurantProfile.visualPreset
   );
   const deliveryEnabled = restaurantProfile.deliveryEnabled;
   const deliveryFee = restaurantProfile.deliveryFee;
@@ -1075,15 +1065,15 @@ export function OrderMenuClient({ tenantId, tenantSlug }: OrderMenuClientProps) 
 
   return (
     <div
-      className={`min-h-screen bg-[var(--tenant-bg)] text-[var(--tenant-text)] ${typographyClassName}`}
+      className={`min-h-screen bg-[var(--tenant-bg)] text-[var(--tenant-text)] ${presetClassName}`}
       style={tenantDesignStyle}
     >
       <main className="mx-auto flex w-full max-w-5xl flex-col pb-32">
-        <section className="relative overflow-hidden border-b border-[var(--tenant-ring)] bg-[var(--tenant-surface)] px-5 pb-5 pt-4 sm:px-8 sm:pb-6 sm:pt-5">
+        <section className="relative overflow-hidden border-b border-[var(--tenant-border)] bg-[var(--tenant-surface)] px-5 pb-5 pt-4 shadow-[var(--tenant-card-shadow)] sm:px-8 sm:pb-6 sm:pt-5">
           <div
             className="absolute inset-0 bg-cover bg-center opacity-50"
             style={{
-              backgroundImage: `${restaurantProfile.designPreset.heroOverlay}, url(${restaurantProfile.heroImageUrl})`,
+              backgroundImage: `var(--tenant-hero-overlay), url(${restaurantProfile.heroImageUrl})`,
             }}
             aria-hidden="true"
           />
@@ -1135,7 +1125,7 @@ export function OrderMenuClient({ tenantId, tenantSlug }: OrderMenuClientProps) 
                 Menú
               </h2>
 
-              <div className="hidden rounded-full bg-[var(--tenant-surface)] px-4 py-3 text-sm font-medium text-[var(--tenant-muted)] shadow-sm ring-1 ring-[var(--tenant-ring)] sm:block">
+              <div className="hidden rounded-full bg-[var(--tenant-card)] px-4 py-3 text-sm font-medium text-[var(--tenant-muted)] shadow-[var(--tenant-card-shadow)] ring-1 ring-[var(--tenant-border)] sm:block">
                 🔎 Buscar productos...
               </div>
             </div>
@@ -1162,7 +1152,7 @@ export function OrderMenuClient({ tenantId, tenantSlug }: OrderMenuClientProps) 
           </div>
 
           {isLoading ? (
-            <div className="rounded-[var(--tenant-radius)] border border-[var(--tenant-ring)] bg-[var(--tenant-surface)] p-6 text-sm font-medium text-[var(--tenant-muted)] shadow-sm">
+            <div className="rounded-[var(--tenant-radius)] border border-[var(--tenant-border)] bg-[var(--tenant-card)] p-6 text-sm font-medium text-[var(--tenant-muted)] shadow-[var(--tenant-card-shadow)]">
               Preparando el menú...
             </div>
           ) : null}
@@ -1174,7 +1164,7 @@ export function OrderMenuClient({ tenantId, tenantSlug }: OrderMenuClientProps) 
           ) : null}
 
           {!isLoading && !errorMessage && products.length === 0 ? (
-            <div className="rounded-[var(--tenant-radius)] border border-dashed border-[var(--tenant-ring)] bg-[var(--tenant-surface)] p-6 text-sm font-medium text-[var(--tenant-muted)] shadow-sm">
+            <div className="rounded-[var(--tenant-radius)] border border-dashed border-[var(--tenant-border)] bg-[var(--tenant-card)] p-6 text-sm font-medium text-[var(--tenant-muted)] shadow-[var(--tenant-card-shadow)]">
               Por ahora no hay productos disponibles.
             </div>
           ) : null}
@@ -1186,7 +1176,7 @@ export function OrderMenuClient({ tenantId, tenantSlug }: OrderMenuClientProps) 
                 ref={(element) => {
                   categoryRefs.current[categoryKey] = element;
                 }}
-                className="rounded-[var(--tenant-radius)] bg-[var(--tenant-surface)] p-5 shadow-sm ring-1 ring-[var(--tenant-ring)]"
+                className="rounded-[var(--tenant-radius)] bg-[var(--tenant-card)] p-5 shadow-[var(--tenant-card-shadow)] ring-1 ring-[var(--tenant-border)]"
               >
                 <div className="mb-4 flex flex-wrap items-center gap-3">
                   <span className="text-2xl" aria-hidden="true">
@@ -1198,7 +1188,7 @@ export function OrderMenuClient({ tenantId, tenantSlug }: OrderMenuClientProps) 
                   </h3>
 
                   {index === 0 ? (
-                    <span className="rounded-full bg-amber-500/20 px-3 py-1 text-xs font-extrabold text-amber-300">
+                    <span className="rounded-full bg-[var(--tenant-accent)] px-3 py-1 text-xs font-extrabold text-[var(--tenant-secondary)]">
                       Los favoritos de la casa
                     </span>
                   ) : null}

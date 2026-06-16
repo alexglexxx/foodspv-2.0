@@ -10,7 +10,7 @@ import {
 
 import { AppButton } from "@/components/ui/AppButton";
 import { auth } from "@/lib/firebase/client";
-import { getPresetForTenant } from "@/modules/design/tenantDesignPresets";
+import { getVisualPreset } from "@/modules/design/tenantVisualPresets";
 
 import {
   createSuperAdminTenant,
@@ -34,7 +34,7 @@ const EMPTY_TENANT_FORM: SuperAdminTenantInput = {
   name: "",
   category: "generico",
   featuredCategory: "Generico",
-  designPresetId: "generico-limpio",
+  visualPresetId: "fresh",
   description: "",
   greeting: "",
   estimatedTime: "15–20 min",
@@ -74,7 +74,7 @@ function getTenantFormFromSummary(
     name: tenant.name,
     category: tenant.category,
     featuredCategory: tenant.featuredCategory,
-    designPresetId: tenant.designPresetId,
+    visualPresetId: tenant.visualPresetId,
     description: tenant.description,
     greeting: tenant.greeting,
     estimatedTime: tenant.estimatedTime,
@@ -724,7 +724,7 @@ function ThemePreview({
   tenant: SuperAdminTenantSummary;
   onEdit: (tenant: SuperAdminTenantSummary) => void;
 }) {
-  const preset = getPresetForTenant(tenant.category, tenant.designPresetId);
+  const preset = getVisualPreset(tenant.visualPresetId);
 
   return (
     <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
@@ -736,16 +736,16 @@ function ThemePreview({
           </p>
         </div>
         <div className="flex flex-wrap gap-3">
-          <ColorToken label="Principal" value={preset.primaryColor} />
-          <ColorToken label="Secundario" value={preset.secondaryColor} />
-          <ColorToken label="Acento" value={preset.accentColor} />
-          <ColorToken label="Fondo" value={preset.backgroundColor} />
-          <ColorToken label="Tarjeta" value={preset.cardColor} />
-          <ColorToken label="Texto" value={preset.textColor} />
+          <ColorToken label="Principal" value={preset.colors.primary} />
+          <ColorToken label="Secundario" value={preset.colors.secondary} />
+          <ColorToken label="Acento" value={preset.colors.accent} />
+          <ColorToken label="Fondo" value={preset.colors.background} />
+          <ColorToken label="Tarjeta" value={preset.colors.card} />
+          <ColorToken label="Texto" value={preset.colors.text} />
         </div>
         <div className="mt-5 grid gap-3 sm:grid-cols-2">
-          <InfoItem label="Preset" value={tenant.designPresetId} />
-          <InfoItem label="Mood" value={preset.fontMood} />
+          <InfoItem label="Preset" value={tenant.visualPresetId} />
+          <InfoItem label="Estilo hero" value={preset.layout.heroStyle} />
         </div>
       </div>
       <AppButton
