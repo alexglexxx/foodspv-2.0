@@ -13,6 +13,11 @@ import { auth } from "@/lib/firebase/client";
 import { getVisualPreset } from "@/modules/design/tenantVisualPresets";
 
 import {
+  getDefaultWidgetPreferences,
+  normalizeWidgetPreferences,
+  type DashboardWidgetPreferences,
+} from "../dashboardWidgets";
+import {
   createSuperAdminTenant,
   fetchSuperAdminTenants,
   permanentlyDeleteTenant,
@@ -25,8 +30,9 @@ import type {
 } from "../types/superAdmin";
 import { CollapsibleSection } from "./CollapsibleSection";
 import { ProductManager } from "./ProductManager";
+import { SuperadminDashboard } from "./SuperadminDashboard";
+import { SuperadminWidgetSettings } from "./SuperadminWidgetSettings";
 import { TenantFormSection } from "./TenantFormSection";
-import { TenantList } from "./TenantList";
 
 const EMPTY_TENANT_FORM: SuperAdminTenantInput = {
   tenantId: "",
@@ -64,8 +70,10 @@ const EMPTY_TENANT_FORM: SuperAdminTenantInput = {
 };
 
 const SELECTED_TENANT_STORAGE_KEY = "foodspv.superadmin.selectedTenantId";
+const WIDGET_PREFERENCES_STORAGE_KEY =
+  "foodspv.superadmin.widgetPreferences.v1";
 
-type SectionKey = "create" | "tenants" | "products" | "theme" | "operations";
+type SectionKey = "create" | "products" | "theme" | "operations";
 
 function getTenantFormFromSummary(
   tenant: SuperAdminTenantSummary
@@ -173,6 +181,41 @@ function setStoredSelectedTenantId(tenantId: string | null): void {
   }
 }
 
+function getStoredWidgetPreferences(): DashboardWidgetPreferences {
+  if (typeof window === "undefined") {
+    return getDefaultWidgetPreferences();
+  }
+
+  try {
+    const storedPreferences = window.localStorage.getItem(
+      WIDGET_PREFERENCES_STORAGE_KEY
+    );
+
+    return normalizeWidgetPreferences(
+      storedPreferences ? JSON.parse(storedPreferences) : null
+    );
+  } catch {
+    return getDefaultWidgetPreferences();
+  }
+}
+
+function setStoredWidgetPreferences(
+  preferences: DashboardWidgetPreferences
+): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  try {
+    window.localStorage.setItem(
+      WIDGET_PREFERENCES_STORAGE_KEY,
+      JSON.stringify(preferences)
+    );
+  } catch {
+    // localStorage can be unavailable in restricted browser contexts.
+  }
+}
+
 function resolveSelectedTenantId(
   tenants: SuperAdminTenantSummary[],
   currentTenantId: string | null
@@ -207,12 +250,17 @@ export function SuperAdminClient() {
   const [password, setPassword] = useState<string>("");
   const [tenants, setTenants] = useState<SuperAdminTenantSummary[]>([]);
   const [selectedTenantId, setSelectedTenantId] = useState<string | null>(null);
+  const [widgetPreferences, setWidgetPreferences] =
+    useState<DashboardWidgetPreferences>(getDefaultWidgetPreferences);
+  const [widgetPreferenceDraft, setWidgetPreferenceDraft] =
+    useState<DashboardWidgetPreferences>(getDefaultWidgetPreferences);
+  const [isWidgetSettingsOpen, setIsWidgetSettingsOpen] =
+    useState<boolean>(false);
   const [form, setForm] = useState<SuperAdminTenantInput>(EMPTY_TENANT_FORM);
   const [editingTenantId, setEditingTenantId] = useState<string | null>(null);
   const [openSections, setOpenSections] = useState<Record<SectionKey, boolean>>(
     {
       create: false,
-      tenants: true,
       products: false,
       theme: false,
       operations: false,
@@ -246,6 +294,10 @@ export function SuperAdminClient() {
 
   useEffect(() => {
     return onAuthStateChanged(auth, (nextUser) => {
+      const storedPreferences = getStoredWidgetPreferences();
+
+      setWidgetPreferences(storedPreferences);
+      setWidgetPreferenceDraft(storedPreferences);
       setUser(nextUser);
       setAuthReady(true);
     });
@@ -271,6 +323,38 @@ export function SuperAdminClient() {
       ...currentSections,
       [sectionKey]: true,
     }));
+  }
+
+  function openWidgetSettings(): void {
+    setWidgetPreferenceDraft(widgetPreferences);
+    setIsWidgetSettingsOpen(true);
+  }
+
+  function saveWidgetPreferences(): void {
+    const normalizedPreferences =
+      normalizeWidgetPreferences(widgetPreferenceDraft);
+
+    setWidgetPreferences(normalizedPreferences);
+    setWidgetPreferenceDraft(normalizedPreferences);
+    setStoredWidgetPreferences(normalizedPreferences);
+    setIsWidgetSettingsOpen(false);
+    setMessage("Preferencias del dashboard guardadas.");
+    setErrorMessage(null);
+  }
+
+  function restoreDefaultWidgetPreferences(): void {
+    const defaultPreferences = getDefaultWidgetPreferences();
+
+    setWidgetPreferences(defaultPreferences);
+    setWidgetPreferenceDraft(defaultPreferences);
+    setStoredWidgetPreferences(defaultPreferences);
+    setMessage("Dashboard restaurado al predeterminado.");
+    setErrorMessage(null);
+  }
+
+  function startCreateTenant(): void {
+    resetForm();
+    openSection("create");
   }
 
   async function loadTenants(currentUser: User): Promise<void> {
@@ -419,7 +503,6 @@ export function SuperAdminClient() {
       setOpenSections((currentSections) => ({
         ...currentSections,
         create: false,
-        tenants: true,
       }));
       setMessage(editingTenantId ? "Negocio actualizado." : "Negocio creado.");
       await loadTenants(user);
@@ -571,6 +654,20 @@ export function SuperAdminClient() {
     setErrorMessage(null);
   }
 
+  function openSelectedTenantTheme(tenant: SuperAdminTenantSummary): void {
+    setSelectedTenantId(tenant.tenantId);
+    openSection("theme");
+    setMessage(`Diseño visual: ${tenant.name}`);
+    setErrorMessage(null);
+  }
+
+  function openSelectedTenantOperations(tenant: SuperAdminTenantSummary): void {
+    setSelectedTenantId(tenant.tenantId);
+    openSection("operations");
+    setMessage(`Configuración operativa: ${tenant.name}`);
+    setErrorMessage(null);
+  }
+
   function openSelectedTenantOrders(tenant: SuperAdminTenantSummary): void {
     setSelectedTenantId(tenant.tenantId);
     window.location.href = `/admin?tenantId=${encodeURIComponent(
@@ -679,6 +776,30 @@ export function SuperAdminClient() {
           </p>
         ) : null}
 
+        <SuperadminDashboard
+          tenants={tenants}
+          selectedTenant={selectedTenant}
+          selectedTenantId={selectedTenantId}
+          widgetPreferences={widgetPreferences}
+          isLoading={isLoading}
+          deletingTenantId={deletingTenantId}
+          permanentlyDeletingTenantId={permanentlyDeletingTenantId}
+          onCustomize={openWidgetSettings}
+          onRefresh={() => void loadTenants(user)}
+          onSelectTenant={selectTenant}
+          onStartCreateTenant={startCreateTenant}
+          onOpenWebapp={openTenantWebapp}
+          onEditTenant={editTenant}
+          onOpenProducts={openSelectedTenantProducts}
+          onOpenOrders={openSelectedTenantOrders}
+          onOpenTheme={openSelectedTenantTheme}
+          onOpenOperations={openSelectedTenantOperations}
+          onToggleActive={(tenant) => void handleToggleTenantActive(tenant)}
+          onPermanentDelete={(tenantId) =>
+            void handlePermanentDeleteTenant(tenantId)
+          }
+        />
+
         <div className="mt-6 grid gap-4">
           <CollapsibleSection
             title="Crear / editar negocio"
@@ -694,32 +815,6 @@ export function SuperAdminClient() {
               onChange={setForm}
               onReset={resetForm}
               onSubmit={(event) => void handleSaveTenant(event)}
-            />
-          </CollapsibleSection>
-
-          <CollapsibleSection
-            title="Seleccionar negocio"
-            description="Busca y selecciona un negocio sin renderizar todas las cards."
-            isOpen={openSections.tenants}
-            onToggle={() => toggleSection("tenants")}
-            badge={selectedTenant?.name}
-          >
-            <TenantList
-              tenants={tenants}
-              selectedTenantId={selectedTenantId}
-              isLoading={isLoading}
-              deletingTenantId={deletingTenantId}
-              permanentlyDeletingTenantId={permanentlyDeletingTenantId}
-              onRefresh={() => void loadTenants(user)}
-              onSelect={selectTenant}
-              onOpenWebapp={openTenantWebapp}
-              onEdit={editTenant}
-              onOpenProducts={openSelectedTenantProducts}
-              onOpenOrders={openSelectedTenantOrders}
-              onToggleActive={(tenant) => void handleToggleTenantActive(tenant)}
-              onPermanentDelete={(tenantId) =>
-                void handlePermanentDeleteTenant(tenantId)
-              }
             />
           </CollapsibleSection>
 
@@ -765,6 +860,16 @@ export function SuperAdminClient() {
             </CollapsibleSection>
           ) : null}
         </div>
+
+        {isWidgetSettingsOpen ? (
+          <SuperadminWidgetSettings
+            draftPreferences={widgetPreferenceDraft}
+            onChange={setWidgetPreferenceDraft}
+            onSave={saveWidgetPreferences}
+            onRestoreDefault={restoreDefaultWidgetPreferences}
+            onClose={() => setIsWidgetSettingsOpen(false)}
+          />
+        ) : null}
       </main>
     </div>
   );
