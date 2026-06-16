@@ -5,6 +5,7 @@ import { type FormEvent } from "react";
 import { AppButton } from "@/components/ui/AppButton";
 
 import type { SuperAdminProductInput } from "../types/superAdmin";
+import { ImageGalleryEditor } from "./ImageGalleryEditor";
 import { ModifierEditor } from "./ModifierEditor";
 
 interface ProductFormProps {
@@ -186,6 +187,12 @@ export function ProductForm({
             </span>
           </label>
         </div>
+
+        <ImageGalleryEditor
+          images={form.images ?? []}
+          onChange={(images) => onChange({ ...form, images })}
+          disabled={isSaving}
+        />
 
         <ModifierEditor
           options={form.options ?? []}

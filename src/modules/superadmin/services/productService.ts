@@ -8,7 +8,7 @@ import type {
   SuperAdminProductOption,
   SuperAdminProductSummary,
 } from "../types/superAdmin";
-import type { ProductOptionValue } from "@/types/product.types";
+import type { ProductOptionValue, ProductImage } from "@/types/product.types";
 
 interface ProductRecord {
   name?: unknown;
@@ -16,6 +16,7 @@ interface ProductRecord {
   price?: unknown;
   category?: unknown;
   imageUrl?: unknown;
+  images?: unknown;
   active?: unknown;
   available?: unknown;
   modifiers?: unknown;
@@ -128,6 +129,51 @@ function normalizeOptions(value: unknown): SuperAdminProductOption[] {
   });
 }
 
+function normalizeImages(value: unknown): ProductImage[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  const images = value.flatMap((img): ProductImage[] => {
+    if (!img || typeof img !== "object") {
+      return [];
+    }
+
+    const record = img as Record<string, unknown>;
+    const id = toStringValue(record.id);
+    const url = toStringValue(record.url);
+    const sortOrder = typeof record.sortOrder === "number" ? record.sortOrder : 0;
+
+    if (!id || !url) {
+      return [];
+    }
+
+    return [
+      {
+        id,
+        url,
+        ...(toStringValue(record.alt) ? { alt: toStringValue(record.alt) } : {}),
+        ...(toStringValue(record.label)
+          ? { label: toStringValue(record.label) }
+          : {}),
+        sortOrder,
+        isPrimary: typeof record.isPrimary === "boolean" ? record.isPrimary : false,
+      },
+    ];
+  });
+
+  const primaryImageId =
+    images.find((image) => image.isPrimary)?.id ?? images[0]?.id;
+
+  return images
+    .sort((left, right) => left.sortOrder - right.sortOrder)
+    .map((image, index) => ({
+      ...image,
+      sortOrder: index,
+      isPrimary: image.id === primaryImageId,
+    }));
+}
+
 function mapProductRecord(
   productId: string,
   record: ProductRecord
@@ -144,6 +190,7 @@ function mapProductRecord(
         : 0,
     category: toStringValue(record.category),
     imageUrl: toStringValue(record.imageUrl),
+    images: normalizeImages(record.images),
     active,
     available: typeof record.available === "boolean" ? record.available : active,
     options: normalizeOptions(record.options),
@@ -360,6 +407,14 @@ export function validateSuperAdminProductInput(
     });
   }
 
+  const images = normalizeImages(record.images);
+  if (images.length > 5) {
+    return {
+      valid: false,
+      message: "Se permiten máximo 5 imágenes por producto.",
+    };
+  }
+
   return {
     valid: true,
     data: {
@@ -368,6 +423,7 @@ export function validateSuperAdminProductInput(
       price: Math.round(record.price * 100) / 100,
       category,
       imageUrl,
+      images,
       active: record.active,
       available: record.available,
       options,
@@ -392,7 +448,7 @@ export async function listSuperAdminTenantProducts(
       id: document.id,
       record: document.data() as ProductRecord,
     }))
-    .filter(({ record }) => record.active !== false && !isDeletedProduct(record))
+    .filter(({ record }) => !isDeletedProduct(record))
     .map(({ id, record }) => mapProductRecord(id, record));
 }
 
@@ -414,6 +470,7 @@ export async function createSuperAdminTenantProduct(
     price: input.price,
     category: input.category,
     imageUrl: input.imageUrl,
+    images: input.images ?? [],
     active: input.active,
     available: input.active ? input.available : false,
     options: input.options ?? [],
@@ -454,6 +511,7 @@ export async function updateSuperAdminTenantProduct(
     price: input.price,
     category: input.category,
     imageUrl: input.imageUrl,
+    images: input.images ?? [],
     active: input.active,
     available: input.active ? input.available : false,
     options: input.options ?? [],

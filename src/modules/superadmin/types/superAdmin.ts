@@ -2,7 +2,7 @@ import type {
   TenantCategory,
   TenantDesignPreset,
 } from "@/modules/design/tenantDesignPresets";
-import type { ProductOption } from "@/types/product.types";
+import type { ProductOption, ProductImage } from "@/types/product.types";
 
 export type SuperAdminTenantStatus = "active" | "inactive";
 
@@ -102,6 +102,7 @@ export interface SuperAdminProductSummary {
   price: number;
   category: string;
   imageUrl: string;
+  images?: ProductImage[];
   active: boolean;
   available: boolean;
   options: SuperAdminProductOption[];
@@ -115,6 +116,7 @@ export interface SuperAdminProductInput {
   price: number;
   category: string;
   imageUrl: string;
+  images?: ProductImage[];
   active: boolean;
   available: boolean;
   options?: SuperAdminProductOption[];

@@ -43,6 +43,7 @@ interface CatalogProductRecord {
   active?: unknown;
   available?: unknown;
   options?: unknown;
+  deletedAt?: unknown;
 }
 
 interface CatalogProduct {
@@ -165,6 +166,10 @@ function mapCatalogProduct(
   record: CatalogProductRecord | undefined
 ): CatalogProduct | null {
   if (!record || !isNonEmptyString(record.name) || typeof record.price !== "number") {
+    return null;
+  }
+
+  if (record.deletedAt !== null && record.deletedAt !== undefined) {
     return null;
   }
 

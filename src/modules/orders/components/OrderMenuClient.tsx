@@ -12,6 +12,7 @@ import {
 import type { CartItem } from "@/types/cart.types";
 import type {
   Product,
+  ProductImage,
   ProductOption,
   ProductOptionValue,
   SelectedProductOption,
@@ -70,6 +71,7 @@ interface FirestoreProductRecord {
   description?: unknown;
   price?: unknown;
   imageUrl?: unknown;
+  images?: unknown;
   available?: unknown;
   active?: unknown;
   category?: unknown;
@@ -282,6 +284,39 @@ function normalizeProductOptionValues(value: unknown): ProductOptionValue[] {
       },
     ];
   });
+}
+
+
+function normalizeProductImage(value: unknown): ProductImage[] {
+  if (!Array.isArray(value)) return [];
+
+  const images = value.flatMap((img): ProductImage[] => {
+    if (!img || typeof img !== "object") return [];
+    const r = img as Record<string, unknown>;
+    const id = typeof r.id === "string" && r.id.trim().length > 0 ? r.id.trim() : null;
+    const url = typeof r.url === "string" && r.url.trim().length > 0 ? r.url.trim() : null;
+    if (!id || !url) return [];
+    return [{
+      id,
+      url,
+      alt: typeof r.alt === "string" ? r.alt.trim() : undefined,
+      label: typeof r.label === "string" ? r.label.trim() : undefined,
+      sortOrder: typeof r.sortOrder === "number" ? r.sortOrder : 0,
+      isPrimary: typeof r.isPrimary === "boolean" ? r.isPrimary : false,
+    }];
+  });
+
+  const primaryImageId =
+    images.find((image) => image.isPrimary)?.id ?? images[0]?.id;
+
+  return images
+    .sort((left, right) => left.sortOrder - right.sortOrder)
+    .slice(0, 5)
+    .map((image, index) => ({
+      ...image,
+      sortOrder: index,
+      isPrimary: image.id === primaryImageId,
+    }));
 }
 
 function normalizeProductOptions(value: unknown): ProductOption[] {
@@ -497,6 +532,7 @@ function mapProduct(
     description: toOptionalString(record.description),
     price: record.price,
     imageUrl: toOptionalString(record.imageUrl),
+    images: normalizeProductImage(record.images),
     available,
     category: toOptionalString(record.category),
     options: normalizeProductOptions(record.options),

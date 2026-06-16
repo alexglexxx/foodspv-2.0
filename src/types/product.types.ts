@@ -21,6 +21,15 @@ export interface SelectedProductOption {
   priceDeltaTotal: number;
 }
 
+export interface ProductImage {
+  id: string;
+  url: string;
+  alt?: string;
+  label?: string;
+  sortOrder: number;
+  isPrimary?: boolean;
+}
+
 export interface Product {
   id: string;
 
@@ -34,7 +43,13 @@ export interface Product {
 
   imageUrl?: string;
 
+  images?: ProductImage[];
+
   available: boolean;
+
+  active?: boolean;
+
+  deletedAt?: unknown;
 
   category?: string;
 
