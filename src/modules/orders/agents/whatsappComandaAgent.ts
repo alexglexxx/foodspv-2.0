@@ -9,15 +9,7 @@ function formatCustomerCode(customerCode: string | undefined): string {
     return "No asignado";
   }
 
-  const [prefix, digits] = customerCode.split("-");
-
-  if (!digits) {
-    return customerCode;
-  }
-
-  const digitBlocks = digits.match(/.{1,3}/g)?.join(" ") ?? digits;
-
-  return `${prefix} ${digitBlocks}`;
+  return customerCode;
 }
 
 function getProductEmoji(productName: string): string {

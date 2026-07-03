@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 
 import { AppButton } from "@/components/ui/AppButton";
+import { normalizeCustomerCode } from "@/modules/customers/utils/generateCustomerCode";
 import {
   getVisualPreset,
   type TenantVisualPreset,
@@ -411,25 +412,7 @@ function getCustomerCodeStorageKey(tenantId: string): string {
 }
 
 function normalizeCustomerCodeInput(customerCode: string): string {
-  const [rawPrefix, rawSuffix] = customerCode.includes("-")
-    ? customerCode.split("-", 2)
-    : ["", ""];
-  const cleanPrefix = rawPrefix.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
-  const cleanSuffix = rawSuffix.replace(/\D/g, "");
-
-  if (cleanPrefix.length > 0 && cleanSuffix.length > 0) {
-    return `${cleanPrefix.slice(0, 4)}-${cleanSuffix}`;
-  }
-
-  const cleanCode = customerCode.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
-  const suffix = cleanCode.slice(-5);
-  const prefix = cleanCode.slice(0, -5).slice(0, 4);
-
-  if (prefix.length === 0 || suffix.length === 0) {
-    return cleanCode;
-  }
-
-  return `${prefix}-${suffix}`;
+  return normalizeCustomerCode(customerCode);
 }
 
 function toStoredCustomerProfile(

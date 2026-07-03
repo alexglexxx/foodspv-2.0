@@ -1,40 +1,44 @@
-const FALLBACK_PREFIX = "FOOD";
-const MAX_PREFIX_LENGTH = 4;
+const CUSTOMER_CODE_PATTERN = /^[A-Z][0-9]{5}$/;
+const LEGACY_MAX_PREFIX_LENGTH = 4;
+const LEGACY_SUFFIX_LENGTH = 5;
 
-function getCleanTenantPrefix(tenantSlug: string): string {
-  const cleanPrefix = tenantSlug
-    .replace(/[^a-zA-Z0-9]/g, "")
-    .toUpperCase()
-    .slice(0, MAX_PREFIX_LENGTH);
+function getRandomUppercaseLetter(): string {
+  return String.fromCharCode(65 + Math.floor(Math.random() * 26));
+}
 
-  return cleanPrefix.length > 0 ? cleanPrefix : FALLBACK_PREFIX;
+function getRandomDigits(length: number): string {
+  return Math.floor(Math.random() * 10 ** length)
+    .toString()
+    .padStart(length, "0");
 }
 
 export function generateCustomerCode(tenantSlug: string): string {
-  const prefix = getCleanTenantPrefix(tenantSlug);
-  const randomNumber = Math.floor(10000 + Math.random() * 90000);
+  void tenantSlug;
 
-  return `${prefix}-${randomNumber}`;
+  return `${getRandomUppercaseLetter()}${getRandomDigits(5)}`;
 }
 
 export function normalizeCustomerCode(customerCode: string): string {
-  const [rawPrefix, rawSuffix] = customerCode.includes("-")
-    ? customerCode.split("-", 2)
-    : ["", ""];
-  const cleanPrefix = rawPrefix.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
-  const cleanSuffix = rawSuffix.replace(/\D/g, "");
+  const cleanCode = customerCode.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
 
-  if (cleanPrefix.length > 0 && cleanSuffix.length > 0) {
-    return `${cleanPrefix.slice(0, MAX_PREFIX_LENGTH)}-${cleanSuffix}`;
+  if (CUSTOMER_CODE_PATTERN.test(cleanCode)) {
+    return cleanCode;
   }
 
-  const cleanCode = customerCode.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
-  const suffix = cleanCode.slice(-5);
-  const prefix = cleanCode.slice(0, -5).slice(0, MAX_PREFIX_LENGTH);
+  const suffixMatch = cleanCode.match(/(\d+)$/);
+
+  if (!suffixMatch) {
+    return cleanCode;
+  }
+
+  const suffix = suffixMatch[1];
+  const prefix = cleanCode.slice(0, cleanCode.length - suffix.length);
 
   if (prefix.length === 0 || suffix.length === 0) {
     return cleanCode;
   }
 
-  return `${prefix}-${suffix}`;
+  return `${prefix.slice(0, LEGACY_MAX_PREFIX_LENGTH)}-${suffix.slice(
+    -LEGACY_SUFFIX_LENGTH
+  )}`;
 }
