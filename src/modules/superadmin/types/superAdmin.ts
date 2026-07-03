@@ -3,6 +3,7 @@ import type {
   TenantVisualPreset,
   TenantVisualPresetId,
 } from "@/modules/design/tenantVisualPresets";
+import type { UserRole } from "@/modules/auth/types/userRole";
 import type { ProductOption, ProductImage } from "@/types/product.types";
 
 export type SuperAdminTenantStatus = "active" | "inactive";
@@ -123,6 +124,26 @@ export interface SuperAdminProductInput {
   options?: SuperAdminProductOption[];
 }
 
+export interface SuperAdminUserSummary {
+  uid: string;
+  email: string;
+  displayName: string;
+  role: UserRole;
+  tenantId: string | null;
+  active: boolean;
+  createdAt: number | null;
+  updatedAt: number | null;
+}
+
+export interface SuperAdminUserInput {
+  email: string;
+  displayName: string;
+  password: string;
+  role: UserRole;
+  tenantId: string | null;
+  active: boolean;
+}
+
 export type SuperAdminTenantsResponse =
   | {
       success: true;
@@ -159,6 +180,26 @@ export type SuperAdminProductsResponse =
   | {
       success: true;
       products: SuperAdminProductSummary[];
+    }
+  | {
+      success: false;
+      message: string;
+    };
+
+export type SuperAdminUsersResponse =
+  | {
+      success: true;
+      users: SuperAdminUserSummary[];
+    }
+  | {
+      success: false;
+      message: string;
+    };
+
+export type SuperAdminUserMutationResponse =
+  | {
+      success: true;
+      user: SuperAdminUserSummary | null;
     }
   | {
       success: false;

@@ -1,6 +1,14 @@
 # Tenant Order Dashboard
 
-FoodSPV opera pedidos por tenant en `/admin?tenantId=...`.
+FoodSPV opera pedidos por tenant en `/admin`.
+
+Resolución actual de tenant:
+
+- `tenant_admin` y `employee` usan exclusivamente `users/{uid}.tenantId`.
+- `/admin?tenantId=...` queda como soporte puntual solo para `superadmin`.
+- La fuente de verdad de acceso interno es `users/{uid}`.
+
+Ver auditoría: `docs/audits/foodspv-auth-tenant-flow.md`.
 
 ## Estado y Flujo
 
@@ -53,4 +61,3 @@ La API:
 - Rechaza transiciones inválidas.
 - Actualiza `estado`, `updatedAt` y `statusUpdatedAt`.
 - Envía notificación WhatsApp al cliente cuando aplica.
-

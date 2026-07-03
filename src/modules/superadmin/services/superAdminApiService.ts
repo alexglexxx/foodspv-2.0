@@ -8,6 +8,9 @@ import type {
   SuperAdminTenantMutationResponse,
   SuperAdminTenantResponse,
   SuperAdminTenantsResponse,
+  SuperAdminUserInput,
+  SuperAdminUserMutationResponse,
+  SuperAdminUsersResponse,
 } from "../types/superAdmin";
 
 async function getAuthorizationHeaders(user: User): Promise<HeadersInit> {
@@ -209,4 +212,41 @@ export async function deleteSuperAdminProduct(
   );
 
   return (await response.json()) as SuperAdminProductMutationResponse;
+}
+
+export async function fetchSuperAdminUsers(
+  user: User
+): Promise<SuperAdminUsersResponse> {
+  const response = await fetch("/api/superadmin/users", {
+    headers: await getAuthorizationHeaders(user),
+  });
+
+  return (await response.json()) as SuperAdminUsersResponse;
+}
+
+export async function createSuperAdminUser(
+  user: User,
+  input: SuperAdminUserInput
+): Promise<SuperAdminUserMutationResponse> {
+  const response = await fetch("/api/superadmin/users", {
+    method: "POST",
+    headers: await getAuthorizationHeaders(user),
+    body: JSON.stringify(input),
+  });
+
+  return (await response.json()) as SuperAdminUserMutationResponse;
+}
+
+export async function updateSuperAdminUser(
+  user: User,
+  uid: string,
+  input: SuperAdminUserInput
+): Promise<SuperAdminUserMutationResponse> {
+  const response = await fetch(`/api/superadmin/users/${uid}`, {
+    method: "PATCH",
+    headers: await getAuthorizationHeaders(user),
+    body: JSON.stringify(input),
+  });
+
+  return (await response.json()) as SuperAdminUserMutationResponse;
 }

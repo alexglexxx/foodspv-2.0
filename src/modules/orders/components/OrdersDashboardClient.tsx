@@ -492,6 +492,9 @@ function getStatusBadgeClassName(status: OrderState): string {
 export function OrdersDashboardClient({
   requestedTenantId,
 }: OrdersDashboardClientProps) {
+  // requestedTenantId is not an auth source of truth. It is only a support
+  // selector for superadmin. tenant_admin and employee always operate on the
+  // tenant assigned in users/{uid}.tenantId.
   const supportTenantId =
     requestedTenantId && isValidTenantId(requestedTenantId)
       ? requestedTenantId

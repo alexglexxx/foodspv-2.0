@@ -29,6 +29,7 @@ import type {
   SuperAdminTenantSummary,
 } from "../types/superAdmin";
 import { CollapsibleSection } from "./CollapsibleSection";
+import { InternalUsersManager } from "./InternalUsersManager";
 import { ProductManager } from "./ProductManager";
 import { SuperadminDashboard } from "./SuperadminDashboard";
 import { SuperadminWidgetSettings } from "./SuperadminWidgetSettings";
@@ -73,7 +74,7 @@ const SELECTED_TENANT_STORAGE_KEY = "foodspv.superadmin.selectedTenantId";
 const WIDGET_PREFERENCES_STORAGE_KEY =
   "foodspv.superadmin.widgetPreferences.v1";
 
-type SectionKey = "create" | "products" | "theme" | "operations";
+type SectionKey = "create" | "products" | "theme" | "operations" | "users";
 
 function getTenantFormFromSummary(
   tenant: SuperAdminTenantSummary
@@ -264,6 +265,7 @@ export function SuperAdminClient() {
       products: false,
       theme: false,
       operations: false,
+      users: false,
     }
   );
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -892,6 +894,15 @@ export function SuperAdminClient() {
               <OperationsPreview tenant={selectedTenant} onEdit={editTenant} />
             </CollapsibleSection>
           ) : null}
+
+          <CollapsibleSection
+            title="Usuarios internos"
+            description="Alta y edición de superadmin, tenant_admin y employee sobre users/{uid}."
+            isOpen={openSections.users}
+            onToggle={() => toggleSection("users")}
+          >
+            <InternalUsersManager user={user} tenants={tenants} />
+          </CollapsibleSection>
         </div>
 
         {isWidgetSettingsOpen ? (
