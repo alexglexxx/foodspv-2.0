@@ -1,11 +1,8 @@
-import { db } from "@/lib/firebase/client";
+import "server-only";
 
-import {
-  collection,
-  doc,
-  setDoc,
-  serverTimestamp
-} from "firebase/firestore";
+import { FieldValue } from "firebase-admin/firestore";
+
+import { adminDb } from "@/lib/firebase-admin";
 
 import { Order } from "../types/order";
 
@@ -25,23 +22,17 @@ export async function firestoreWriterAgent(
 ): Promise<FirestoreWriterResult> {
 
   try {
-    const orderRef = doc(
-      collection(
-        db,
-        "tenants",
-        order.tenantId,
-        "orders"
-      )
-    );
+    const orderRef = adminDb
+      .collection("tenants")
+      .doc(order.tenantId)
+      .collection("orders")
+      .doc();
 
-    await setDoc(
-      orderRef,
-      {
-        orderId: orderRef.id,
-        ...order,
-        createdAt: serverTimestamp()
-      }
-    );
+    await orderRef.set({
+      orderId: orderRef.id,
+      ...order,
+      createdAt: FieldValue.serverTimestamp()
+    });
 
     return {
       success: true,

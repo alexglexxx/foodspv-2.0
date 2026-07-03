@@ -647,6 +647,37 @@ export function SuperAdminClient() {
     setSelectedTenantId(tenant.tenantId);
   }
 
+  async function copyTenantUrl(tenant: SuperAdminTenantSummary): Promise<void> {
+    const fallbackUrl = `${window.location.origin}/${tenant.tenantId}`;
+    const tenantUrl = tenant.publicUrl || fallbackUrl;
+
+    try {
+      await navigator.clipboard.writeText(tenantUrl);
+      setSelectedTenantId(tenant.tenantId);
+      setMessage(`URL copiada: ${tenant.name}`);
+      setErrorMessage(null);
+    } catch {
+      setMessage(null);
+      setErrorMessage("No se pudo copiar la URL pública.");
+    }
+  }
+
+  function downloadTenantQr(tenant: SuperAdminTenantSummary): void {
+    if (!tenant.qrCode) {
+      setMessage(null);
+      setErrorMessage("Este tenant no tiene QR disponible.");
+      return;
+    }
+
+    const downloadLink = document.createElement("a");
+    downloadLink.href = tenant.qrCode;
+    downloadLink.download = `${tenant.tenantId}-qr.png`;
+    downloadLink.click();
+    setSelectedTenantId(tenant.tenantId);
+    setMessage(`QR descargado: ${tenant.name}`);
+    setErrorMessage(null);
+  }
+
   function openSelectedTenantProducts(tenant: SuperAdminTenantSummary): void {
     setSelectedTenantId(tenant.tenantId);
     openSection("products");
@@ -789,6 +820,8 @@ export function SuperAdminClient() {
           onSelectTenant={selectTenant}
           onStartCreateTenant={startCreateTenant}
           onOpenWebapp={openTenantWebapp}
+          onCopyUrl={(tenant) => void copyTenantUrl(tenant)}
+          onDownloadQr={downloadTenantQr}
           onEditTenant={editTenant}
           onOpenProducts={openSelectedTenantProducts}
           onOpenOrders={openSelectedTenantOrders}

@@ -1,6 +1,8 @@
 import type { DocumentData } from "firebase-admin/firestore";
 
 import { adminDb } from "@/lib/firebase-admin";
+import { isTenantAvailable } from "@/modules/tenants/tenantAvailability";
+import { sendWhatsAppTextMessage } from "@/modules/whatsapp/services/whatsappCloudService";
 
 import type {
   TenantWhatsAppConfig,
@@ -8,23 +10,10 @@ import type {
   WhatsAppSendStatus,
 } from "../types/whatsapp";
 
-const META_GRAPH_API_BASE_URL = "https://graph.facebook.com";
-const META_GRAPH_API_VERSION = "v22.0";
-const META_MESSAGES_ENDPOINT = `${META_GRAPH_API_BASE_URL}/${META_GRAPH_API_VERSION}`;
-
 interface WhatsAppSenderInput {
   tenantId: string;
   whatsappMessage: string;
   recipientPhone?: string;
-}
-
-interface MetaMessagesResponse {
-  messages?: Array<{
-    id?: string;
-  }>;
-  error?: {
-    message?: string;
-  };
 }
 
 function createResult(
@@ -78,21 +67,6 @@ function mapTenantConfig(data: DocumentData): TenantWhatsAppConfig {
   };
 }
 
-async function parseMetaError(response: Response): Promise<string> {
-  try {
-    const data = (await response.json()) as MetaMessagesResponse;
-    const apiMessage = data.error?.message;
-
-    if (isNonEmptyString(apiMessage)) {
-      return `Meta API error (${response.status}): ${apiMessage}`;
-    }
-  } catch {
-    // Ignore invalid JSON and fall back to the generic HTTP error.
-  }
-
-  return `Meta API error (${response.status} ${response.statusText}).`;
-}
-
 export async function whatsappSenderAgent(
   input: WhatsAppSenderInput
 ): Promise<WhatsAppSendResult> {
@@ -142,49 +116,19 @@ export async function whatsappSenderAgent(
 
     const tenantConfig = mapTenantConfig(tenantData);
 
-    if (!tenantConfig.active) {
+    if (!isTenantAvailable(tenantData) || !tenantConfig.active) {
       return createResult(
         "tenant_inactive",
         `El tenant ${tenantId} está inactivo.`
       );
     }
 
-    const response = await fetch(
-      `${META_MESSAGES_ENDPOINT}/${tenantConfig.metaPhoneNumberId}/messages`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${tenantConfig.metaAccessToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          messaging_product: "whatsapp",
-          recipient_type: "individual",
-          to: recipientPhone ?? tenantConfig.whatsappPhone,
-          type: "text",
-          text: {
-            preview_url: false,
-            body: whatsappMessage,
-          },
-        }),
-      }
-    );
-
-    if (!response.ok) {
-      return createResult("api_error", await parseMetaError(response));
-    }
-
-    const data = (await response.json()) as MetaMessagesResponse;
-    const messageId = data.messages?.[0]?.id;
-
-    if (!isNonEmptyString(messageId)) {
-      return createResult(
-        "api_error",
-        "Meta respondió sin messages[0].id."
-      );
-    }
-
-    return createResult("sent", null, messageId);
+    return sendWhatsAppTextMessage({
+      accessToken: tenantConfig.metaAccessToken,
+      phoneNumberId: tenantConfig.metaPhoneNumberId,
+      to: recipientPhone ?? tenantConfig.whatsappPhone,
+      body: whatsappMessage,
+    });
   } catch (error) {
     console.error("Error enviando mensaje por WhatsApp:", error);
 

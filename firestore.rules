@@ -1,0 +1,136 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // users/{uid}
+    //   - role: "superadmin" | "tenant_admin" | "employee"
+    //   - tenantId: string | null
+    //   - active: boolean | missing
+    //
+    // tenants/{tenantId}
+    //   - contains public menu settings and private operational settings.
+    //   - client SDK reads are restricted to internal users only because
+    //     Firestore Rules cannot hide private fields inside a readable document.
+    //
+    // tenants/{tenantId}/products/{productId}
+    //   - menu catalog records managed by backend/superadmin APIs.
+    //
+    // tenants/{tenantId}/orders/{orderId}
+    //   - order records created by the backend after catalog validation.
+    //   - internal client SDK updates may only change order status metadata.
+    //
+    // tenants/{tenantId}/customerProfiles and customerCodes
+    //   - customer PII and lookup records; backend-only.
+    //
+    // ===============================================================
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function userRolePath() {
+      return /databases/$(database)/documents/users/$(request.auth.uid);
+    }
+
+    function hasActiveRole() {
+      return isSignedIn() &&
+        exists(userRolePath()) &&
+        get(userRolePath()).data.active != false;
+    }
+
+    function role() {
+      return get(userRolePath()).data.role;
+    }
+
+    function roleTenantId() {
+      return get(userRolePath()).data.tenantId;
+    }
+
+    function isSuperAdmin() {
+      return hasActiveRole() && role() == "superadmin";
+    }
+
+    function hasTenantAccess(tenantId) {
+      return isSuperAdmin() ||
+        (
+          hasActiveRole() &&
+          role() in ["tenant_admin", "employee"] &&
+          roleTenantId() == tenantId
+        );
+    }
+
+    function isTenantAdmin(tenantId) {
+      return isSuperAdmin() ||
+        (
+          hasActiveRole() &&
+          role() == "tenant_admin" &&
+          roleTenantId() == tenantId
+        );
+    }
+
+    function isValidOrderState(state) {
+      return state in [
+        "requires_confirmation",
+        "pendiente",
+        "preparando",
+        "listo",
+        "entregado",
+        "cancelado"
+      ];
+    }
+
+    function isInternalOrderStatusUpdate() {
+      return request.resource.data.diff(resource.data).changedKeys()
+          .hasOnly(["estado", "updatedAt", "statusUpdatedAt"]) &&
+        request.resource.data.diff(resource.data).changedKeys()
+          .hasAny(["estado"]) &&
+        request.resource.data.diff(resource.data).removedKeys().size() == 0 &&
+        isValidOrderState(request.resource.data.estado);
+    }
+
+    match /users/{userId} {
+      allow read: if isSignedIn() && (request.auth.uid == userId || isSuperAdmin());
+      allow create, update, delete: if false;
+    }
+
+    match /tenants/{tenantId} {
+      allow read: if hasTenantAccess(tenantId);
+      allow create, update, delete: if false;
+
+      match /products/{productId} {
+        allow read: if hasTenantAccess(tenantId);
+        allow create, update, delete: if false;
+      }
+
+      match /orders/{orderId} {
+        allow read: if hasTenantAccess(tenantId);
+        allow update: if hasTenantAccess(tenantId) && isInternalOrderStatusUpdate();
+        allow create, delete: if false;
+      }
+
+      match /customerProfiles/{customerId} {
+        allow read, write: if false;
+      }
+
+      match /customerCodes/{customerCode} {
+        allow read, write: if false;
+      }
+
+      match /{document=**} {
+        allow read, write: if false;
+      }
+    }
+
+    match /webhookEvents/{eventId} {
+      allow read, write: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

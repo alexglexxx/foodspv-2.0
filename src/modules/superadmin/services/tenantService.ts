@@ -274,11 +274,66 @@ export async function generateTenantQRCode(url: string): Promise<string> {
   return await QRCode.toDataURL(url);
 }
 
-function mapTenantRecord(
+function getFallbackTenantPath(tenantId: string): string {
+  return `/${tenantId}`;
+}
+
+function getConfiguredTenantUrl(tenantId: string): string | null {
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
+
+  if (!isNonEmptyString(baseUrl)) {
+    return null;
+  }
+
+  return `${baseUrl.replace(/\/$/, "")}/${tenantId}`;
+}
+
+async function resolveTenantAccessAssets(
+  tenantId: string,
+  record: TenantRecord
+): Promise<{
+  publicUrl: string;
+  qrCode: string;
+  shouldPersist: boolean;
+}> {
+  const configuredTenantUrl = getConfiguredTenantUrl(tenantId);
+  const storedPublicUrl = toStringValue(record.publicUrl, "");
+  const storedQrCode = toStringValue(record.qrCode, "");
+  const publicUrl =
+    configuredTenantUrl ||
+    storedPublicUrl ||
+    getFallbackTenantPath(tenantId);
+
+  if (!configuredTenantUrl) {
+    return {
+      publicUrl,
+      qrCode: storedQrCode,
+      shouldPersist: storedPublicUrl.length === 0,
+    };
+  }
+
+  const shouldRefreshPublicUrl = storedPublicUrl !== configuredTenantUrl;
+  const shouldGenerateQrCode = storedQrCode.length === 0 || shouldRefreshPublicUrl;
+  const qrCode = shouldGenerateQrCode
+    ? await generateTenantQRCode(configuredTenantUrl)
+    : storedQrCode;
+
+  return {
+    publicUrl: configuredTenantUrl,
+    qrCode,
+    shouldPersist: shouldRefreshPublicUrl || shouldGenerateQrCode,
+  };
+}
+
+async function mapTenantRecord(
   tenantId: string,
   record: TenantRecord,
-  stats: SuperAdminTenantStats
-): SuperAdminTenantSummary {
+  stats: SuperAdminTenantStats,
+  accessAssets: {
+    publicUrl: string;
+    qrCode: string;
+  }
+): Promise<SuperAdminTenantSummary> {
   const category = normalizeTenantCategory(record.category);
   const visualPreset = getVisualPreset(
     isValidVisualPresetId(record.visualPresetId)
@@ -323,10 +378,29 @@ function mapTenantRecord(
     deliveryConfig,
     deliveryEnabled: deliveryConfig.enabled,
     deliveryFee: deliveryConfig.enabled ? deliveryConfig.fee ?? 0 : 0,
-    publicUrl: toStringValue(record.publicUrl, ""),
-    qrCode: toStringValue(record.qrCode, ""),
+    publicUrl: accessAssets.publicUrl,
+    qrCode: accessAssets.qrCode,
     stats,
   };
+}
+
+async function getTenantSummary(
+  tenantId: string,
+  record: TenantRecord,
+  stats: SuperAdminTenantStats
+): Promise<SuperAdminTenantSummary> {
+  const accessAssets = await resolveTenantAccessAssets(tenantId, record);
+  const tenant = await mapTenantRecord(tenantId, record, stats, accessAssets);
+
+  if (accessAssets.shouldPersist) {
+    await adminDb.collection("tenants").doc(tenantId).update({
+      publicUrl: accessAssets.publicUrl,
+      qrCode: accessAssets.qrCode,
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+  }
+
+  return tenant;
 }
 
 async function getTenantStats(tenantId: string): Promise<SuperAdminTenantStats> {
@@ -520,7 +594,7 @@ export async function listSuperAdminTenants(): Promise<
       .map(async (document) => {
         const stats = await getTenantStats(document.id);
 
-        return mapTenantRecord(
+        return getTenantSummary(
           document.id,
           document.data() as TenantRecord,
           stats
@@ -540,7 +614,7 @@ export async function getSuperAdminTenant(
     return null;
   }
 
-  return mapTenantRecord(
+  return getTenantSummary(
     tenantSnapshot.id,
     tenantSnapshot.data() as TenantRecord,
     await getTenantStats(tenantSnapshot.id)

@@ -1,10 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
-import { collection, doc, getDoc, getDocs, query } from "firebase/firestore";
 
 import { AppButton } from "@/components/ui/AppButton";
-import { db } from "@/lib/firebase/client";
 import {
   getVisualPreset,
   type TenantVisualPreset,
@@ -92,6 +90,13 @@ interface CustomerProfileLookupResponse {
     customerCode?: unknown;
     displayName?: unknown;
   };
+  message?: string;
+}
+
+interface MenuResponse {
+  success?: boolean;
+  tenant?: FirestoreTenantRecord;
+  products?: Array<FirestoreProductRecord & { id?: unknown }>;
   message?: string;
 }
 
@@ -700,23 +705,24 @@ export function OrderMenuClient({ tenantId, tenantSlug }: OrderMenuClientProps) 
       setErrorMessage(null);
 
       try {
-        const tenantRef = doc(db, "tenants", tenantId);
-        const productsQuery = query(collection(db, "tenants", tenantId, "products"));
+        const response = await fetch(`/api/menu/${encodeURIComponent(tenantId)}`, {
+          method: "GET",
+        });
+        const menu = (await response.json()) as MenuResponse;
 
-        const [tenantSnapshot, productsSnapshot] = await Promise.all([
-          getDoc(tenantRef),
-          getDocs(productsQuery),
-        ]);
+        if (!response.ok || menu.success !== true) {
+          throw new Error(menu.message ?? "No se pudo cargar el menú.");
+        }
 
-        const profile = mapTenantProfile(
-          tenantSnapshot.exists()
-            ? (tenantSnapshot.data() as FirestoreTenantRecord)
-            : undefined
-        );
+        const profile = mapTenantProfile(menu.tenant);
 
-        const loadedProducts = productsSnapshot.docs
-          .map((document) =>
-            mapProduct(document.id, tenantId, document.data() as FirestoreProductRecord)
+        const loadedProducts = (menu.products ?? [])
+          .map((product) =>
+            mapProduct(
+              isNonEmptyString(product.id) ? product.id : "",
+              tenantId,
+              product
+            )
           )
           .filter((product): product is Product => product !== null)
           .filter((product) => product.available);

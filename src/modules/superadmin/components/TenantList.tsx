@@ -8,6 +8,7 @@ import type {
   SuperAdminTenantStatus,
   SuperAdminTenantSummary,
 } from "../types/superAdmin";
+import { TenantAccessCard } from "./TenantAccessCard";
 
 type TenantFilter = "all" | "active" | "inactive" | "incomplete";
 
@@ -20,6 +21,8 @@ interface TenantListProps {
   onRefresh: () => void;
   onSelect: (tenant: SuperAdminTenantSummary) => void;
   onOpenWebapp: (tenant: SuperAdminTenantSummary) => void;
+  onCopyUrl: (tenant: SuperAdminTenantSummary) => void;
+  onDownloadQr: (tenant: SuperAdminTenantSummary) => void;
   onEdit: (tenant: SuperAdminTenantSummary) => void;
   onOpenProducts: (tenant: SuperAdminTenantSummary) => void;
   onOpenOrders: (tenant: SuperAdminTenantSummary) => void;
@@ -92,6 +95,8 @@ export function TenantList({
   onRefresh,
   onSelect,
   onOpenWebapp,
+  onCopyUrl,
+  onDownloadQr,
   onEdit,
   onOpenProducts,
   onOpenOrders,
@@ -307,6 +312,14 @@ export function TenantList({
                         ? "Completa"
                         : "Incompleta"
                     }
+                  />
+                </div>
+
+                <div className="mt-5">
+                  <TenantAccessCard
+                    tenant={selectedTenant}
+                    onCopyUrl={onCopyUrl}
+                    onDownloadQr={onDownloadQr}
                   />
                 </div>
 

@@ -9,7 +9,8 @@ export type WhatsAppCloudSendStatus = "sent" | "config_error" | "api_error";
 export interface WhatsAppCloudTextMessageInput {
   to: string;
   body: string;
-  phoneNumberId?: string | null;
+  phoneNumberId: string;
+  accessToken: string;
 }
 
 export interface WhatsAppCloudSendResult {
@@ -97,22 +98,21 @@ async function parseMetaError(response: Response): Promise<string> {
 export async function sendWhatsAppTextMessage(
   input: WhatsAppCloudTextMessageInput
 ): Promise<WhatsAppCloudSendResult> {
-  const accessToken = process.env.META_WHATSAPP_TOKEN;
+  const accessToken = isNonEmptyString(input.accessToken)
+    ? input.accessToken.trim()
+    : "";
   const phoneNumberId = isNonEmptyString(input.phoneNumberId)
     ? input.phoneNumberId.trim()
-    : process.env.META_WHATSAPP_PHONE_NUMBER_ID;
+    : "";
   const to = isNonEmptyString(input.to) ? input.to.trim() : "";
   const body = isNonEmptyString(input.body) ? input.body.trim() : "";
 
-  if (!isNonEmptyString(accessToken)) {
-    return createResult("config_error", "META_WHATSAPP_TOKEN no configurado.");
+  if (!accessToken) {
+    return createResult("config_error", "Meta access token requerido.");
   }
 
-  if (!isNonEmptyString(phoneNumberId)) {
-    return createResult(
-      "config_error",
-      "META_WHATSAPP_PHONE_NUMBER_ID no configurado."
-    );
+  if (!phoneNumberId) {
+    return createResult("config_error", "Meta phone number ID requerido.");
   }
 
   if (!to) {
@@ -129,7 +129,7 @@ export async function sendWhatsAppTextMessage(
       {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${accessToken.trim()}`,
+          Authorization: `Bearer ${accessToken}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({

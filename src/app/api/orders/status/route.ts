@@ -2,6 +2,7 @@ import { FieldValue } from "firebase-admin/firestore";
 import { NextResponse } from "next/server";
 
 import { adminDb } from "@/lib/firebase-admin";
+import { requireEmployeeOrTenantAdmin } from "@/modules/auth/services/authorizationService";
 import {
   canTransitionOrderState,
   isOrderState,
@@ -271,6 +272,18 @@ export async function PATCH(request: Request) {
           message: "tenantId, orderId y nextState válido son obligatorios.",
         },
         { status: 400 }
+      );
+    }
+
+    const auth = await requireEmployeeOrTenantAdmin(request, input.tenantId);
+
+    if (!auth.authorized) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: auth.message,
+        },
+        { status: auth.status }
       );
     }
 

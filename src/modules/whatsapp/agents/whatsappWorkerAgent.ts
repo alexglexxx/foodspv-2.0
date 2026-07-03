@@ -1,19 +1,21 @@
 import "server-only";
 
-import { FieldValue, type DocumentReference } from "firebase-admin/firestore";
+import {
+  FieldValue,
+  type DocumentData,
+  type DocumentReference,
+  type Transaction,
+} from "firebase-admin/firestore";
 
 import { adminDb } from "@/lib/firebase-admin";
+import { whatsappSenderAgent } from "@/modules/orders/agents/whatsappSenderAgent";
+import type { WhatsAppSendResult } from "@/modules/orders/types/whatsapp";
 import { extractPhoneNumberId } from "@/modules/webhook/services/metaWebhookService";
 import type {
   MetaWebhookPayload,
   TenantActionEngineResult,
 } from "@/modules/webhook/types/metaWebhook";
 import type { TenantRouterResult } from "@/modules/webhook/agents/tenantRouterAgent";
-
-import {
-  sendWhatsAppTextMessage,
-  type WhatsAppCloudSendResult,
-} from "../services/whatsappCloudService";
 
 const AUTO_REPLY_MESSAGE = `Hola 👋
 FoodSPV recibió tu mensaje correctamente.`;
@@ -37,9 +39,21 @@ interface WorkerResponseResult {
   incomingMessageId: string;
   to: string;
   success: boolean;
-  status: WhatsAppCloudSendResult["status"];
+  status: WhatsAppSendResult["status"] | "duplicate";
   messageId: string | null;
   error: string | null;
+}
+
+interface IncomingMessageReceiptRecord {
+  processed?: unknown;
+  processing?: unknown;
+  attemptCount?: unknown;
+  duplicateCount?: unknown;
+}
+
+interface IncomingMessageClaimResult {
+  shouldProcess: boolean;
+  reason: "new" | "retry" | "duplicate" | "in_flight";
 }
 
 export interface WhatsAppWorkerInput {
@@ -139,6 +153,137 @@ function extractIncomingMessages(
   return messages;
 }
 
+function getWebhookMessageReceiptRef(messageId: string): DocumentReference {
+  return adminDb.collection("webhookMessageReceipts").doc(messageId);
+}
+
+function getAttemptCount(record: DocumentData | IncomingMessageReceiptRecord): number {
+  return typeof record.attemptCount === "number" && Number.isFinite(record.attemptCount)
+    ? record.attemptCount
+    : 0;
+}
+
+function getDuplicateCount(record: DocumentData | IncomingMessageReceiptRecord): number {
+  return typeof record.duplicateCount === "number" && Number.isFinite(record.duplicateCount)
+    ? record.duplicateCount
+    : 0;
+}
+
+async function claimIncomingMessage(
+  input: {
+    message: IncomingWhatsAppMessage;
+    webhookEventId: string;
+    tenantId: string | null;
+    phoneNumberId: string | null;
+  }
+): Promise<IncomingMessageClaimResult> {
+  const receiptRef = getWebhookMessageReceiptRef(input.message.messageId);
+
+  return adminDb.runTransaction(
+    async (transaction: Transaction): Promise<IncomingMessageClaimResult> => {
+      const receiptSnapshot = await transaction.get(receiptRef);
+
+      if (!receiptSnapshot.exists) {
+        transaction.create(receiptRef, {
+          messageId: input.message.messageId,
+          tenantId: input.tenantId,
+          phoneNumberId: input.phoneNumberId,
+          from: input.message.from,
+          body: input.message.body,
+          sourceTimestamp: input.message.timestamp,
+          firstWebhookEventId: input.webhookEventId,
+          lastWebhookEventId: input.webhookEventId,
+          firstSeenAt: FieldValue.serverTimestamp(),
+          lastSeenAt: FieldValue.serverTimestamp(),
+          claimedAt: FieldValue.serverTimestamp(),
+          attemptCount: 1,
+          duplicateCount: 0,
+          processing: true,
+          processed: false,
+          lastError: null,
+          responseMessageId: null,
+        });
+
+        return {
+          shouldProcess: true,
+          reason: "new",
+        };
+      }
+
+      const receiptData =
+        (receiptSnapshot.data() ?? {}) as IncomingMessageReceiptRecord;
+
+      if (receiptData.processing === true) {
+        transaction.update(receiptRef, {
+          lastWebhookEventId: input.webhookEventId,
+          lastSeenAt: FieldValue.serverTimestamp(),
+          duplicateCount: getDuplicateCount(receiptData) + 1,
+        });
+
+        return {
+          shouldProcess: false,
+          reason: "in_flight",
+        };
+      }
+
+      if (receiptData.processed === true) {
+        transaction.update(receiptRef, {
+          lastWebhookEventId: input.webhookEventId,
+          lastSeenAt: FieldValue.serverTimestamp(),
+          duplicateCount: getDuplicateCount(receiptData) + 1,
+        });
+
+        return {
+          shouldProcess: false,
+          reason: "duplicate",
+        };
+      }
+
+      transaction.update(receiptRef, {
+        tenantId: input.tenantId,
+        phoneNumberId: input.phoneNumberId,
+        from: input.message.from,
+        body: input.message.body,
+        sourceTimestamp: input.message.timestamp,
+        lastWebhookEventId: input.webhookEventId,
+        lastSeenAt: FieldValue.serverTimestamp(),
+        claimedAt: FieldValue.serverTimestamp(),
+        attemptCount: getAttemptCount(receiptData) + 1,
+        processing: true,
+        processed: false,
+        lastError: null,
+      });
+
+      return {
+        shouldProcess: true,
+        reason: "retry",
+      };
+    }
+  );
+}
+
+async function finalizeIncomingMessageReceipt(input: {
+  message: IncomingWhatsAppMessage;
+  webhookEventId: string;
+  sendResult: WhatsAppSendResult;
+}): Promise<void> {
+  const receiptRef = getWebhookMessageReceiptRef(input.message.messageId);
+
+  await receiptRef.set(
+    {
+      lastWebhookEventId: input.webhookEventId,
+      lastSeenAt: FieldValue.serverTimestamp(),
+      processed: input.sendResult.success,
+      processing: false,
+      processedAt: FieldValue.serverTimestamp(),
+      lastError: input.sendResult.error,
+      responseMessageId: input.sendResult.messageId,
+      lastSendStatus: input.sendResult.status,
+    },
+    { merge: true }
+  );
+}
+
 async function markWebhookEventFailed(
   webhookEventRef: DocumentReference | null,
   error: string
@@ -158,6 +303,21 @@ async function markWebhookEventFailed(
       error: updateError instanceof Error ? updateError.message : "unknown_error",
     });
   }
+}
+
+async function appendWebhookEventSummary(
+  webhookEventRef: DocumentReference,
+  summary: Record<string, unknown>
+): Promise<void> {
+  await webhookEventRef.set(summary, { merge: true });
+}
+
+function extractDuplicateMessageIds(
+  responseResults: WorkerResponseResult[]
+): string[] {
+  return responseResults
+    .filter((result) => result.status === "duplicate")
+    .map((result) => result.incomingMessageId);
 }
 
 export async function whatsappWorkerAgent(
@@ -220,10 +380,35 @@ export async function whatsappWorkerAgent(
     const responseResults: WorkerResponseResult[] = [];
 
     for (const message of incomingMessages) {
-      const sendResult = await sendWhatsAppTextMessage({
-        to: message.from,
-        body: AUTO_REPLY_MESSAGE,
+      const claimResult = await claimIncomingMessage({
+        message,
+        webhookEventId: webhookEventRef.id,
+        tenantId,
         phoneNumberId,
+      });
+
+      if (!claimResult.shouldProcess) {
+        responseResults.push({
+          incomingMessageId: message.messageId,
+          to: message.from,
+          success: true,
+          status: "duplicate",
+          messageId: null,
+          error: null,
+        });
+        continue;
+      }
+
+      const sendResult = await whatsappSenderAgent({
+        tenantId: tenantId ?? "",
+        recipientPhone: message.from,
+        whatsappMessage: AUTO_REPLY_MESSAGE,
+      });
+
+      await finalizeIncomingMessageReceipt({
+        message,
+        webhookEventId: webhookEventRef.id,
+        sendResult,
       });
 
       responseResults.push({
@@ -237,6 +422,7 @@ export async function whatsappWorkerAgent(
     }
 
     const failedResults = responseResults.filter((result) => !result.success);
+    const duplicateMessageIds = extractDuplicateMessageIds(responseResults);
     const processed = failedResults.length === 0;
     const error =
       failedResults.length > 0
@@ -245,11 +431,12 @@ export async function whatsappWorkerAgent(
             .join(" | ")
         : null;
 
-    await webhookEventRef.update({
+    await appendWebhookEventSummary(webhookEventRef, {
       processed,
       processedAt: FieldValue.serverTimestamp(),
       incomingMessages,
       responseResults,
+      duplicateMessageIds,
       error,
     });
 
@@ -258,13 +445,14 @@ export async function whatsappWorkerAgent(
       tenantId,
       phoneNumberId,
       messageCount: incomingMessages.length,
+      duplicateCount: duplicateMessageIds.length,
       processed,
     });
 
     return {
       success: processed,
       eventId: webhookEventRef.id,
-      processedMessages: incomingMessages.length,
+      processedMessages: incomingMessages.length - duplicateMessageIds.length,
       error,
     };
   } catch (error) {

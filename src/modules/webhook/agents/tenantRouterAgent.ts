@@ -1,4 +1,5 @@
 import { adminDb } from "@/lib/firebase-admin";
+import { isTenantAvailable } from "@/modules/tenants/tenantAvailability";
 
 import type { MetaWebhookPayload } from "../types/metaWebhook";
 
@@ -56,7 +57,7 @@ export async function tenantRouterAgent(input: {
   const tenantDocument = tenantSnapshot.docs.find((document) => {
     const tenantData = document.data();
 
-    return tenantData.active !== false;
+    return isTenantAvailable(tenantData);
   });
 
   if (!tenantDocument) {

@@ -21,6 +21,8 @@ interface SuperadminDashboardProps {
   onSelectTenant: (tenant: SuperAdminTenantSummary) => void;
   onStartCreateTenant: () => void;
   onOpenWebapp: (tenant: SuperAdminTenantSummary) => void;
+  onCopyUrl: (tenant: SuperAdminTenantSummary) => void;
+  onDownloadQr: (tenant: SuperAdminTenantSummary) => void;
   onEditTenant: (tenant: SuperAdminTenantSummary) => void;
   onOpenProducts: (tenant: SuperAdminTenantSummary) => void;
   onOpenOrders: (tenant: SuperAdminTenantSummary) => void;
@@ -43,6 +45,8 @@ export function SuperadminDashboard({
   onSelectTenant,
   onStartCreateTenant,
   onOpenWebapp,
+  onCopyUrl,
+  onDownloadQr,
   onEditTenant,
   onOpenProducts,
   onOpenOrders,
@@ -96,6 +100,8 @@ export function SuperadminDashboard({
             onRefresh={onRefresh}
             onSelect={onSelectTenant}
             onOpenWebapp={onOpenWebapp}
+            onCopyUrl={onCopyUrl}
+            onDownloadQr={onDownloadQr}
             onEdit={onEditTenant}
             onOpenProducts={onOpenProducts}
             onOpenOrders={onOpenOrders}
@@ -218,6 +224,8 @@ export function SuperadminTenantSelectorWidget({
   onRefresh,
   onSelect,
   onOpenWebapp,
+  onCopyUrl,
+  onDownloadQr,
   onEdit,
   onOpenProducts,
   onOpenOrders,
@@ -232,6 +240,8 @@ export function SuperadminTenantSelectorWidget({
   onRefresh: () => void;
   onSelect: (tenant: SuperAdminTenantSummary) => void;
   onOpenWebapp: (tenant: SuperAdminTenantSummary) => void;
+  onCopyUrl: (tenant: SuperAdminTenantSummary) => void;
+  onDownloadQr: (tenant: SuperAdminTenantSummary) => void;
   onEdit: (tenant: SuperAdminTenantSummary) => void;
   onOpenProducts: (tenant: SuperAdminTenantSummary) => void;
   onOpenOrders: (tenant: SuperAdminTenantSummary) => void;
@@ -253,6 +263,8 @@ export function SuperadminTenantSelectorWidget({
         onRefresh={onRefresh}
         onSelect={onSelect}
         onOpenWebapp={onOpenWebapp}
+        onCopyUrl={onCopyUrl}
+        onDownloadQr={onDownloadQr}
         onEdit={onEdit}
         onOpenProducts={onOpenProducts}
         onOpenOrders={onOpenOrders}

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { adminDb } from "@/lib/firebase-admin";
 import { normalizeCustomerCode } from "@/modules/customers/utils/generateCustomerCode";
+import { isTenantAvailable } from "@/modules/tenants/tenantAvailability";
 
 interface CustomerCodeRecord {
   customerId?: unknown;
@@ -31,6 +32,12 @@ export async function GET(request: Request) {
       },
       { status: 400 }
     );
+  }
+
+  const tenantSnapshot = await adminDb.collection("tenants").doc(tenantId).get();
+
+  if (!tenantSnapshot.exists || !isTenantAvailable(tenantSnapshot.data() ?? null)) {
+    return NextResponse.json({ found: false }, { status: 404 });
   }
 
   const normalizedCustomerCode = normalizeCustomerCode(customerCode);

@@ -8,6 +8,7 @@ import { orderValidatorAgent } from "@/modules/orders/agents/orderValidatorAgent
 import { tenantOrderFlowConfigAgent } from "@/modules/orders/agents/tenantOrderFlowConfigAgent";
 import { whatsappComandaAgent } from "@/modules/orders/agents/whatsappComandaAgent";
 import { whatsappSenderAgent } from "@/modules/orders/agents/whatsappSenderAgent";
+import { isTenantAvailable } from "@/modules/tenants/tenantAvailability";
 import type { Order, OrderItem } from "@/modules/orders/types/order";
 import type {
   ProductOption,
@@ -22,8 +23,11 @@ interface OrderConfirmationPolicyRecord {
 }
 
 interface TenantOrderConfirmationPolicyRecord {
+  active?: unknown;
+  deletedAt?: unknown;
   orderConfirmationPolicy?: unknown;
   slug?: unknown;
+  status?: unknown;
 }
 
 interface OrderConfirmationPolicy {
@@ -364,7 +368,17 @@ async function getTenantOrderContext(
   tenantId: string
 ): Promise<TenantOrderContext> {
   const tenantSnapshot = await adminDb.collection("tenants").doc(tenantId).get();
+
+  if (!tenantSnapshot.exists) {
+    throw new Error("TENANT_NOT_FOUND");
+  }
+
   const tenantRecord = (tenantSnapshot.data() ?? {}) as TenantOrderConfirmationPolicyRecord;
+
+  if (!isTenantAvailable(tenantRecord)) {
+    throw new Error("TENANT_INACTIVE");
+  }
+
   const tenantSlug =
     typeof tenantRecord.slug === "string" && tenantRecord.slug.trim().length > 0
       ? tenantRecord.slug.trim()
@@ -538,6 +552,26 @@ export async function POST(request: Request) {
       { status: 201 }
     );
   } catch (error) {
+    if (error instanceof Error && error.message === "TENANT_NOT_FOUND") {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "El tenant no existe.",
+        },
+        { status: 404 }
+      );
+    }
+
+    if (error instanceof Error && error.message === "TENANT_INACTIVE") {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "El tenant no está disponible.",
+        },
+        { status: 404 }
+      );
+    }
+
     console.error("Error procesando pedido:", error);
 
     return NextResponse.json(

@@ -2,7 +2,8 @@ import "server-only";
 
 import type { DecodedIdToken } from "firebase-admin/auth";
 
-import { adminAuth, adminDb } from "@/lib/firebase-admin";
+import { adminAuth } from "@/lib/firebase-admin";
+import { getUserRoleProfile } from "@/modules/auth/services/userRoleService";
 
 type SuperAdminAuthResult =
   | {
@@ -15,10 +16,6 @@ type SuperAdminAuthResult =
       status: 401 | 403;
       message: string;
     };
-
-interface UserRoleRecord {
-  role?: unknown;
-}
 
 function getBearerToken(request: Request): string | null {
   const authorizationHeader = request.headers.get("authorization");
@@ -40,13 +37,6 @@ function tokenHasSuperAdminRole(decodedToken: DecodedIdToken): boolean {
   );
 }
 
-async function userDocumentHasSuperAdminRole(uid: string): Promise<boolean> {
-  const userSnapshot = await adminDb.collection("users").doc(uid).get();
-  const userRecord = (userSnapshot.data() ?? {}) as UserRoleRecord;
-
-  return userRecord.role === "superadmin";
-}
-
 export async function requireSuperAdminAuth(
   request: Request
 ): Promise<SuperAdminAuthResult> {
@@ -62,9 +52,23 @@ export async function requireSuperAdminAuth(
 
   try {
     const decodedToken = await adminAuth.verifyIdToken(token);
-    const hasRole =
-      tokenHasSuperAdminRole(decodedToken) ||
-      (await userDocumentHasSuperAdminRole(decodedToken.uid));
+    const profile = await getUserRoleProfile(
+      decodedToken.uid,
+      decodedToken.email ?? null
+    );
+    const tokenHasRole = tokenHasSuperAdminRole(decodedToken);
+    const profileHasRole = profile?.role === "superadmin";
+    const profileInactive = profile?.active === false;
+
+    if (profileInactive) {
+      return {
+        authorized: false,
+        status: 403,
+        message: "Usuario inactivo.",
+      };
+    }
+
+    const hasRole = tokenHasRole || profileHasRole;
 
     if (!hasRole) {
       return {

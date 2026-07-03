@@ -1,4 +1,7 @@
 {
+  "firestore": {
+    "rules": "firestore.rules"
+  },
   "apphosting": {
     "backendId": "foodspv-2-0",
     "rootDir": "/",
