@@ -10,6 +10,7 @@ import {
 import { adminDb } from "@/lib/firebase-admin";
 import { whatsappSenderAgent } from "@/modules/orders/agents/whatsappSenderAgent";
 import type { WhatsAppSendResult } from "@/modules/orders/types/whatsapp";
+import { executeRecentOrdersCommand } from "@/modules/whatsapp/commands/recentOrdersCommand";
 import { extractPhoneNumberId } from "@/modules/webhook/services/metaWebhookService";
 import type {
   MetaWebhookPayload,
@@ -284,6 +285,27 @@ async function finalizeIncomingMessageReceipt(input: {
   );
 }
 
+async function resolveResponseMessage(input: {
+  message: IncomingWhatsAppMessage;
+  tenantRoute: TenantRouterResult;
+}): Promise<string | null> {
+  const commandResult = await executeRecentOrdersCommand({
+    tenantRoute: input.tenantRoute,
+    senderPhone: input.message.from,
+    messageBody: input.message.body,
+  });
+
+  if (!commandResult.matched) {
+    return AUTO_REPLY_MESSAGE;
+  }
+
+  if (!commandResult.shouldReply) {
+    return null;
+  }
+
+  return commandResult.message;
+}
+
 async function markWebhookEventFailed(
   webhookEventRef: DocumentReference | null,
   error: string
@@ -399,11 +421,23 @@ export async function whatsappWorkerAgent(
         continue;
       }
 
-      const sendResult = await whatsappSenderAgent({
-        tenantId: tenantId ?? "",
-        recipientPhone: message.from,
-        whatsappMessage: AUTO_REPLY_MESSAGE,
+      const responseMessage = await resolveResponseMessage({
+        message,
+        tenantRoute: input.tenantRoute,
       });
+      const sendResult =
+        responseMessage === null
+          ? {
+              success: true,
+              status: "sent" as const,
+              messageId: null,
+              error: null,
+            }
+          : await whatsappSenderAgent({
+              tenantId: tenantId ?? "",
+              recipientPhone: message.from,
+              whatsappMessage: responseMessage,
+            });
 
       await finalizeIncomingMessageReceipt({
         message,

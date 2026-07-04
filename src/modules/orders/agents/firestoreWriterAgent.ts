@@ -4,7 +4,7 @@ import { FieldValue } from "firebase-admin/firestore";
 
 import { adminDb } from "@/lib/firebase-admin";
 
-import { Order } from "../types/order";
+import type { Order, OrderWhatsAppState } from "../types/order";
 
 export type FirestoreWriterResult =
   | {
@@ -31,7 +31,8 @@ export async function firestoreWriterAgent(
     await orderRef.set({
       orderId: orderRef.id,
       ...order,
-      createdAt: FieldValue.serverTimestamp()
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp()
     });
 
     return {
@@ -54,4 +55,36 @@ export async function firestoreWriterAgent(
 
   }
 
+}
+
+interface UpdateFirestoreOrderWhatsAppInput {
+  tenantId: string;
+  orderId: string;
+  whatsapp: OrderWhatsAppState;
+}
+
+export async function updateFirestoreOrderWhatsAppAgent(
+  input: UpdateFirestoreOrderWhatsAppInput
+): Promise<void> {
+  await adminDb
+    .collection("tenants")
+    .doc(input.tenantId)
+    .collection("orders")
+    .doc(input.orderId)
+    .set(
+      {
+        whatsapp: {
+          attempted: input.whatsapp.attempted,
+          sent: input.whatsapp.sent,
+          status: input.whatsapp.status ?? null,
+          messageId: input.whatsapp.messageId,
+          error: input.whatsapp.error,
+          sentAt: input.whatsapp.sent
+            ? FieldValue.serverTimestamp()
+            : null,
+        },
+        updatedAt: FieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
 }

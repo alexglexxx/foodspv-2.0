@@ -3,13 +3,20 @@ import { NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase-admin";
 import { upsertCustomerProfile } from "@/modules/customers/server/upsertCustomerProfile";
 import { customerConfirmationAgent } from "@/modules/orders/agents/customerConfirmationAgent";
-import { firestoreWriterAgent } from "@/modules/orders/agents/firestoreWriterAgent";
+import {
+  firestoreWriterAgent,
+  updateFirestoreOrderWhatsAppAgent,
+} from "@/modules/orders/agents/firestoreWriterAgent";
 import { orderValidatorAgent } from "@/modules/orders/agents/orderValidatorAgent";
 import { tenantOrderFlowConfigAgent } from "@/modules/orders/agents/tenantOrderFlowConfigAgent";
 import { whatsappComandaAgent } from "@/modules/orders/agents/whatsappComandaAgent";
 import { whatsappSenderAgent } from "@/modules/orders/agents/whatsappSenderAgent";
 import { isTenantAvailable } from "@/modules/tenants/tenantAvailability";
-import type { Order, OrderItem } from "@/modules/orders/types/order";
+import type {
+  Order,
+  OrderItem,
+  OrderWhatsAppState,
+} from "@/modules/orders/types/order";
 import type {
   ProductOption,
   ProductOptionValue,
@@ -410,6 +417,43 @@ function applyOrderConfirmationPolicy(
   };
 }
 
+function createInitialWhatsAppState(): OrderWhatsAppState {
+  return {
+    attempted: false,
+    sent: false,
+    messageId: null,
+    error: null,
+    sentAt: null,
+  };
+}
+
+function createDeliveredWhatsAppState(
+  whatsappDelivery: {
+    success: boolean;
+    status: OrderWhatsAppState["status"];
+    messageId: string | null;
+    error: string | null;
+  }
+): OrderWhatsAppState {
+  return {
+    attempted: true,
+    sent: whatsappDelivery.success,
+    status: whatsappDelivery.status,
+    messageId: whatsappDelivery.messageId,
+    error: whatsappDelivery.error,
+    sentAt: whatsappDelivery.success ? Date.now() : null,
+  };
+}
+
+function buildOrderWarning(messages: Array<string | null>): string | undefined {
+  const filteredMessages = messages.filter(
+    (message): message is string =>
+      typeof message === "string" && message.trim().length > 0
+  );
+
+  return filteredMessages.length > 0 ? filteredMessages.join(" ") : undefined;
+}
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
@@ -443,6 +487,9 @@ export async function POST(request: Request) {
     const tenantContext = await getTenantOrderContext(
       catalogValidation.order.tenantId
     );
+    const tenantOrderFlow = await tenantOrderFlowConfigAgent(
+      catalogValidation.order.tenantId
+    );
     const customerProfileResult = await upsertCustomerProfile({
       tenantId: catalogValidation.order.tenantId,
       tenantSlug: catalogValidation.order.tenantSlug ?? tenantContext.tenantSlug,
@@ -469,6 +516,7 @@ export async function POST(request: Request) {
     });
     const orderWithCustomer: Order = {
       ...catalogValidation.order,
+      tenantSlug: tenantContext.tenantSlug,
       cliente: {
         ...catalogValidation.order.cliente,
         customerCode: customerProfileResult.customerProfile.customerCode,
@@ -479,13 +527,23 @@ export async function POST(request: Request) {
         nombre: catalogValidation.order.cliente.nombre,
         telefono: catalogValidation.order.cliente.telefono,
       },
+      customerId: customerProfileResult.customerProfile.id,
+      customerCode: customerProfileResult.customerProfile.customerCode,
     };
     const orderConfirmation = applyOrderConfirmationPolicy(
       orderWithCustomer,
       tenantContext.confirmationPolicy
     );
+    const orderToPersist: Order = {
+      ...orderConfirmation.order,
+      customerId: customerProfileResult.customerProfile.id,
+      customerCode: customerProfileResult.customerProfile.customerCode,
+      orderFlowMode: tenantOrderFlow.config.orderFlowMode,
+      orderState: orderConfirmation.order.estado,
+      whatsapp: createInitialWhatsAppState(),
+    };
 
-    const persistedOrder = await firestoreWriterAgent(orderConfirmation.order);
+    const persistedOrder = await firestoreWriterAgent(orderToPersist);
 
     if (!persistedOrder.success) {
       return NextResponse.json(
@@ -497,14 +555,26 @@ export async function POST(request: Request) {
       );
     }
 
-    const tenantOrderFlow = await tenantOrderFlowConfigAgent(
-      orderConfirmation.order.tenantId
-    );
     const whatsappMessage = whatsappComandaAgent(orderConfirmation.order);
     const whatsappDelivery = await whatsappSenderAgent({
       tenantId: orderConfirmation.order.tenantId,
       whatsappMessage,
     });
+    const whatsappState = createDeliveredWhatsAppState(whatsappDelivery);
+    let persistenceWarning: string | null = null;
+
+    try {
+      await updateFirestoreOrderWhatsAppAgent({
+        tenantId: orderConfirmation.order.tenantId,
+        orderId: persistedOrder.orderId,
+        whatsapp: whatsappState,
+      });
+    } catch (error) {
+      console.error("Error actualizando estado WhatsApp de la orden:", error);
+      persistenceWarning =
+        "El pedido se guardó, pero no se pudo actualizar la metadata de WhatsApp en Firestore.";
+    }
+
     const shouldSendCustomerConfirmation =
       tenantOrderFlow.config.orderFlowMode === "simple_whatsapp" &&
       whatsappDelivery.success &&
@@ -526,8 +596,21 @@ export async function POST(request: Request) {
       : null;
     const deliveredCustomerConfirmation =
       customerConfirmationDelivery?.success ?? false;
+    const whatsappWarning = !whatsappDelivery.success
+      ? "El pedido se guardó correctamente, pero falló el envío por WhatsApp."
+      : null;
+    const customerConfirmationWarning =
+      shouldSendCustomerConfirmation && !deliveredCustomerConfirmation
+        ? "Falló la confirmación al cliente por WhatsApp."
+        : null;
+    const warning = buildOrderWarning([
+      customerProfileResult.warning ?? null,
+      whatsappWarning,
+      customerConfirmationWarning,
+      persistenceWarning,
+    ]);
     const message = !whatsappDelivery.success
-      ? "Pedido guardado correctamente, pero falló el envío por WhatsApp."
+      ? "Pedido guardado correctamente."
       : shouldSendCustomerConfirmation
         ? deliveredCustomerConfirmation
           ? "Pedido guardado, enviado al negocio y confirmado al cliente por WhatsApp."
@@ -541,9 +624,15 @@ export async function POST(request: Request) {
         orderId: persistedOrder.orderId,
         customerCode: customerProfileResult.customerProfile.customerCode,
         customerProfileWarning: customerProfileResult.warning,
-        order: orderConfirmation.order,
+        warning,
+        order: {
+          ...orderToPersist,
+          orderId: persistedOrder.orderId,
+          whatsapp: whatsappState,
+        },
         requiresConfirmation: orderConfirmation.requiresConfirmation,
         tenantOrderFlow,
+        whatsapp: whatsappState,
         whatsappMessage,
         whatsappDelivery,
         customerConfirmationMessage,

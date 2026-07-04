@@ -1,5 +1,6 @@
 import type { Order } from "../types/order";
 import type { TenantOrderFlowConfig } from "@/types/tenant.types";
+import type { OrderWhatsAppState } from "../types/order";
 
 interface CreateOrderResponseBody {
   success?: boolean;
@@ -7,8 +8,10 @@ interface CreateOrderResponseBody {
   orderId?: string;
   customerCode?: string;
   customerProfileWarning?: string;
+  warning?: string;
   errors?: string[];
   requiresConfirmation?: boolean;
+  whatsapp?: Partial<OrderWhatsAppState>;
   tenantOrderFlow?: {
     config?: TenantOrderFlowConfig;
     source?: "tenant" | "default";
@@ -40,7 +43,9 @@ export type CreateOrderResult =
       orderId: string;
       customerCode?: string;
       customerProfileWarning?: string;
+      warning?: string;
       requiresConfirmation: boolean;
+      whatsapp?: Partial<OrderWhatsAppState>;
       tenantOrderFlow?: {
         config: TenantOrderFlowConfig;
         source: "tenant" | "default";
@@ -70,7 +75,9 @@ export async function createOrder(order: Order): Promise<CreateOrderResult> {
       orderId: payload.orderId,
       customerCode: payload.customerCode,
       customerProfileWarning: payload.customerProfileWarning,
+      warning: payload.warning,
       requiresConfirmation: payload.requiresConfirmation === true,
+      whatsapp: payload.whatsapp,
       tenantOrderFlow: toTenantOrderFlow(payload.tenantOrderFlow),
     };
   }

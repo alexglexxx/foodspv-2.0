@@ -1,3 +1,5 @@
+import type { OrderFlowMode } from "@/types/tenant.types";
+import type { WhatsAppSendStatus } from "./whatsapp";
 import type { SelectedProductOption } from "@/types/product.types";
 
 export const ORDER_STATES = [
@@ -40,7 +42,18 @@ export interface OrderCustomer {
   telefono:string;
 }
 
+export interface OrderWhatsAppState {
+  attempted:boolean;
+  sent:boolean;
+  status?:WhatsAppSendStatus;
+  messageId:string | null;
+  error:string | null;
+  sentAt?:number | null;
+}
+
 export interface Order {
+
+  orderId?:string;
 
   tenantId:string;
 
@@ -49,6 +62,10 @@ export interface Order {
   cliente:CustomerInfo;
 
   customer?:OrderCustomer;
+
+  customerId?:string;
+
+  customerCode?:string;
 
   productos:OrderItem[];
 
@@ -62,8 +79,16 @@ export interface Order {
 
   deliveryFee?:number;
 
+  orderFlowMode?:OrderFlowMode;
+
   estado:OrderState;
 
+  orderState?:OrderState;
+
+  whatsapp?:OrderWhatsAppState;
+
   createdAt:number;
+
+  updatedAt?:number;
 
 }
