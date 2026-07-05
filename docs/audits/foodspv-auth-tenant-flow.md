@@ -1,118 +1,96 @@
-# FoodSPV Auth / Tenant Flow Audit
+# FoodSPV — Auth Tenant Flow Audit
 
-Fecha: 2026-07-03
-Scope: `/admin`, `users/{uid}`, tenant resolution, and `PATCH /api/orders/status`
+## Resumen
 
-## Resumen Ejecutivo
+Se auditó el sistema de autenticación, usuarios, roles, administrador de negocio y tenant dashboard de FoodSPV.
 
-FoodSPV ya tiene auth multi-tenant real.
+Conclusión: el flujo multi-tenant base ya existe y no debe reconstruirse desde cero.
 
-La fuente de verdad para acceso interno es `users/{uid}`. El sistema no debe volver a reconstruirse alrededor de query strings, client-side guesses, o mapas paralelos de roles.
+## Fuente de verdad
 
-## Fuente de Verdad
+Firestore usa:
 
-El documento `users/{uid}` define el acceso operativo interno:
+- users/{uid}
 
-- `role`: `superadmin`, `tenant_admin`, o `employee`
-- `tenantId`: tenant asignado al usuario cuando aplica
-- `active`: permite bloquear usuarios inactivos sin borrar la cuenta
+Campos esperados:
 
-Archivos base:
+- email
+- role
+- tenantId
+- active
+- createdAt
+- updatedAt
 
-- `src/modules/auth/services/userRoleService.ts`
-- `src/modules/auth/services/authorizationService.ts`
-- `src/modules/orders/components/OrdersDashboardClient.tsx`
+## Roles actuales
 
-## Roles Existentes
+- superadmin
+- tenant_admin
+- employee
 
-### `superadmin`
+## Archivos clave
 
-- Tiene acceso operativo global.
-- No depende de un `tenantId` fijo en `users/{uid}` para operar `/admin`.
-- Puede abrir `/admin?tenantId=...` como soporte puntual para un tenant específico.
-- Conserva su dashboard principal en `/superadmin`.
+- src/modules/auth/services/userRoleService.ts
+- src/modules/auth/services/authorizationService.ts
+- src/modules/auth/types/userRole.ts
+- src/modules/orders/components/OrdersDashboardClient.tsx
+- src/modules/dashboard/components/TenantDashboardClient.tsx
+- src/app/admin/page.tsx
+- src/app/superadmin/page.tsx
+- src/app/api/orders/status/route.ts
 
-### `tenant_admin`
+## Hallazgos confirmados
 
-- Administra un solo negocio.
-- Su tenant operativo sale de `users/{uid}.tenantId`.
-- `/admin` ignora cualquier `tenantId` externo para este rol.
+userRoleService.ts lee users/{uid} desde Firestore.
 
-### `employee`
+authorizationService.ts valida Firebase ID Token con adminAuth.verifyIdToken().
 
-- Opera pedidos dentro de un solo negocio.
-- Su tenant operativo sale de `users/{uid}.tenantId`.
-- `/admin` ignora cualquier `tenantId` externo para este rol.
+Existen funciones de autorización:
 
-## Como `/admin` Resuelve `tenantId`
+- requireUserAuth()
+- requireSuperAdmin()
+- requireTenantAccess()
+- requireTenantAdmin()
+- requireEmployeeOrTenantAdmin()
 
-Entrada en `src/app/admin/page.tsx`:
+/api/orders/status usa requireEmployeeOrTenantAdmin(request, input.tenantId).
 
-- Lee `searchParams.tenantId`.
-- Lo pasa como `requestedTenantId` a `OrdersDashboardClient`.
+/admin/page.tsx renderiza OrdersDashboardClient.
 
-Resolución real en `src/modules/orders/components/OrdersDashboardClient.tsx`:
+OrdersDashboardClient lee users/{uid} y resuelve el tenant real desde profile.tenantId para tenant_admin y employee.
 
-1. El cliente escucha el usuario autenticado de Firebase Auth.
-2. Luego lee `users/{uid}`.
-3. Si el perfil no existe, es inválido, o `active === false`, no habilita tenant.
-4. Si `role === "superadmin"`, puede usar `requestedTenantId` como tenant operativo temporal.
-5. Si `role === "tenant_admin"` o `role === "employee"`, el tenant operativo sale solo de `profile.tenantId`.
-6. Para `tenant_admin` y `employee`, cualquier `tenantId` externo queda efectivamente ignorado.
+requestedTenantId por URL solo aplica para superadmin como modo soporte.
 
-Conclusion:
+tenant_admin y employee ignoran tenantId externo y no pueden cambiar de negocio desde query param.
 
-- `/admin` ya no funciona como dashboard abierto por query string para roles internos comunes.
-- `/admin?tenantId=...` solo tiene sentido como soporte para `superadmin`.
+## Qué ya está hecho
 
-## Por Que `requestedTenantId` Solo Aplica A `superadmin`
+- Modelo userId → role → tenantId → active.
+- Roles básicos.
+- Fuente de verdad users/{uid}.
+- Validación backend con Firebase Admin.
+- Protección de cambio de estado de pedidos.
+- Dashboard de negocio con resolución de tenant por usuario.
 
-Porque aceptar un `tenantId` externo para `tenant_admin` o `employee` rompería el aislamiento multi-tenant.
+## Qué NO debe repetirse
 
-El modelo correcto es:
+No volver a crear desde cero:
 
-- identidad: Firebase Auth
-- autorizacion: `users/{uid}`
-- alcance tenant: `users/{uid}.tenantId`
+- userId → tenantId
+- roles básicos
+- authorizationService
+- users/{uid}
+- tenant dashboard básico
+- protección básica de cambio de estado de pedidos
 
-`requestedTenantId` no es fuente de verdad. Es solo un selector operativo para `superadmin`, que ya tiene permisos globales.
+## Riesgos pendientes
 
-## Validacion Backend De Pedidos
+- Documentar mejor requestedTenantId como modo soporte superadmin.
+- Verificar si existe UI cómoda para crear tenant_admin desde superadmin.
+- Confirmar reglas Firestore para lectura de users/{uid}, tenants/{tenantId} y orders.
 
-`src/app/api/orders/status/route.ts` usa:
+## Próximos pasos recomendados
 
-- `requireEmployeeOrTenantAdmin(request, input.tenantId)`
-
-Y `src/modules/auth/services/authorizationService.ts` valida:
-
-- token Firebase server-side
-- perfil en `users/{uid}`
-- `active !== false`
-- rol permitido
-- match entre `auth.user.tenantId` y el `tenantId` solicitado cuando el usuario no es `superadmin`
-
-Esto confirma que la proteccion backend ya existe y no depende de la UI.
-
-## Que NO Debe Reconstruirse
-
-No volver a implementar:
-
-- auth paralela para `/admin`
-- asignacion de tenant basada en query string para `tenant_admin` o `employee`
-- listas separadas de roles fuera de `users/{uid}`
-- validaciones frontend como sustituto de autorizacion backend
-- “fixes” que intenten pasar `tenantId` manualmente para cambiar de negocio en usuarios no superadmin
-
-## Decision Operativa
-
-La intencion correcta es:
-
-- `users/{uid}` = fuente de verdad
-- `requestedTenantId` = soporte exclusivo para `superadmin`
-- `tenant_admin` y `employee` = tenant fijado por perfil
-
-## Impacto En Trabajo Futuro
-
-Si una tarea futura pide “arreglar auth multi-tenant” para `/admin`, primero revisar este documento y los archivos fuente. Ese trabajo ya existe.
-
-Lo correcto en adelante es documentar, aclarar naming, o endurecer validaciones puntuales, pero no duplicar el sistema.
+1. Documentar esta auditoría también en ALE.
+2. Agregar comentario en /admin/page.tsx explicando que requestedTenantId solo es soporte superadmin.
+3. Revisar si superadmin puede crear tenant_admin de forma cómoda.
+4. No rediseñar auth salvo que haya evidencia de bug real.
