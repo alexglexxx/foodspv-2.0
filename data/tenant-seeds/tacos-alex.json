@@ -1,0 +1,288 @@
+{
+  "tenantId": "tacos-alex",
+  "slug": "tacos-alex",
+  "name": "Tacos Alex",
+  "legalName": "",
+  "category": "tacos",
+  "featuredCategory": "Tacos",
+  "description": "Tacos, quesadillas, volcanes, alambres, órdenes de carne, aguas frescas y refrescos.",
+  "greeting": "¡Bienvenido a Tacos Alex! 🌮🔥 Pide tus tacos, quesadillas, volcanes, alambres y bebidas favoritas. Preparamos tu orden con mucho sabor.",
+  "status": "active",
+  "active": true,
+
+  "visualPresetId": "street",
+  "designPresetId": "taqueria",
+  "themeId": "",
+  "logoUrl": "",
+  "heroImageUrl": "https://images.unsplash.com/photo-1565299585323-38d6b0865b47?q=80&w=1400&auto=format&fit=crop",
+  "coverImageUrl": "",
+  "primaryColor": "",
+  "secondaryColor": "",
+  "accentColor": "",
+
+  "whatsappPhone": "523220000000",
+  "contactPhone": "",
+  "supportPhone": "",
+  "email": "",
+  "instagramUrl": "",
+  "facebookUrl": "",
+  "websiteUrl": "",
+  "location": "Puerto Vallarta",
+  "address": "",
+  "city": "Puerto Vallarta",
+  "state": "Jalisco",
+  "country": "MX",
+  "postalCode": "",
+  "googleMapsUrl": "",
+
+  "metaPhoneNumberId": "",
+  "metaAccessToken": "",
+  "metaBusinessAccountId": "",
+  "metaWabaId": "",
+  "metaAppId": "",
+  "metaAppSecret": "",
+  "webhookVerifyToken": "",
+  "whatsappEnabled": false,
+  "whatsappProvider": "meta",
+  "authorizedWhatsappPhones": [],
+
+  "orderFlowMode": "simple_whatsapp",
+  "estimatedTime": "15 a 25 minutos",
+  "estimatedPreparationMinutes": 20,
+  "timezone": "America/Mexico_City",
+  "currency": "MXN",
+  "locale": "es-MX",
+  "acceptsOrders": true,
+  "acceptsPickup": true,
+  "acceptsDelivery": false,
+  "deliveryEnabled": false,
+  "deliveryFee": 0,
+  "minimumOrder": 0,
+
+  "deliveryConfig": {
+    "enabled": false,
+    "fee": 0,
+    "minimumOrder": 0,
+    "notes": "",
+    "zones": []
+  },
+
+  "orderConfirmationPolicy": {
+    "enabled": false,
+    "amountThreshold": 1,
+    "action": "allow"
+  },
+
+  "businessHours": {
+    "monday": { "open": "", "close": "", "closed": false },
+    "tuesday": { "open": "", "close": "", "closed": false },
+    "wednesday": { "open": "", "close": "", "closed": false },
+    "thursday": { "open": "", "close": "", "closed": false },
+    "friday": { "open": "", "close": "", "closed": false },
+    "saturday": { "open": "", "close": "", "closed": false },
+    "sunday": { "open": "", "close": "", "closed": false }
+  },
+  "specialHours": [],
+  "closedDates": [],
+
+  "rating": "5.0",
+  "reviews": "Nuevo",
+
+  "products": [
+    {
+      "id": "taco-asada",
+      "name": "Taco de asada",
+      "description": "Taco de carne asada servido con tortilla caliente.",
+      "price": 0,
+      "pricingMode": "fixed",
+      "category": "Tacos",
+      "imageUrl": "https://images.unsplash.com/photo-1613514785940-daed07799d9b?q=80&w=1200&auto=format&fit=crop",
+      "active": true,
+      "available": true,
+      "options": []
+    },
+    {
+      "id": "taco-adobada",
+      "name": "Taco de adobada",
+      "description": "Taco de adobada con mucho sabor, servido al momento.",
+      "price": 0,
+      "pricingMode": "fixed",
+      "category": "Tacos",
+      "imageUrl": "https://images.unsplash.com/photo-1613514785940-daed07799d9b?q=80&w=1200&auto=format&fit=crop",
+      "active": true,
+      "available": true,
+      "options": []
+    },
+    {
+      "id": "taco-pastor",
+      "name": "Taco de pastor",
+      "description": "Taco de pastor clásico, ideal para abrir el apetito.",
+      "price": 0,
+      "pricingMode": "fixed",
+      "category": "Tacos",
+      "imageUrl": "https://images.unsplash.com/photo-1613514785940-daed07799d9b?q=80&w=1200&auto=format&fit=crop",
+      "active": true,
+      "available": true,
+      "options": []
+    },
+    {
+      "id": "quesadilla",
+      "name": "Quesadilla",
+      "description": "Quesadilla sencilla con queso derretido.",
+      "price": 0,
+      "pricingMode": "fixed",
+      "category": "Quesadillas",
+      "imageUrl": "https://images.unsplash.com/photo-1599974579688-8dbdd335c77f?q=80&w=1200&auto=format&fit=crop",
+      "active": true,
+      "available": true,
+      "options": []
+    },
+    {
+      "id": "quesadilla-con-carne",
+      "name": "Quesadilla con carne",
+      "description": "Quesadilla con queso derretido y carne a elegir.",
+      "price": 0,
+      "pricingMode": "fixed",
+      "category": "Quesadillas",
+      "imageUrl": "https://images.unsplash.com/photo-1599974579688-8dbdd335c77f?q=80&w=1200&auto=format&fit=crop",
+      "active": true,
+      "available": true,
+      "options": [
+        {
+          "id": "carne",
+          "name": "Carne",
+          "type": "single",
+          "required": true,
+          "values": [
+            { "id": "asada", "label": "Asada", "active": true },
+            { "id": "adobada", "label": "Adobada", "active": true },
+            { "id": "pastor", "label": "Pastor", "active": true }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "volcan",
+      "name": "Volcán",
+      "description": "Volcán crujiente con queso y carne a elegir.",
+      "price": 0,
+      "pricingMode": "fixed",
+      "category": "Volcanes",
+      "imageUrl": "https://images.unsplash.com/photo-1613514785940-daed07799d9b?q=80&w=1200&auto=format&fit=crop",
+      "active": true,
+      "available": true,
+      "options": [
+        {
+          "id": "carne",
+          "name": "Carne",
+          "type": "single",
+          "required": true,
+          "values": [
+            { "id": "asada", "label": "Asada", "active": true },
+            { "id": "adobada", "label": "Adobada", "active": true },
+            { "id": "pastor", "label": "Pastor", "active": true }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "orden-carne",
+      "name": "Orden de carne a elegir",
+      "description": "Orden de carne servida para acompañar o compartir.",
+      "price": 0,
+      "pricingMode": "fixed",
+      "category": "Órdenes",
+      "imageUrl": "https://images.unsplash.com/photo-1529692236671-f1f6cf9683ba?q=80&w=1200&auto=format&fit=crop",
+      "active": true,
+      "available": true,
+      "options": [
+        {
+          "id": "carne",
+          "name": "Carne",
+          "type": "single",
+          "required": true,
+          "values": [
+            { "id": "asada", "label": "Asada", "active": true },
+            { "id": "adobada", "label": "Adobada", "active": true },
+            { "id": "pastor", "label": "Pastor", "active": true }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "alambre",
+      "name": "Alambre",
+      "description": "Alambre preparado con carne, vegetales y queso.",
+      "price": 0,
+      "pricingMode": "fixed",
+      "category": "Especialidades",
+      "imageUrl": "https://images.unsplash.com/photo-1555939594-58d7cb561ad1?q=80&w=1200&auto=format&fit=crop",
+      "active": true,
+      "available": true,
+      "options": [
+        {
+          "id": "carne",
+          "name": "Carne",
+          "type": "single",
+          "required": false,
+          "values": [
+            { "id": "asada", "label": "Asada", "active": true },
+            { "id": "adobada", "label": "Adobada", "active": true },
+            { "id": "pastor", "label": "Pastor", "active": true },
+            { "id": "mixto", "label": "Mixto", "active": true }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "agua-fresca",
+      "name": "Agua fresca",
+      "description": "Agua fresca de sabor a elegir.",
+      "price": 0,
+      "pricingMode": "fixed",
+      "category": "Bebidas",
+      "imageUrl": "https://images.unsplash.com/photo-1544145945-f90425340c7e?q=80&w=1200&auto=format&fit=crop",
+      "active": true,
+      "available": true,
+      "options": [
+        {
+          "id": "sabor",
+          "name": "Sabor",
+          "type": "single",
+          "required": true,
+          "values": [
+            { "id": "jamaica", "label": "Jamaica", "active": true },
+            { "id": "horchata", "label": "Horchata", "active": true },
+            { "id": "limon", "label": "Limón", "active": true }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "refresco",
+      "name": "Refresco",
+      "description": "Refresco frío de sabor a elegir.",
+      "price": 0,
+      "pricingMode": "fixed",
+      "category": "Bebidas",
+      "imageUrl": "https://images.unsplash.com/photo-1581636625402-29b2a704ef13?q=80&w=1200&auto=format&fit=crop",
+      "active": true,
+      "available": true,
+      "options": [
+        {
+          "id": "sabor",
+          "name": "Refresco",
+          "type": "single",
+          "required": true,
+          "values": [
+            { "id": "coca-cola", "label": "Coca Cola", "active": true },
+            { "id": "sprite", "label": "Sprite", "active": true },
+            { "id": "fanta", "label": "Fanta", "active": true },
+            { "id": "fresca", "label": "Fresca", "active": true },
+            { "id": "7up", "label": "7Up", "active": true }
+          ]
+        }
+      ]
+    }
+  ]
+}
