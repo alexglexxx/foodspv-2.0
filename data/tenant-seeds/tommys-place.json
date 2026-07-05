@@ -1,0 +1,31 @@
+{
+  "tenantId": "tommys-place",
+  "name": "Tommy's Place",
+  "category": "regalos",
+  "featuredCategory": "Regalos",
+  "description": "Regalos, adornos, arreglos florales, detalles personalizados y decoraciones para momentos especiales.",
+  "greeting": "¡Bienvenido a Tommy's Place! 🎁🌸 Aquí encuentras regalitos, flores, charms, detalles únicos y decoraciones para celebrar bonito.",
+  "location": "Puerto Vallarta",
+  "whatsappPhone": "523220000000",
+  "orderFlowMode": "simple_whatsapp",
+  "visualPresetId": "fresh",
+  "designPresetId": "premium",
+  "products": [
+    {
+      "id": "pulsera-corazon",
+      "name": "Pulsera corazón",
+      "description": "Pulsera decorativa con detalle de corazón.",
+      "price": 0,
+      "pricingMode": "fixed",
+      "category": "Pulseras"
+    },
+    {
+      "id": "decoracion-cumpleanos",
+      "name": "Decoración para fiesta de cumpleaños",
+      "description": "Decoración para fiesta de cumpleaños. Puede adaptarse a colores, edad, temática y espacio disponible.",
+      "price": 0,
+      "pricingMode": "quote",
+      "category": "Decoraciones para fiestas"
+    }
+  ]
+}
