@@ -4,11 +4,17 @@ import { useState, type FormEvent } from "react";
 
 import { AppButton } from "@/components/ui/AppButton";
 
-import type { CustomerInfo, DeliveryAddressDetails } from "../types/order";
+import type {
+  CustomerInfo,
+  DeliveryAddressDetails,
+  OrderTotalMode,
+} from "../types/order";
 
 interface CustomerInfoModalProps {
   isOpen: boolean;
   total: number;
+  hasQuoteItems: boolean;
+  totalMode: OrderTotalMode;
   deliveryEnabled: boolean;
   deliveryType: "pickup" | "delivery";
   deliveryFee: number;
@@ -120,6 +126,8 @@ function getCustomerFriendlyStatus(deliveryType: "pickup" | "delivery"): {
 export function CustomerInfoModal({
   isOpen,
   total,
+  hasQuoteItems,
+  totalMode,
   deliveryEnabled,
   deliveryType,
   deliveryFee,
@@ -304,16 +312,27 @@ export function CustomerInfoModal({
 
         <div className="mt-6 rounded-[var(--tenant-radius)] border border-[var(--tenant-ring)] bg-[var(--tenant-subtle)] p-5 shadow-sm">
           <p className="text-xs font-extrabold uppercase tracking-[0.24em] text-[var(--tenant-accent)]">
-            Total del pedido
+            {totalMode === "partial_quote"
+              ? "Total parcial"
+              : totalMode === "quote_only"
+                ? "Pedido por cotizar"
+                : "Total del pedido"}
           </p>
 
           <p className="mt-2 text-4xl font-black tracking-tight text-[var(--tenant-text)]">
-            {formatCurrency(total)}
+            {totalMode === "quote_only" ? "Por cotizar" : formatCurrency(total)}
           </p>
 
           {deliveryType === "delivery" ? (
             <p className="mt-2 text-sm font-semibold text-[var(--tenant-muted)]">
               Incluye envío: {formatCurrency(deliveryFee)}
+            </p>
+          ) : null}
+          {hasQuoteItems ? (
+            <p className="mt-3 text-sm leading-6 text-[var(--tenant-muted)]">
+              Este pedido incluye productos por cotizar. Completa tu pedido y el
+              negocio se comunicará contigo para confirmar precio, detalles y
+              disponibilidad.
             </p>
           ) : null}
         </div>

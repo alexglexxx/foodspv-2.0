@@ -2,7 +2,11 @@
 
 import { useState } from "react";
 import { AppButton } from "@/components/ui/AppButton";
-import type { Product, ProductImage } from "@/types/product.types";
+import {
+  normalizeProductPricingMode,
+  type Product,
+  type ProductImage,
+} from "@/types/product.types";
 import { ProductLightbox } from "./ProductLightbox";
 
 interface ProductCardProps {
@@ -27,6 +31,7 @@ export function ProductCard({
   className = "",
 }: ProductCardProps) {
   const [lightboxOpen, setLightboxOpen] = useState(false);
+  const pricingMode = normalizeProductPricingMode(product);
 
   const images: ProductImage[] =
     product.images && product.images.length > 0
@@ -92,12 +97,20 @@ export function ProductCard({
               {product.name}
             </h2>
             <span className="mt-1 inline-flex rounded-full bg-[var(--tenant-accent)]/20 px-2 py-1 text-[11px] font-bold text-[var(--tenant-accent)]">
-              {formatCurrency(product.price)}
+              {pricingMode === "quote"
+                ? "Contáctenos para cotizar"
+                : formatCurrency(product.price ?? 0)}
             </span>
 
             <p className="mt-1 line-clamp-2 text-xs leading-4 text-[var(--tenant-muted)]">
               {product.description ?? "Producto disponible."}
             </p>
+            {pricingMode === "quote" ? (
+              <p className="mt-2 text-[11px] font-semibold leading-4 text-[var(--tenant-muted)]">
+                Agrégalo al carrito para solicitar cotización. Nos
+                comunicaremos contigo lo más pronto posible.
+              </p>
+            ) : null}
           </div>
 
           <div className="mt-2 flex items-center justify-between gap-2">
@@ -112,7 +125,11 @@ export function ProductCard({
               loadingText="Agregando..."
               className="min-h-[44px] shrink-0 !border-[var(--tenant-primary)] !bg-[var(--tenant-primary)] px-3 text-xs text-[var(--tenant-button-text)] hover:!bg-[var(--tenant-primary-hover)] active:!bg-[var(--tenant-primary)] focus-visible:ring-offset-[var(--tenant-surface)] disabled:!bg-[var(--tenant-ring)] disabled:text-[var(--tenant-muted)]"
             >
-              {product.available ? "Agregar" : "No disponible"}
+              {product.available
+                ? pricingMode === "quote"
+                  ? "Agregar para cotizar"
+                  : "Agregar"
+                : "No disponible"}
             </AppButton>
           </div>
         </div>

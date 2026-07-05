@@ -1,4 +1,7 @@
-import type { SelectedProductOption } from "./product.types";
+import type {
+  ProductPricingMode,
+  SelectedProductOption,
+} from "./product.types";
 
 export interface CartItem {
   cartItemId:string;
@@ -9,7 +12,11 @@ export interface CartItem {
 
   quantity:number;
 
-  unitPrice:number;
+  pricingMode?:ProductPricingMode;
+
+  unitPrice?:number | null;
+
+  quoteRequired?:boolean;
 
   notes?:string;
 

@@ -23,6 +23,22 @@ function formatTotal(value: number | null): string {
   }).format(value);
 }
 
+function formatOrderTotalLabel(
+  order: RecentTenantOrderSummary
+): { label: string; value: string } {
+  if (order.totalMode === "quote_only") {
+    return {
+      label: "Total",
+      value: "Por cotizar",
+    };
+  }
+
+  return {
+    label: order.totalMode === "partial_quote" ? "Total parcial" : "Total",
+    value: formatTotal(order.total),
+  };
+}
+
 function summarizeProducts(order: RecentTenantOrderSummary): string {
   if (order.productos.length === 0) {
     return "Productos no disponibles";
@@ -50,15 +66,22 @@ export function formatRecentOrdersForWhatsApp(
   }
 
   const lines = orders.flatMap((order, index) => [
+    ...(() => {
+      const totalSummary = formatOrderTotalLabel(order);
+
+      return [
     `${index + 1}. Pedido ${getShortOrderId(order.orderId)}`,
     `Fecha: ${formatDate(order.createdAt)}`,
     `Cliente: ${order.clienteNombre}`,
     `Teléfono: ${order.clienteTelefono}`,
     ...(order.customerCode ? [`Código cliente: ${order.customerCode}`] : []),
     `Productos: ${summarizeProducts(order)}`,
-    `Total: ${formatTotal(order.total)}`,
+    `${totalSummary.label}: ${totalSummary.value}`,
+    ...(order.hasQuoteItems ? ["Cotización pendiente"] : []),
     `Estado: ${order.estado}`,
     "",
+      ];
+    })(),
   ]);
 
   return [

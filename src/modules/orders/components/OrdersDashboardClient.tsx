@@ -20,6 +20,7 @@ import {
 
 import { auth, db } from "@/lib/firebase/client";
 import type { OrderFlowMode } from "@/types/tenant.types";
+import { normalizeProductPricingMode } from "@/types/product.types";
 
 import {
   getAvailableOrderStateTransitions,
@@ -28,6 +29,7 @@ import {
 } from "../agents/orderStateAgent";
 import type { DeliveryAddressDetails, Order, OrderState } from "../types/order";
 import type { SelectedProductOption } from "@/types/product.types";
+import { getPricingMode } from "../utils/pricing";
 
 interface OrdersDashboardClientProps {
   requestedTenantId?: string | null;
@@ -43,11 +45,15 @@ interface FirestoreOrderRecord {
   productos?: Array<{
     id?: unknown;
     nombre?: unknown;
+    pricingMode?: unknown;
     precio?: unknown;
     cantidad?: unknown;
+    quoteRequired?: unknown;
     selectedOptions?: unknown;
   }>;
   total?: unknown;
+  hasQuoteItems?: unknown;
+  totalMode?: unknown;
   deliveryType?: unknown;
   deliveryAddress?: unknown;
   deliveryAddressDetails?: unknown;
@@ -82,6 +88,7 @@ interface TenantDashboardRecord {
 interface ProductDashboardRecord {
   id: string;
   name: string;
+  pricingMode: "fixed" | "quote";
   price: number | null;
   active: boolean;
   available: boolean;
@@ -91,6 +98,7 @@ interface ProductDashboardRecord {
 
 interface FirestoreProductRecord {
   name?: unknown;
+  pricingMode?: unknown;
   price?: unknown;
   active?: unknown;
   available?: unknown;
@@ -370,6 +378,10 @@ function mapProductDocument(
   return {
     id: document.id,
     name: isNonEmptyString(record.name) ? record.name.trim() : "Producto sin nombre",
+    pricingMode: normalizeProductPricingMode({
+      pricingMode: record.pricingMode,
+      price: record.price,
+    }),
     price: isValidNumber(record.price) ? record.price : null,
     active,
     available: typeof record.available === "boolean" ? record.available : active,
@@ -409,8 +421,10 @@ function mapOrderDocument(
       return {
         id: producto.id.trim(),
         nombre: producto.nombre.trim(),
-        precio: producto.precio,
+        pricingMode: getPricingMode(producto),
+        precio: isValidNumber(producto.precio) ? producto.precio : null,
         cantidad: producto.cantidad,
+        quoteRequired: producto.quoteRequired === true,
         selectedOptions: mapSelectedOptions(producto.selectedOptions),
       };
     })
@@ -420,8 +434,10 @@ function mapOrderDocument(
       ): producto is {
         id: string;
         nombre: string;
-        precio: number;
+        pricingMode: "fixed" | "quote";
+        precio: number | null;
         cantidad: number;
+        quoteRequired: boolean;
         selectedOptions: SelectedProductOption[];
       } => producto !== null
     );
@@ -451,6 +467,11 @@ function mapOrderDocument(
       record.deliveryAddressDetails
     ),
     deliveryFee: isValidNumber(record.deliveryFee) ? record.deliveryFee : undefined,
+    hasQuoteItems: record.hasQuoteItems === true,
+    totalMode:
+      record.totalMode === "partial_quote" || record.totalMode === "quote_only"
+        ? record.totalMode
+        : "fixed",
     estado: record.estado,
     createdAt: createdAtDate ? createdAtDate.getTime() : 0,
     createdAtLabel: createdAtDate
@@ -468,6 +489,26 @@ function formatCurrency(value: number): string {
     currency: "MXN",
     maximumFractionDigits: 2,
   }).format(value);
+}
+
+function formatOrderTotal(order: Pick<Order, "total" | "totalMode">): string {
+  if (order.totalMode === "quote_only") {
+    return "Por cotizar";
+  }
+
+  return formatCurrency(order.total);
+}
+
+function getOrderTotalLabel(order: Pick<Order, "totalMode">): string {
+  return order.totalMode === "partial_quote" ? "Total parcial" : "Total";
+}
+
+function getQuoteBadgeLabel(order: Pick<Order, "totalMode" | "hasQuoteItems">): string | null {
+  if (!order.hasQuoteItems) {
+    return null;
+  }
+
+  return order.totalMode === "quote_only" ? "Por cotizar" : "Cotización pendiente";
 }
 
 function getStatusBadgeClassName(status: OrderState): string {
@@ -938,7 +979,9 @@ export function OrdersDashboardClient({
   const productsWithoutPrice = useMemo(
     () =>
       activeProducts.filter(
-        (product) => product.price === null || product.price <= 0
+        (product) =>
+          product.pricingMode === "fixed" &&
+          (product.price === null || product.price <= 0)
       ),
     [activeProducts]
   );
@@ -1288,10 +1331,10 @@ export function OrdersDashboardClient({
                         {order.cliente.nombre}
                       </span>
                       <span className="font-semibold">
-                        {formatCurrency(order.total)}
+                        {formatOrderTotal(order)}
                       </span>
                       <span className="min-w-0 truncate text-slate-600">
-                        {getOrderStateLabel(order.estado)}
+                        {getQuoteBadgeLabel(order) ?? getOrderStateLabel(order.estado)}
                       </span>
                     </div>
                   ))}
@@ -1610,11 +1653,20 @@ function OrderKanbanCard({
       </div>
 
       <div className="mt-3 flex items-center justify-between gap-3">
-        <span className="text-xs font-bold text-stone-500">Total</span>
+        <span className="text-xs font-bold text-stone-500">
+          {getOrderTotalLabel(order)}
+        </span>
         <span className="text-lg font-black text-stone-950">
-          {formatCurrency(order.total)}
+          {formatOrderTotal(order)}
         </span>
       </div>
+      {order.hasQuoteItems ? (
+        <div className="mt-2">
+          <span className="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-black text-amber-800 ring-1 ring-amber-200">
+            {getQuoteBadgeLabel(order)}
+          </span>
+        </div>
+      ) : null}
 
       <div className="mt-3 border-t border-stone-100 pt-3">
         <p className="text-xs font-black uppercase tracking-[0.16em] text-stone-500">
@@ -1631,7 +1683,9 @@ function OrderKanbanCard({
                   {producto.cantidad} x {producto.nombre}
                 </p>
                 <p className="shrink-0 font-bold text-stone-700">
-                  {formatCurrency(producto.cantidad * producto.precio)}
+                  {getPricingMode(producto) === "quote"
+                    ? "Por cotizar"
+                    : formatCurrency(producto.cantidad * (producto.precio ?? 0))}
                 </p>
               </div>
               {(producto.selectedOptions ?? []).length > 0 ? (

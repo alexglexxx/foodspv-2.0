@@ -3,10 +3,11 @@
 import { useMemo, useState } from "react";
 
 import { AppButton } from "@/components/ui/AppButton";
-import type {
-  Product,
-  ProductOption,
-  SelectedProductOption,
+import {
+  normalizeProductPricingMode,
+  type Product,
+  type ProductOption,
+  type SelectedProductOption,
 } from "@/types/product.types";
 
 interface ProductOptionsModalProps {
@@ -72,6 +73,7 @@ export function ProductOptionsModal({
   onAddToCart,
 }: ProductOptionsModalProps) {
   const activeOptions = useMemo(() => getActiveOptions(product), [product]);
+  const pricingMode = normalizeProductPricingMode(product);
   const [selections, setSelections] = useState<Record<string, string[]>>({});
   const selectedOptions = useMemo(
     () => buildSelectedOptions(activeOptions, selections),
@@ -81,7 +83,7 @@ export function ProductOptionsModal({
     (sum, option) => sum + option.priceDeltaTotal,
     0
   );
-  const finalPrice = product.price + priceDeltaTotal;
+  const finalPrice = (product.price ?? 0) + priceDeltaTotal;
   const canAdd = activeOptions.every((option) => {
     if (!option.required) {
       return true;
@@ -140,7 +142,9 @@ export function ProductOptionsModal({
           </p>
           <h2 className="mt-1 text-xl font-black">{product.name}</h2>
           <p className="mt-1 text-sm font-semibold text-[var(--tenant-muted)]">
-            Base {formatCurrency(product.price)}
+            {pricingMode === "quote"
+              ? "Este producto se cotiza con el cliente."
+              : `Base ${formatCurrency(product.price ?? 0)}`}
           </p>
         </div>
 
@@ -182,7 +186,7 @@ export function ProductOptionsModal({
                         <span className="truncate">{value.label}</span>
                       </span>
 
-                      {value.priceDelta && value.priceDelta > 0 ? (
+                      {pricingMode === "fixed" && value.priceDelta && value.priceDelta > 0 ? (
                         <span className="shrink-0 text-[var(--tenant-accent)]">
                           +{formatCurrency(value.priceDelta)}
                         </span>
@@ -197,9 +201,13 @@ export function ProductOptionsModal({
 
         <div className="border-t border-[var(--tenant-ring)] px-5 py-4">
           <div className="mb-3 flex items-center justify-between text-sm font-semibold">
-            <span>Total por unidad</span>
+            <span>
+              {pricingMode === "quote" ? "Solicitud por unidad" : "Total por unidad"}
+            </span>
             <span className="text-lg font-black text-[var(--tenant-accent)]">
-              {formatCurrency(finalPrice)}
+              {pricingMode === "quote"
+                ? "Por cotizar"
+                : formatCurrency(finalPrice)}
             </span>
           </div>
 
@@ -216,7 +224,7 @@ export function ProductOptionsModal({
               disabled={!canAdd}
               className="!border-[var(--tenant-primary)] !bg-[var(--tenant-primary)] text-[var(--tenant-button-text)] hover:!bg-[var(--tenant-primary-hover)]"
             >
-              Agregar
+              {pricingMode === "quote" ? "Agregar para cotizar" : "Agregar"}
             </AppButton>
           </div>
         </div>

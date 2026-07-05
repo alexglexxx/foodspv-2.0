@@ -3,7 +3,7 @@ import "server-only";
 import { Timestamp } from "firebase-admin/firestore";
 
 import { adminDb } from "@/lib/firebase-admin";
-import type { OrderState } from "../types/order";
+import type { OrderState, OrderTotalMode } from "../types/order";
 
 export interface RecentTenantOrderItemSummary {
   nombre: string;
@@ -18,6 +18,8 @@ export interface RecentTenantOrderSummary {
   customerCode: string | null;
   productos: RecentTenantOrderItemSummary[];
   total: number | null;
+  hasQuoteItems: boolean;
+  totalMode: OrderTotalMode;
   estado: OrderState | string;
 }
 
@@ -36,6 +38,8 @@ interface FirestoreOrderRecord {
     cantidad?: unknown;
   }>;
   total?: unknown;
+  hasQuoteItems?: unknown;
+  totalMode?: unknown;
   estado?: unknown;
   orderState?: unknown;
   createdAt?: Timestamp | { toDate?: () => Date } | null;
@@ -113,6 +117,11 @@ function mapRecentOrder(
     customerCode,
     productos,
     total: isFiniteNumber(record.total) ? record.total : null,
+    hasQuoteItems: record.hasQuoteItems === true,
+    totalMode:
+      record.totalMode === "partial_quote" || record.totalMode === "quote_only"
+        ? record.totalMode
+        : "fixed",
     estado: isNonEmptyString(record.orderState)
       ? record.orderState.trim()
       : isNonEmptyString(record.estado)

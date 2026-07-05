@@ -3,6 +3,7 @@
 import { type FormEvent } from "react";
 
 import { AppButton } from "@/components/ui/AppButton";
+import { normalizeProductPricingMode } from "@/types/product.types";
 
 import type { SuperAdminProductInput } from "../types/superAdmin";
 import { ImageGalleryEditor } from "./ImageGalleryEditor";
@@ -69,6 +70,8 @@ export function ProductForm({
   onCancel,
   onSubmit,
 }: ProductFormProps) {
+  const pricingMode = normalizeProductPricingMode(form);
+
   function updateTextField(field: ProductTextField, value: string): void {
     onChange({
       ...form,
@@ -142,21 +145,56 @@ export function ProductForm({
         />
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <TextField
-            label="Precio"
-            type="number"
-            value={String(form.price)}
-            onChange={(value) =>
-              onChange({ ...form, price: Number.parseFloat(value) || 0 })
-            }
-            required
-          />
+          <label className="block">
+            <span className="text-sm font-extrabold text-stone-900">
+              Tipo de precio
+            </span>
+            <select
+              value={pricingMode}
+              onChange={(event) =>
+                onChange({
+                  ...form,
+                  pricingMode: event.target.value === "quote" ? "quote" : "fixed",
+                  price:
+                    event.target.value === "quote"
+                      ? null
+                      : form.price ?? 0,
+                })
+              }
+              className="mt-2 w-full rounded-2xl border border-stone-300 bg-white px-4 py-3 text-sm font-semibold text-stone-950 outline-none transition focus:border-orange-500 focus:ring-4 focus:ring-orange-100"
+            >
+              <option value="fixed">Precio fijo</option>
+              <option value="quote">Cotizar con cliente</option>
+            </select>
+          </label>
           <TextField
             label="Imagen URL"
             value={form.imageUrl}
             onChange={(value) => updateTextField("imageUrl", value)}
           />
         </div>
+
+        {pricingMode === "fixed" ? (
+          <TextField
+            label="Precio"
+            type="number"
+            value={form.price === null || form.price === undefined ? "" : String(form.price)}
+            onChange={(value) =>
+              onChange({
+                ...form,
+                pricingMode: "fixed",
+                price: value.trim().length === 0 ? null : Number.parseFloat(value),
+              })
+            }
+            required
+          />
+        ) : (
+          <div className="rounded-2xl border border-orange-200 bg-orange-50 px-4 py-3 text-sm font-medium text-orange-900">
+            Este producto se mostrará como &quot;Contáctenos para cotizar&quot;.
+            El cliente podrá agregarlo al carrito y el negocio recibirá sus
+            datos para contactarlo.
+          </div>
+        )}
 
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="flex items-center gap-3 rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3">

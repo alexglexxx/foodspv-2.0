@@ -8,11 +8,16 @@ import type {
   SuperAdminProductOption,
   SuperAdminProductSummary,
 } from "../types/superAdmin";
-import type { ProductOptionValue, ProductImage } from "@/types/product.types";
+import {
+  normalizeProductPricingMode,
+  type ProductImage,
+  type ProductOptionValue,
+} from "@/types/product.types";
 
 interface ProductRecord {
   name?: unknown;
   description?: unknown;
+  pricingMode?: unknown;
   price?: unknown;
   category?: unknown;
   imageUrl?: unknown;
@@ -179,15 +184,21 @@ function mapProductRecord(
   record: ProductRecord
 ): SuperAdminProductSummary {
   const active = typeof record.active === "boolean" ? record.active : true;
+  const pricingMode = normalizeProductPricingMode({
+    pricingMode: record.pricingMode,
+    price: record.price,
+  });
+  const price =
+    typeof record.price === "number" && Number.isFinite(record.price)
+      ? record.price
+      : null;
 
   return {
     productId,
     name: toStringValue(record.name, "Producto sin nombre"),
     description: toStringValue(record.description),
-    price:
-      typeof record.price === "number" && Number.isFinite(record.price)
-        ? record.price
-        : 0,
+    pricingMode,
+    price: pricingMode === "fixed" ? price : null,
     category: toStringValue(record.category),
     imageUrl: toStringValue(record.imageUrl),
     images: normalizeImages(record.images),
@@ -247,6 +258,10 @@ export function validateSuperAdminProductInput(
   const category = toStringValue(record.category);
   const description = toStringValue(record.description);
   const imageUrl = toStringValue(record.imageUrl);
+  const pricingMode = normalizeProductPricingMode({
+    pricingMode: record.pricingMode,
+    price: record.price,
+  });
 
   if (name.length < 2 || name.length > 80) {
     return {
@@ -262,7 +277,12 @@ export function validateSuperAdminProductInput(
     };
   }
 
-  if (typeof record.price !== "number" || !Number.isFinite(record.price) || record.price < 0) {
+  const price =
+    typeof record.price === "number" && Number.isFinite(record.price)
+      ? Math.round(record.price * 100) / 100
+      : null;
+
+  if (pricingMode === "fixed" && (price === null || price < 0)) {
     return {
       valid: false,
       message: "El precio debe ser un número mayor o igual a 0.",
@@ -420,7 +440,8 @@ export function validateSuperAdminProductInput(
     data: {
       name,
       description,
-      price: Math.round(record.price * 100) / 100,
+      pricingMode,
+      price: pricingMode === "fixed" ? price : null,
       category,
       imageUrl,
       images,
@@ -467,7 +488,8 @@ export async function createSuperAdminTenantProduct(
   await productRef.set({
     name: input.name,
     description: input.description,
-    price: input.price,
+    pricingMode: input.pricingMode ?? "fixed",
+    price: input.pricingMode === "quote" ? null : input.price ?? null,
     category: input.category,
     imageUrl: input.imageUrl,
     images: input.images ?? [],
@@ -508,7 +530,8 @@ export async function updateSuperAdminTenantProduct(
   await productRef.update({
     name: input.name,
     description: input.description,
-    price: input.price,
+    pricingMode: input.pricingMode ?? "fixed",
+    price: input.pricingMode === "quote" ? null : input.price ?? null,
     category: input.category,
     imageUrl: input.imageUrl,
     images: input.images ?? [],
@@ -560,6 +583,7 @@ export async function duplicateSuperAdminTenantProduct(
   await productRef.set({
     name: `${sourceProduct.name} (Copia)`,
     description: sourceProduct.description,
+    pricingMode: sourceProduct.pricingMode ?? "fixed",
     price: sourceProduct.price,
     category: sourceProduct.category,
     imageUrl: sourceProduct.imageUrl,

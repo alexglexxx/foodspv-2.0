@@ -2,10 +2,13 @@
 
 import { AppButton } from "@/components/ui/AppButton";
 import type { CartItem } from "@/types/cart.types";
+import type { OrderTotalMode } from "../types/order";
 
 interface CartSummaryProps {
   items: CartItem[];
   total: number;
+  hasQuoteItems: boolean;
+  totalMode: OrderTotalMode;
   onOpenCart: () => void;
   onGenerateOrder: () => void;
 }
@@ -21,6 +24,8 @@ function formatCurrency(value: number): string {
 export function CartSummary({
   items,
   total,
+  hasQuoteItems,
+  totalMode,
   onOpenCart,
   onGenerateOrder,
 }: CartSummaryProps) {
@@ -48,7 +53,11 @@ export function CartSummary({
           </span>
 
           <span className="shrink-0 text-base font-bold">
-            {formatCurrency(total)}
+            {totalMode === "quote_only"
+              ? "Por cotizar"
+              : hasQuoteItems
+                ? `Parcial ${formatCurrency(total)}`
+                : formatCurrency(total)}
           </span>
         </AppButton>
 
@@ -57,9 +66,16 @@ export function CartSummary({
           disabled={!hasItems}
           className="shrink-0 rounded-[var(--tenant-radius)] !border-[var(--tenant-primary)] !bg-[var(--tenant-primary)] px-4 py-3 text-sm text-[var(--tenant-button-text)] hover:!bg-[var(--tenant-primary-hover)] active:!bg-[var(--tenant-primary)] focus-visible:ring-offset-[var(--tenant-surface)] disabled:!bg-[var(--tenant-subtle)] disabled:text-[var(--tenant-muted)]"
         >
-          Pedir
+          {hasQuoteItems ? "Completar pedido" : "Pedir"}
         </AppButton>
       </div>
+      {hasQuoteItems ? (
+        <p className="mx-auto mt-2 w-full max-w-3xl text-xs font-medium text-[var(--tenant-muted)]">
+          Este pedido incluye productos por cotizar. Completa tu pedido y el
+          negocio se comunicará contigo para confirmar precio, detalles y
+          disponibilidad.
+        </p>
+      ) : null}
     </section>
   );
 }

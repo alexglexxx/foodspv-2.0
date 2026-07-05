@@ -20,8 +20,13 @@ import type {
 import type {
   ProductOption,
   ProductOptionValue,
+  ProductPricingMode,
   SelectedProductOption,
 } from "@/types/product.types";
+import {
+  buildOrderPricingSummary,
+} from "@/modules/orders/utils/pricing";
+import { normalizeProductPricingMode } from "@/types/product.types";
 
 interface OrderConfirmationPolicyRecord {
   enabled?: unknown;
@@ -50,6 +55,7 @@ interface TenantOrderContext {
 
 interface CatalogProductRecord {
   name?: unknown;
+  pricingMode?: unknown;
   price?: unknown;
   active?: unknown;
   available?: unknown;
@@ -60,7 +66,8 @@ interface CatalogProductRecord {
 interface CatalogProduct {
   id: string;
   name: string;
-  price: number;
+  pricingMode: ProductPricingMode;
+  price?: number | null;
   active: boolean;
   available: boolean;
   options: ProductOption[];
@@ -176,7 +183,7 @@ function mapCatalogProduct(
   id: string,
   record: CatalogProductRecord | undefined
 ): CatalogProduct | null {
-  if (!record || !isNonEmptyString(record.name) || typeof record.price !== "number") {
+  if (!record || !isNonEmptyString(record.name)) {
     return null;
   }
 
@@ -185,11 +192,26 @@ function mapCatalogProduct(
   }
 
   const active = typeof record.active === "boolean" ? record.active : true;
+  const pricingMode = normalizeProductPricingMode({
+    pricingMode: record.pricingMode,
+    price: record.price,
+  });
+
+  if (
+    pricingMode === "fixed" &&
+    (typeof record.price !== "number" || !Number.isFinite(record.price))
+  ) {
+    return null;
+  }
 
   return {
     id,
     name: record.name.trim(),
-    price: Math.round(record.price * 100) / 100,
+    pricingMode,
+    price:
+      pricingMode === "fixed" && typeof record.price === "number"
+        ? Math.round(record.price * 100) / 100
+        : null,
     active,
     available: typeof record.available === "boolean" ? record.available : active,
     options: normalizeProductOptions(record.options),
@@ -320,8 +342,6 @@ async function validateOrderAgainstCatalog(order: Order): Promise<CatalogValidat
   });
 
   const productos: OrderItem[] = [];
-  let subtotal = 0;
-
   order.productos.forEach((item, index) => {
     const product = productMap.get(item.id);
 
@@ -340,11 +360,13 @@ async function validateOrderAgainstCatalog(order: Order): Promise<CatalogValidat
     productos.push({
       id: product.id,
       nombre: product.name,
-      precio: product.price,
+      pricingMode: product.pricingMode,
+      precio: product.pricingMode === "fixed" ? product.price ?? 0 : null,
       cantidad: item.cantidad,
+      quoteRequired: product.pricingMode === "quote",
       selectedOptions: optionValidation.selectedOptions,
+      notes: item.notes,
     });
-    subtotal += (product.price + optionValidation.priceDeltaTotal) * item.cantidad;
   });
 
   if (errors.length > 0) {
@@ -358,14 +380,16 @@ async function validateOrderAgainstCatalog(order: Order): Promise<CatalogValidat
     order.deliveryType === "delivery" && typeof order.deliveryFee === "number"
       ? order.deliveryFee
       : 0;
-  const total = Math.round((subtotal + deliveryFee) * 100) / 100;
+  const pricingSummary = buildOrderPricingSummary(productos, deliveryFee);
 
   return {
     valid: true,
     order: {
       ...order,
       productos,
-      total,
+      total: pricingSummary.total,
+      hasQuoteItems: pricingSummary.hasQuoteItems,
+      totalMode: pricingSummary.totalMode,
       deliveryFee: order.deliveryType === "delivery" ? deliveryFee : undefined,
     },
   };

@@ -2,11 +2,15 @@
 
 import { AppButton } from "@/components/ui/AppButton";
 import type { CartItem } from "@/types/cart.types";
+import type { OrderTotalMode } from "../types/order";
+import { getFixedUnitAmount, getPricingMode } from "../utils/pricing";
 
 interface CartDrawerProps {
   isOpen: boolean;
   items: CartItem[];
   total: number;
+  hasQuoteItems: boolean;
+  totalMode: OrderTotalMode;
   onClose: () => void;
   onIncreaseItem: (cartItemId: string) => void;
   onDecreaseItem: (cartItemId: string) => void;
@@ -23,19 +27,15 @@ function formatCurrency(value: number): string {
 }
 
 function getCartItemUnitPrice(item: CartItem): number {
-  return (
-    item.unitPrice +
-    (item.selectedOptions ?? []).reduce(
-      (sum, option) => sum + option.priceDeltaTotal,
-      0
-    )
-  );
+  return getFixedUnitAmount(item);
 }
 
 export function CartDrawer({
   isOpen,
   items,
   total,
+  hasQuoteItems,
+  totalMode,
   onClose,
   onIncreaseItem,
   onDecreaseItem,
@@ -96,7 +96,9 @@ export function CartDrawer({
                     {item.productName}
                   </h3>
                   <p className="mt-1 text-sm text-[var(--tenant-muted)]">
-                    {formatCurrency(getCartItemUnitPrice(item))} c/u
+                    {getPricingMode(item) === "quote"
+                      ? "Por cotizar"
+                      : `${formatCurrency(getCartItemUnitPrice(item))} c/u`}
                   </p>
                   {(item.selectedOptions ?? []).length > 0 ? (
                     <div className="mt-2 space-y-1 text-sm text-[var(--tenant-muted)]">
@@ -150,7 +152,9 @@ export function CartDrawer({
                 </div>
 
                 <p className="text-base font-semibold text-[var(--tenant-accent)]">
-                  {formatCurrency(item.quantity * getCartItemUnitPrice(item))}
+                  {getPricingMode(item) === "quote"
+                    ? "Por cotizar"
+                    : formatCurrency(item.quantity * getCartItemUnitPrice(item))}
                 </p>
               </div>
             </article>
@@ -159,17 +163,24 @@ export function CartDrawer({
 
         <div className="border-t border-[var(--tenant-ring)] px-6 py-5">
           <div className="mb-4 flex items-center justify-between text-sm text-[var(--tenant-muted)]">
-            <span>Total</span>
+            <span>{totalMode === "partial_quote" ? "Total parcial" : "Total"}</span>
             <span className="text-2xl font-semibold text-[var(--tenant-text)]">
-              {formatCurrency(total)}
+              {totalMode === "quote_only" ? "Por cotizar" : formatCurrency(total)}
             </span>
           </div>
+          {hasQuoteItems ? (
+            <p className="mb-4 text-sm leading-6 text-[var(--tenant-muted)]">
+              Este pedido incluye productos por cotizar. Completa tu pedido y el
+              negocio se comunicará contigo para confirmar precio, detalles y
+              disponibilidad.
+            </p>
+          ) : null}
           <AppButton
             onClick={onGenerateOrder}
             disabled={items.length === 0}
             className="w-full !border-[var(--tenant-primary)] !bg-[var(--tenant-primary)] px-5 py-3 text-sm text-[var(--tenant-button-text)] hover:!bg-[var(--tenant-primary-hover)] active:!bg-[var(--tenant-primary)] focus-visible:ring-offset-[var(--tenant-surface)] disabled:!bg-[var(--tenant-subtle)] disabled:text-[var(--tenant-muted)]"
           >
-            Generar pedido
+            {hasQuoteItems ? "Solicitar pedido" : "Generar pedido"}
           </AppButton>
         </div>
       </aside>

@@ -103,6 +103,7 @@ const products = [
     id: "taco-pastor",
     name: "Taco al pastor",
     description: "Tortilla recién calentada con pastor, cebolla, cilantro y piña.",
+    pricingMode: "fixed",
     price: 24,
     category: "Tacos",
     imageUrl:
@@ -137,6 +138,7 @@ const products = [
     id: "taco-asada",
     name: "Taco de asada",
     description: "Carne asada al momento con cebolla, cilantro y limón.",
+    pricingMode: "fixed",
     price: 28,
     category: "Tacos",
     imageUrl:
@@ -149,6 +151,7 @@ const products = [
     id: "taco-campechano",
     name: "Taco campechano",
     description: "Mezcla de asada y chorizo para quien quiere de todo un poco.",
+    pricingMode: "fixed",
     price: 30,
     category: "Tacos",
     imageUrl:
@@ -161,6 +164,7 @@ const products = [
     id: "quesadilla-grande",
     name: "Quesadilla grande",
     description: "Quesadilla en harina con queso y carne a elegir.",
+    pricingMode: "fixed",
     price: 72,
     category: "Extras",
     imageUrl:
@@ -195,6 +199,7 @@ const products = [
     id: "papas-especiales",
     name: "Papas especiales",
     description: "Papas a la francesa con queso, tocino y aderezo.",
+    pricingMode: "fixed",
     price: 84,
     category: "Extras",
     imageUrl:
@@ -207,6 +212,7 @@ const products = [
     id: "salsa-verde-litro",
     name: "Salsa verde 250ml",
     description: "Salsa verde tatemada para llevar a casa.",
+    pricingMode: "fixed",
     price: 18,
     category: "Salsas",
     imageUrl:
@@ -219,6 +225,7 @@ const products = [
     id: "salsa-roja-litro",
     name: "Salsa roja 250ml",
     description: "Salsa roja picosita para acompañar tacos y quesadillas.",
+    pricingMode: "fixed",
     price: 18,
     category: "Salsas",
     imageUrl:
@@ -231,6 +238,7 @@ const products = [
     id: "refresco-600",
     name: "Refresco 600ml",
     description: "Botella fría para acompañar tus tacos.",
+    pricingMode: "fixed",
     price: 25,
     category: "Bebidas",
     imageUrl:
@@ -256,6 +264,7 @@ const products = [
     id: "agua-fresca",
     name: "Agua fresca grande",
     description: "Agua fresca del día en vaso grande.",
+    pricingMode: "fixed",
     price: 32,
     category: "Bebidas",
     imageUrl:
@@ -280,6 +289,7 @@ const products = [
     id: "flan-casero",
     name: "Flan casero",
     description: "Postre individual para cerrar con algo dulce.",
+    pricingMode: "fixed",
     price: 36,
     category: "Postres",
     imageUrl:
@@ -287,6 +297,31 @@ const products = [
     active: true,
     available: true,
     options: [],
+  },
+  {
+    id: "taquiza-evento",
+    name: "Taquiza para evento",
+    description:
+      "Cotizamos según número de personas, ubicación, horario y tipo de servicio.",
+    pricingMode: "quote",
+    category: "Eventos",
+    imageUrl:
+      "https://images.unsplash.com/photo-1555244162-803834f70033?q=80&w=1200&auto=format&fit=crop",
+    active: true,
+    available: true,
+    options: [
+      {
+        id: "personas",
+        name: "Número aproximado de personas",
+        type: "single",
+        required: false,
+        values: [
+          { id: "20-40", label: "20 a 40 personas", active: true },
+          { id: "40-80", label: "40 a 80 personas", active: true },
+          { id: "80-plus", label: "Más de 80 personas", active: true },
+        ],
+      },
+    ],
   },
 ];
 
@@ -319,7 +354,8 @@ async function upsertProducts(tenantRef) {
         tenantId: TENANT_ID,
         name: product.name,
         description: product.description,
-        price: product.price,
+        pricingMode: product.pricingMode ?? "fixed",
+        price: product.pricingMode === "quote" ? null : product.price,
         category: product.category,
         imageUrl: product.imageUrl,
         images: [],

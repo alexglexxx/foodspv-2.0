@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState, type FormEvent } from "react"
 import type { User } from "firebase/auth";
 
 import { AppButton } from "@/components/ui/AppButton";
+import { normalizeProductPricingMode } from "@/types/product.types";
 
 import {
   createSuperAdminProduct,
@@ -29,6 +30,7 @@ interface ProductManagerProps {
 const EMPTY_PRODUCT_FORM: SuperAdminProductInput = {
   name: "",
   description: "",
+  pricingMode: "fixed",
   price: 0,
   category: "",
   imageUrl: "",
@@ -49,10 +51,13 @@ function formatCurrency(value: number): string {
 function getProductFormFromSummary(
   product: SuperAdminProductSummary
 ): SuperAdminProductInput {
+  const pricingMode = normalizeProductPricingMode(product);
+
   return {
     name: product.name,
     description: product.description,
-    price: product.price,
+    pricingMode,
+    price: pricingMode === "fixed" ? product.price ?? 0 : null,
     category: product.category,
     imageUrl: product.imageUrl,
     images: product.images || [],
@@ -60,6 +65,12 @@ function getProductFormFromSummary(
     available: product.available,
     options: product.options,
   };
+}
+
+function getProductPricingLabel(product: SuperAdminProductSummary): string {
+  return normalizeProductPricingMode(product) === "quote"
+    ? "Por cotizar"
+    : formatCurrency(product.price ?? 0);
 }
 
 export function ProductManager({
@@ -390,7 +401,7 @@ export function ProductManager({
                 <div>
                   <h3 className="text-xl font-black">{product.name}</h3>
                   <p className="mt-2 text-sm font-semibold text-stone-500">
-                    {product.category} · {formatCurrency(product.price)}
+                    {product.category} · {getProductPricingLabel(product)}
                   </p>
                 </div>
 

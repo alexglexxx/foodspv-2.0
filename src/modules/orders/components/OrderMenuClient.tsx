@@ -16,6 +16,7 @@ import type {
   ProductOptionValue,
   SelectedProductOption,
 } from "@/types/product.types";
+import { normalizeProductPricingMode } from "@/types/product.types";
 
 import { CartDrawer } from "./CartDrawer";
 import { CartSummary } from "./CartSummary";
@@ -24,6 +25,10 @@ import { ProductCard } from "./ProductCard";
 import { ProductOptionsModal } from "./ProductOptionsModal";
 import { createOrder } from "../services/orderService";
 import type { CustomerInfo, DeliveryAddressDetails, Order } from "../types/order";
+import {
+  buildCartPricingSummary,
+  getPricingMode,
+} from "../utils/pricing";
 
 interface OrderMenuClientProps {
   tenantId: string;
@@ -68,6 +73,7 @@ interface FirestoreProductRecord {
   tenantId?: unknown;
   name?: unknown;
   description?: unknown;
+  pricingMode?: unknown;
   price?: unknown;
   imageUrl?: unknown;
   images?: unknown;
@@ -491,7 +497,19 @@ function mapProduct(
   tenantId: string,
   record: FirestoreProductRecord
 ): Product | null {
-  if (!isNonEmptyString(record.name) || typeof record.price !== "number") {
+  if (!isNonEmptyString(record.name)) {
+    return null;
+  }
+
+  const pricingMode = normalizeProductPricingMode({
+    pricingMode: record.pricingMode,
+    price: record.price,
+  });
+
+  if (
+    pricingMode === "fixed" &&
+    (typeof record.price !== "number" || !Number.isFinite(record.price))
+  ) {
     return null;
   }
 
@@ -515,7 +533,11 @@ function mapProduct(
       : tenantId,
     name: record.name.trim(),
     description: toOptionalString(record.description),
-    price: record.price,
+    pricingMode,
+    price:
+      pricingMode === "fixed" && typeof record.price === "number"
+        ? record.price
+        : null,
     imageUrl: toOptionalString(record.imageUrl),
     images: normalizeProductImage(record.images),
     available,
@@ -531,16 +553,6 @@ function getActiveProductOptions(product: Product): ProductOption[] {
       values: option.values.filter((value) => value.active),
     }))
     .filter((option) => option.values.length > 0);
-}
-
-function getCartItemUnitPrice(item: CartItem): number {
-  return (
-    item.unitPrice +
-    (item.selectedOptions ?? []).reduce(
-      (sum, option) => sum + option.priceDeltaTotal,
-      0
-    )
-  );
 }
 
 function getCartItemId(
@@ -564,9 +576,12 @@ function mapCartItemsToOrderItems(items: CartItem[]): Order["productos"] {
   return items.map((item) => ({
     id: item.productId,
     nombre: item.productName,
-    precio: item.unitPrice,
+    pricingMode: getPricingMode(item),
+    precio: getPricingMode(item) === "fixed" ? item.unitPrice ?? 0 : null,
     cantidad: item.quantity,
+    quoteRequired: getPricingMode(item) === "quote",
     selectedOptions: item.selectedOptions,
+    notes: item.notes,
   }));
 }
 
@@ -600,7 +615,11 @@ function buildOrder(
   tenantSlug: string,
   customerInfo: CustomerInfo,
   items: CartItem[],
-  total: number,
+  pricingSummary: {
+    total: number;
+    hasQuoteItems: boolean;
+    totalMode: Order["totalMode"];
+  },
   deliveryType: "pickup" | "delivery",
   deliveryAddressDetails: DeliveryAddressDetails | null,
   deliveryFee: number
@@ -628,7 +647,9 @@ function buildOrder(
     tenantSlug,
     cliente: customerInfo,
     productos: mapCartItemsToOrderItems(items),
-    total,
+    total: pricingSummary.total,
+    hasQuoteItems: pricingSummary.hasQuoteItems,
+    totalMode: pricingSummary.totalMode,
     ...deliveryFields,
     estado: "pendiente",
     createdAt: Date.now(),
@@ -820,10 +841,6 @@ export function OrderMenuClient({ tenantId, tenantSlug }: OrderMenuClientProps) 
     });
   }, [products, featuredCategoryKey]);
 
-  const subtotal = cartItems.reduce(
-    (sum, item) => sum + item.quantity * getCartItemUnitPrice(item),
-    0
-  );
   const effectiveDeliveryType =
     deliveryEnabled && deliveryType === "delivery" ? "delivery" : "pickup";
   const effectiveDeliveryAddressDetails =
@@ -834,7 +851,9 @@ export function OrderMenuClient({ tenantId, tenantSlug }: OrderMenuClientProps) 
       : "";
   const deliveryFeeApplied =
     effectiveDeliveryType === "delivery" ? deliveryFee : 0;
-  const total = subtotal + deliveryFeeApplied;
+  const pricingSummary = buildCartPricingSummary(cartItems, deliveryFeeApplied);
+  const subtotal = pricingSummary.subtotal;
+  const total = pricingSummary.total;
 
   function addConfiguredProduct(
     product: Product,
@@ -859,7 +878,9 @@ export function OrderMenuClient({ tenantId, tenantSlug }: OrderMenuClientProps) 
             productId: product.id,
             productName: product.name,
             quantity: 1,
-            unitPrice: product.price,
+            pricingMode: product.pricingMode,
+            unitPrice: product.price ?? null,
+            quoteRequired: getPricingMode(product) === "quote",
             selectedOptions,
           },
         ];
@@ -998,7 +1019,7 @@ export function OrderMenuClient({ tenantId, tenantSlug }: OrderMenuClientProps) 
         tenantSlug,
         customerInfo,
         cartItems,
-        total,
+        pricingSummary,
         effectiveDeliveryType,
         effectiveDeliveryAddressDetails,
         deliveryFeeApplied
@@ -1224,6 +1245,8 @@ export function OrderMenuClient({ tenantId, tenantSlug }: OrderMenuClientProps) 
       <CartSummary
         items={cartItems}
         total={total}
+        hasQuoteItems={pricingSummary.hasQuoteItems}
+        totalMode={pricingSummary.totalMode}
         onOpenCart={() => setIsCartOpen(true)}
         onGenerateOrder={openCustomerModal}
       />
@@ -1232,6 +1255,8 @@ export function OrderMenuClient({ tenantId, tenantSlug }: OrderMenuClientProps) 
         isOpen={isCartOpen}
         items={cartItems}
         total={total}
+        hasQuoteItems={pricingSummary.hasQuoteItems}
+        totalMode={pricingSummary.totalMode}
         onClose={() => setIsCartOpen(false)}
         onIncreaseItem={increaseItem}
         onDecreaseItem={decreaseItem}
@@ -1240,10 +1265,12 @@ export function OrderMenuClient({ tenantId, tenantSlug }: OrderMenuClientProps) 
       />
 
       {isCustomerModalOpen ? (
-        <CustomerInfoModal
+      <CustomerInfoModal
           key={customerModalSession}
           isOpen={isCustomerModalOpen}
           total={submittedTotal ?? total}
+          hasQuoteItems={pricingSummary.hasQuoteItems}
+          totalMode={pricingSummary.totalMode}
           deliveryEnabled={deliveryEnabled}
           deliveryType={effectiveDeliveryType}
           deliveryFee={deliveryFeeApplied}

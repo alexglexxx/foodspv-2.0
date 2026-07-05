@@ -5,6 +5,8 @@ export interface ProductOptionValue {
   active: boolean;
 }
 
+export type ProductPricingMode = "fixed" | "quote";
+
 export interface ProductOption {
   id: string;
   name: string;
@@ -39,7 +41,9 @@ export interface Product {
 
   description?: string;
 
-  price: number;
+  pricingMode?: ProductPricingMode;
+
+  price?: number | null;
 
   imageUrl?: string;
 
@@ -54,4 +58,30 @@ export interface Product {
   category?: string;
 
   options?: ProductOption[];
+}
+
+export function normalizeProductPricingMode(input: {
+  pricingMode?: unknown;
+  price?: unknown;
+}): ProductPricingMode {
+  if (input.pricingMode === "quote") {
+    return "quote";
+  }
+
+  if (input.pricingMode === "fixed") {
+    return "fixed";
+  }
+
+  if (typeof input.price === "number" && Number.isFinite(input.price)) {
+    return "fixed";
+  }
+
+  return "fixed";
+}
+
+export function isQuoteProduct(input: {
+  pricingMode?: unknown;
+  price?: unknown;
+}): boolean {
+  return normalizeProductPricingMode(input) === "quote";
 }

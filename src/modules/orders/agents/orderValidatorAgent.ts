@@ -1,4 +1,5 @@
 import { ORDER_STATES, type Order } from "../types/order";
+import { getOrderTotalMode, getPricingMode } from "../utils/pricing";
 
 export type ValidationResult =
   | {
@@ -64,8 +65,21 @@ export function orderValidatorAgent(input: unknown): ValidationResult {
         errors.push(`Producto ${index + 1}: falta nombre.`);
       }
 
-      if (typeof producto.precio !== "number" || producto.precio < 0) {
+      const pricingMode = getPricingMode(producto);
+
+      if (
+        pricingMode === "fixed" &&
+        (typeof producto.precio !== "number" || producto.precio < 0)
+      ) {
         errors.push(`Producto ${index + 1}: precio inválido.`);
+      }
+
+      if (
+        pricingMode === "quote" &&
+        producto.quoteRequired !== undefined &&
+        producto.quoteRequired !== true
+      ) {
+        errors.push(`Producto ${index + 1}: quoteRequired inválido.`);
       }
 
       if (
@@ -144,8 +158,19 @@ export function orderValidatorAgent(input: unknown): ValidationResult {
     });
   }
 
-  if (typeof order.total !== "number" || order.total <= 0) {
+  if (typeof order.total !== "number" || !Number.isFinite(order.total) || order.total < 0) {
     errors.push("Total inválido.");
+  }
+
+  if (Array.isArray(order.productos) && order.productos.length > 0) {
+    const expectedTotalMode = getOrderTotalMode(order.productos);
+
+    if (
+      order.totalMode !== undefined &&
+      order.totalMode !== expectedTotalMode
+    ) {
+      errors.push("Modo total inválido.");
+    }
   }
 
   if (

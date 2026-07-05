@@ -1,6 +1,9 @@
 import type { OrderFlowMode } from "@/types/tenant.types";
 import type { WhatsAppSendStatus } from "./whatsapp";
-import type { SelectedProductOption } from "@/types/product.types";
+import type {
+  ProductPricingMode,
+  SelectedProductOption,
+} from "@/types/product.types";
 
 export const ORDER_STATES = [
   "requires_confirmation",
@@ -12,13 +15,17 @@ export const ORDER_STATES = [
 ] as const;
 
 export type OrderState = (typeof ORDER_STATES)[number];
+export type OrderTotalMode = "fixed" | "partial_quote" | "quote_only";
 
 export interface OrderItem {
   id:string;
   nombre:string;
-  precio:number;
   cantidad:number;
+  pricingMode?:ProductPricingMode;
+  precio?:number | null;
+  quoteRequired?:boolean;
   selectedOptions?:SelectedProductOption[];
+  notes?:string;
 }
 
 export interface DeliveryAddressDetails {
@@ -70,6 +77,10 @@ export interface Order {
   productos:OrderItem[];
 
   total:number;
+
+  hasQuoteItems?:boolean;
+
+  totalMode?:OrderTotalMode;
 
   deliveryType?:"pickup" | "delivery";
 

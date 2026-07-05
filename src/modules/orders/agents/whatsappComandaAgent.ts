@@ -1,7 +1,12 @@
 import { Order } from "../types/order";
+import { getPricingMode } from "../utils/pricing";
 
 function formatAmount(amount: number): string {
-  return amount.toFixed(2);
+  return new Intl.NumberFormat("es-MX", {
+    style: "currency",
+    currency: "MXN",
+    maximumFractionDigits: 2,
+  }).format(amount);
 }
 
 function formatCustomerCode(customerCode: string | undefined): string {
@@ -34,13 +39,31 @@ function getProductEmoji(productName: string): string {
 }
 
 export function whatsappComandaAgent(order: Order): string {
-  const productLines = order.productos.flatMap((producto, index) => {
+  const fixedProductLines = order.productos.flatMap((producto) => {
+    if (getPricingMode(producto) === "quote") {
+      return [];
+    }
+
     const optionLines = (producto.selectedOptions ?? []).map(
       (option) => `   * ${option.optionName}: ${option.valueLabels.join(", ")}`
     );
 
     return [
-      `${index + 1}. ${producto.cantidad} x ${getProductEmoji(producto.nombre)} ${producto.nombre}`,
+      `${producto.cantidad}x ${getProductEmoji(producto.nombre)} ${producto.nombre} - ${formatAmount((producto.precio ?? 0) * producto.cantidad)}`,
+      ...optionLines,
+    ];
+  });
+  const quoteProductLines = order.productos.flatMap((producto) => {
+    if (getPricingMode(producto) !== "quote") {
+      return [];
+    }
+
+    const optionLines = (producto.selectedOptions ?? []).map(
+      (option) => `   * ${option.optionName}: ${option.valueLabels.join(", ")}`
+    );
+
+    return [
+      `${producto.cantidad}x ${getProductEmoji(producto.nombre)} ${producto.nombre} - Por cotizar`,
       ...optionLines,
     ];
   });
@@ -62,9 +85,19 @@ export function whatsappComandaAgent(order: Order): string {
         ]
     : ["RECOGER PEDIDO"];
   const header =
-    order.estado === "requires_confirmation"
+    order.totalMode === "quote_only"
+      ? "SOLICITUD DE COTIZACIÓN"
+      : order.estado === "requires_confirmation"
       ? "PEDIDO GRANDE - REQUIERE CONFIRMACIÓN"
       : "NUEVA COMANDA";
+  const totalLabel =
+    order.totalMode === "partial_quote"
+      ? "Total parcial"
+      : "Total";
+  const totalValue =
+    order.totalMode === "quote_only"
+      ? "Por cotizar"
+      : formatAmount(order.total);
 
   return [
     header,
@@ -74,9 +107,16 @@ export function whatsappComandaAgent(order: Order): string {
     `Código cliente: ${formatCustomerCode(order.customer?.customerCode)}`,
     ...deliveryLines,
     "",
-    "PRODUCTOS",
-    ...productLines,
+    ...(fixedProductLines.length > 0 ? ["CON PRECIO", ...fixedProductLines, ""] : []),
+    ...(quoteProductLines.length > 0 ? ["POR COTIZAR", ...quoteProductLines, ""] : []),
     "",
-    `Total: ${formatAmount(order.total)}`,
+    `${totalLabel}: ${totalValue}`,
+    ...(order.hasQuoteItems
+      ? [
+          "",
+          "Este pedido incluye productos por cotizar.",
+          "Contactar al cliente para confirmar precio y detalles.",
+        ]
+      : []),
   ].join("\n");
 }

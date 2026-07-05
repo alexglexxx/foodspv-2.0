@@ -4,7 +4,11 @@ import type {
   TenantVisualPresetId,
 } from "@/modules/design/tenantVisualPresets";
 import type { UserRole } from "@/modules/auth/types/userRole";
-import type { ProductOption, ProductImage } from "@/types/product.types";
+import type {
+  ProductImage,
+  ProductOption,
+  ProductPricingMode,
+} from "@/types/product.types";
 
 export type SuperAdminTenantStatus = "active" | "inactive";
 
@@ -101,7 +105,8 @@ export interface SuperAdminProductSummary {
   productId: string;
   name: string;
   description: string;
-  price: number;
+  pricingMode?: ProductPricingMode;
+  price?: number | null;
   category: string;
   imageUrl: string;
   images?: ProductImage[];
@@ -115,7 +120,8 @@ export interface SuperAdminProductSummary {
 export interface SuperAdminProductInput {
   name: string;
   description: string;
-  price: number;
+  pricingMode?: ProductPricingMode;
+  price?: number | null;
   category: string;
   imageUrl: string;
   images?: ProductImage[];
